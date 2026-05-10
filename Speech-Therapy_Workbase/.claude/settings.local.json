@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"c:/VS code_Workspace/Speech-Therapy_Workbase/raw/assets\" \"c:/VS code_Workspace/Speech-Therapy_Workbase/wiki/concepts\" \"c:/VS code_Workspace/Speech-Therapy_Workbase/wiki/entities\" \"c:/VS code_Workspace/Speech-Therapy_Workbase/wiki/sources\")",
+      "Bash(powershell -Command \"\\(Get-Content 'c:\\\\VS code_Workspace\\\\Speech-Therapy_Workbase\\\\wiki\\\\log.md' | Measure-Object -Line\\).Lines\")",
+      "Bash(powershell -Command \"\\(Get-Content 'c:\\\\VS code_Workspace\\\\Speech-Therapy_Workbase\\\\wiki\\\\log.md' -Tail 5\\)\")",
+      "Bash(powershell -Command \"Get-ChildItem 'c:\\\\VS code_Workspace\\\\Speech-Therapy_Workbase\\\\raw\\\\52*' | Select-Object Name, Length\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\VS code_Workspace\\\\Speech-Therapy_Workbase\\\\wiki\" -Recurse -Filter \"*.md\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(powershell -Command \"Get-ChildItem 'c:\\\\VS code_Workspace\\\\Speech-Therapy_Workbase\\\\raw\\\\2[4-9]_*' , 'c:\\\\VS code_Workspace\\\\Speech-Therapy_Workbase\\\\raw\\\\30_*' | Select-Object Name, Length | Format-Table -AutoSize\")",
+      "Bash(powershell -Command \"Get-ChildItem 'c:\\\\VS code_Workspace\\\\Speech-Therapy_Workbase\\\\raw\\\\51_*' | Select-Object Name, Length\")",
+      "Bash(awk '{printf \"%s %s\\\\n\", $5, $9}')"
+    ],
+    "additionalDirectories": [
+      "c:\\VS code_Workspace\\Speech-Therapy_Workbase\\raw"
+    ]
+  }
+}
