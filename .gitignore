@@ -1,3 +1,6 @@
+# 강의/학습 자산 (동영상·PDF·ZIP 등 — git에 두지 않음. 디스크에는 보존)
+Speech-Therapy_Workbase/raw/assets/
+
 # Obsidian 개인 작업 상태 (창 레이아웃 등)
 Speech-Therapy_Workbase/.obsidian/workspace.json
 Speech-Therapy_Workbase/.obsidian/workspace-mobile.json
@@ -17,3 +20,6 @@ Speech-Therapy_Workbase/.obsidian/.trash/
 Thumbs.db
 .DS_Store
 .vscode/
+
+# 정리 작업 임시 백업 (안전 확인 후 사용자가 직접 삭제)
+.git_backup/
