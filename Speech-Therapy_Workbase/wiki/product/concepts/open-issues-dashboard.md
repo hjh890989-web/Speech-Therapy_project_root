@@ -344,6 +344,11 @@ tags: [OpenIssues, 잔여, 보강, ADR후보, 사용자확정, 임상자문, 법
 - [[product/concepts/architecture-decisions]] — ADR 후보 6종 정식 등록 대상
 - [[product/concepts/glossary]] — 신규 합류자가 이슈 이해 진입점
 
+## Clinical 기둥 cross-link
+- [[product/concepts/MVP-clinical-foundation]] — 임상 토대 잔여 결정 사항 추적 (한국어 적응·자문 풀)
+- [[clinical/concepts/다문화-언어발달]] — 잔여 이슈: 다문화 영유아 평가 적응 (CLD 17 항목)
+- [[clinical/concepts/언어발달지연]] — 잔여 이슈: 한국어 MLU·IPSyn 표준 개발
+
 ## 보강 필요
 
 - 본 페이지 자체의 Append-only 갱신 정책 (이슈 해결 시 ✅ 표시 유지 vs 제거 결정).

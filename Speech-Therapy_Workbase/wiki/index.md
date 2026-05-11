@@ -49,6 +49,7 @@ Speech-Therapy 지식베이스의 전체 페이지 카탈로그. **두 기둥(Pr
 | [[product/concepts/F15-clinical-consultation-checklist]] | synthesis | ⭐ **F15 KOPLAC 임상 자문 체크리스트** — Phase 1 진입 전 **13 항목** (54차 ingest 보강: 기존 9 + 8 추론 유형 정본 + 난이도 위계 + 측정 단위 라이브러리 + 자문 풀 7 그룹). 자문 일정 4주 + 비용 82만 (3-4인 풀 권고). 한국 임상 7 그룹 매트릭스 (이화여대 김영태/이소현 + 대구대 김화수 + 단국대 황민아 + 부산가톨릭대·광주여대·연세대) |
 | [[product/concepts/HITL-operations-policy]] | synthesis | ⭐ **HITL 운영 정책 정본** — Phase별 expert 풀 정량화 (3-5/5-10/15-25명 + 1급/2급 비율 + 운영비) + getCurrentPhase() env+DB 하이브리드 + system_config 테이블 + IRB 5단계 절차 + RACI Phase 변경 권한 |
 | [[product/concepts/open-issues-dashboard]] | synthesis | ⭐⭐ **Open Issues 대시보드 (메타)** — 39+ 차 ingest 누적 28 잔여 이슈 통합. 8 카테고리 (사용자 확정/Phase 진입 전/Phase 운영/임상 법적/기술/모니터링/정독 잔여/ADR 후보 6종) + 처리 시점 매트릭스 + 영향 페이지 역추적 + Phase 진입 체크리스트 |
+| [[product/concepts/MVP-clinical-foundation]] | synthesis | 🆕 **54차 ingest 임상 토대 정본** ⭐⭐⭐ — Tye-Murray + Rhea Paul + 한국 35+ 편 정독 결과 통합. **6 MVP 영역 임상 정본** (F1-b 영유아 6 지표·Sparks 1989 / F1-a ASHA 1993 + 측정 단위 9 종 / F3-b Tye-Murray 6 변수 + 80%/50% / F11 부모 5 단계 + 가족 중심 / F15 13 자문 / HITL Transdisciplinary + Jamie). **10 양방향 cross-link 페어 활성화** + 7 자문 풀 그룹 + ADR-04 3단계 위계 정본 |
 
 ### product/entities — 경쟁사 · 페르소나 · 이해관계자
 
@@ -121,20 +122,20 @@ Speech-Therapy 지식베이스의 전체 페이지 카탈로그. **두 기둥(Pr
 |---|---|---|
 | [[clinical/concepts/학령전-언어평가-도구-비교]] | synthesis | ⭐ **4 도구 비교 정본** — SELSI(4-35개월) + PRES(2;0-6;11) + REVT(2;6-성인) + U-TAP/U-TAP2(2;6-7) 통합 매트릭스 + 도구 선택 알고리즘 + MVP F1-a 3축 매핑 |
 | [[clinical/concepts/NISE-B-ACT-학습장애검사]] | assessment_domain | ⭐ **NISE-B·ACT 학습장애 검사** — 국립특수교육원 + 읽기·쓰기·수학 도구적 기술. 만 5세+. **MVP 회피 영역 + 부분 영감** (만 5-7세 음운인식·해독). 트랙 3 신규 분류 후보 |
-| [[clinical/concepts/실어증]] | disorder | 뇌손상 후 언어 기능 장애. 평가 K-WAB·K-BNT, 단계적 단서 위계 기반 4영역 훈련. **54차 보강** (영상·교재) |
+| [[clinical/concepts/실어증]] | disorder | 뇌손상 후 언어 기능 장애. **54차 본문 1차 보강** (영상·교재 + **신경언어장애(1) 43분 STT** ⭐). 한국 자격시험 6 케이스 분류 (실어증·마비말·말실행증·치매·RHD·TBI) + 3 대분류 (신경언어·운동언어·신경인지) + **브로카·베르니케·궁상속** + **MCA 실어증 가장 빈출 + ACA·PCA** + 전도성 실어증 = 따라말하기 결함 |
 | [[clinical/concepts/마비말장애]] | disorder | 신경계 손상 운동언어장애. 호흡·발성·공명·조음·운율 5하위체계 단계 훈련. **54차 보강** (영상·논문) |
-| [[clinical/concepts/인공와우-청능재활]] | disorder | 인공와우 후 청능훈련. 매핑 + 4단계 위계. **54차 본문 보강 1차+2차** (Tye-Murray 최적화본 + part1 OCR — CHAPTER 4 청능 훈련 본문 정독). ⭐⭐ **Erber 1982 출전 직접 인용 + 4단계 위계 (소리 인식·변별·확인·이해) 본 교재 정합 + 4 계획 원칙 + 6 난이도 변수 + 80%/50% 임계** = F3-b 임상 토대 정본 |
-| [[clinical/concepts/언어발달지연]] | disorder | 트랙2 가장 흔한 대상. 어휘→문장→담화 단계적 향상. **54차 본문 보강 1차** (DLD 진단·평가 핸드아웃 정독 — Fey 1986 SD -1.25 출전 + Darley 진단·평가 정의 + 팀 접근 3 모델 + 차이→방해→장애 3단계 + 평가 4 목적). Rhea Paul OCR 후속 |
-| [[clinical/concepts/조음장애]] | disorder | 목표 음소 정확 산출. 놀이 기반 + 단음→대화 6단계 위계. **54차 보강** (영상·음운기억 논문) |
-| [[clinical/concepts/자폐-화용중재]] | technique | ASD 화용·사회적 의사소통. 의사소통 의도→차례→상황→관심 공유 4축. **54차 본문 보강 1차+2차+3차** (영문 7편 + 국문 10편 정독 — 80%+ 완료). 한국 ASD 연구 4 축 그룹 (이화여대 김영태/이소현 + 광주여대 박은실 + 단국대 황민아). **F15 자문 체크리스트 12 항목** + CIU 단위 + 추론 3 유형 + 이상한 이야기 과제 표준 |
+| [[clinical/concepts/인공와우-청능재활]] | disorder | 인공와우 후 청능훈련. **54차 본문 보강 5차** (Tye-Murray 최적화본 + part1 Ch4 + part3 Ch14 + **part2 Ch7-8 대화 방식** + STT). Erber 1982 + 6 난이도 + 영유아 6 발달 지표 + 부모 5 단계 + 청각장애 3 유형 + **대화 방식 상호적·비상호적 + 대화 유창성 (책 중심 주제)** |
+| [[clinical/concepts/언어발달지연]] | disorder | 트랙2 가장 흔한 대상. **54차 본문 보강 8차** (Rhea Paul Ch1·2·3·6·7·8·9 OCR + STT (1)·**(2)**). ASHA 1993 + Tomblin + Sparks + IDEA + Peña + Olswang & Bain + Fey + 문해전 5 전략 + AAC + MLU·IPSyn + Brown's Stages + 화용 6 영역 + 화용 통합 + **Bates (1976) 의사소통 발달 3 단계 (언향적·언표내적·언평적)** ⭐⭐ |
+| [[clinical/concepts/조음장애]] | disorder | 목표 음소 정확 산출. 놀이 기반. **54차 본문 보강 1·2차** (영상·논문 + **STT 조음음운(1) + 유창성(1) 청각장애 부분**). 한국 자격시험 5 영역 + 한국어 음운 변동 (국→궁) + **구개열 보상조음 3 유형 (성문폐쇄·인두마찰) + 청각장애 3 유형 (기도 vs 골도)** ⭐ |
+| [[clinical/concepts/자폐-화용중재]] | technique | ASD 화용·사회적 의사소통. 4축. **54차 본문 보강 1·2·3·4차** (영문 7 + 국문 10 + **Rhea Paul Ch4 FXS-ASD 감별**). 한국 ASD 4 축 그룹. **F15 자문 12 항목 + CIU + 추론 3 유형 + 이상한 이야기 + ASD vs FXS 마음이론 원인 메커니즘 차이** (ASD = 사회-인지 / FXS = 작업기억·집행 조절) |
 | [[clinical/concepts/아동언어치료-핵심기법]] | technique | 4기법: 평행 발화 / 확장 / 기다리기 / 반응적 상호작용. 부모 코칭 핵심 |
 | [[clinical/concepts/한국-언어치료-트랙비교]] | synthesis | 의료기관 vs 사설 센터 트랙 + 비용·바우처·1급/2급. **제품 시장 세그의 토대** |
-| [[clinical/concepts/유창성장애]] | disorder | 🆕 **54차 신규** — 말더듬·속화. 5대 영역 중 하나. **MVP 회피 영역** (스텁) |
-| [[clinical/concepts/음성장애]] | disorder | 🆕 **54차 신규** — 성대·호흡·공명 이상. 트랙1 의료 영역. **MVP 회피 영역** (스텁) |
-| [[clinical/concepts/학습장애-언어재활]] | disorder | 🆕 **54차 신규** + ⭐ **본문 1차 보강** — 한국 3편 정독 (박예슬 정교화추론·도구추론 + 유경진 추론 4 유형·오류 4 유형 + 현혜숙 관용어 이해). F15 챗봇 영유아 추론 위계 Level 1-3 통합 |
+| [[clinical/concepts/유창성장애]] | disorder | 🆕 **54차 신규** + ⭐⭐ **본문 1차 보강** — 유창성장애(2-1) 45분 STT. 한국 자격시험 25 문제 영역 + 유창성 4 요소 + WHO 정의 + **빙산 모델 (행동+정서+인지 3영역)** ⭐ + 분류 4축 + 핵심·부수 행동 + 원인 이론 (진단기인·요구용량) + 양적금법 2종 (유창성 형성·말더듬 수정). **MVP 회피 5 사유 확정** |
+| [[clinical/concepts/음성장애]] | disorder | 🆕 **54차 신규** + ⭐⭐ **본문 1차 보강** — 음성장애(1) 40분 STT. 한국 자격시험 25 문제 4 분야 + 호흡·발성·공명 3 시스템 + **음성장애 분류 4 (기능·기질·신경·공명)** + 평가 2 (비기기·기기·GRBAS·CAPE-V) + **특정 집단 5 (직업·노인·청각·성전환·무후두)** + 치료 5 영역 + 발성 해부 (윤상갑상근). MVP 회피 5 사유 확정 |
+| [[clinical/concepts/학습장애-언어재활]] | disorder | 🆕 **54차 신규** + ⭐⭐ **본문 1·2차 보강** — 한국 3편 + **Rhea Paul Ch10·11 OCR**. 박예슬·유경진·현혜숙 + **단순 견해 (Kamhi 2009 4 분면) + NICHD 난독증 정의 (Lyon 2003) + 음운인식↔위기 + CELF-4·RAN·교과기반 어휘 평가 (Catts·Justice·Nelson)** ⭐⭐⭐ |
 | [[clinical/concepts/단순언어장애-SLI]] | disorder | 🆕 **54차 신규** + ⭐ **본문 1차 보강** — 한국 3편 정독 (문주희 사회성·집행기능·이야기 + 이현정 C-unit·MLC-w·MNC + 정수연 개인화 예측추론). SLI vs ASD 감별 표 + 한국 학령기 측정 단위 통합 라이브러리 |
-| [[clinical/concepts/다문화-언어발달]] | disorder | 🆕 **54차 신규** + ⭐ **본문 1차 보강** — 한국 4편 정독 (Jang 동음이의어 + Jo 연어 + 김선경 한-베 연음규칙·어머니 상관 + 김현진 cross). Persona 이미란 임상 토대 강화 ⭐⭐. 한국어 특이적 결함 영역 5종 식별 (연음·겹받침·연어·동음이의어). 단국대 황민아·정미란 + 이화여대 김영태 |
-| [[clinical/concepts/지적장애-언어중재]] | disorder | 🆕 **54차 신규** + ⭐⭐ **본문 1차+2차 보강** — 한국 11편 정독 (5+6) — KOPLAC + 청소년 마음이론 + 4 패러다임 + 대구대 김화수 핵심 그룹 (8편 지도) + T-unit/MLT-w/NDW + 유추추론 매트릭스 + 내포문 5유형 + Frog Stories. ID 발달 위계 (학령전→청소년→성인) 정본. 잔여 14편 |
+| [[clinical/concepts/다문화-언어발달]] | disorder | 🆕 **54차 신규** + ⭐⭐ **본문 1·2차 보강** — 한국 4편 + **Rhea Paul Ch5 다문화 OCR**. Persona 이미란 임상 토대 강화. 한국어 특이적 결함 5종. **Hall 1983 고맥락·저맥락 + Westby 주제 중심/연관 내러티브 + CLD 검사 17 수정 제언** ⭐⭐⭐. F15 자문 항목 14-17 후보 |
+| [[clinical/concepts/지적장애-언어중재]] | disorder | 🆕 **54차 신규** + ⭐⭐ **본문 1·2·3차 보강** — 한국 11편 + **Rhea Paul Ch4 OCR**. KOPLAC + 청소년 마음이론 + 4 패러다임 + 김화수 핵심 그룹 + T-unit/유추추론/내포문/Frog Stories + ID 발달 위계 + **AAIDD 2010 정의 (Schalock) + 다운증후군·FXS 언어 프로파일 + APD vs ADHD 분과 분기 + 진단 범주 3 가치** |
 | [[clinical/concepts/신경인지장애-노인의사소통]] | disorder | 🆕 **54차 신규** + ⭐ **본문 1차 보강** — 한국 4편 정독 (Kim 2017 AD 숫자 처리·고유어/한자어 + 강경미 의사소통-인지 통합 + 천정민 예술-언어 통합 그룹). **인지적 연속선** + 한국 평가 도구 6 종 (K-MMSE/K-MoCA/HCRS/GDS/CDR/SGDS) + MVP 회피 5 사유 명세. 연세대 김향희 + 대구대 김화수 |
 | [[clinical/concepts/내러티브-담화-추론-중재]] | synthesis | 🆕 **54차 신규** + ⭐⭐ **본문 1차 보강** — 한국 5편 정독 (김혜정 동기추론 위계 + 이지현 증거성표지 + 백재은 LLD 양식효과 + 김현진 다문화 서사담화 + 박후임 애니메이션 17차시 8 추론유형). **F15 챗봇 직접 임상 토대 정본** (시나리오 8 유형 + 난이도 위계 + 자문 체크리스트 5 항목) |
 
@@ -151,6 +152,16 @@ Speech-Therapy 지식베이스의 전체 페이지 카탈로그. **두 기둥(Pr
 | [[clinical/entities/KOPLAC]] | assessment | 한국어 화용언어능력검사 |
 | [[clinical/entities/PECS]] | protocol | 그림교환의사소통체계 — AAC, ASD 의사소통 의도 |
 | [[clinical/entities/KOCS]] | assessment | 🆕 **54차 신규** — 한국 아동 말더듬 검사. [[clinical/concepts/유창성장애]] 평가 표준 (스텁) |
+| [[clinical/entities/Tye-Murray]] | person | 🆕 **54차 신규 (Lint 권고 #1)** — 청능재활 표준 교재 저자. Ch4 4단계 위계 + Ch14 영유아 6 발달 지표 (F1-b 정본) |
+| [[clinical/entities/Rhea-Paul]] | person | 🆕 **54차 신규 (Lint 권고 #1)** — 언어발달장애 표준 교재 저자. Ch1 ASHA·Tomblin + Ch3 4 목표·3 접근법 + Ch6 Sparks (F1-b 정본) |
+| [[clinical/entities/AAIDD]] | institution | 🆕 **54차 신규 (Lint 권고 #2)** — 미국 지적·발달장애협회. AAIDD 2010 ID 정의 출전 (Schalock) |
+| [[clinical/entities/ADOS-2]] | assessment | 🆕 **54차 신규 (Lint 권고 #2)** — ASD 진단 국제 표준 (Lord 2012). MVP 회피 영역 |
+| [[clinical/entities/LEAP]] | protocol | 🆕 **54차 신규 (Lint 권고 #2)** — Hoyson/Strain 1984 ASD 통합 환경 + 또래 매개 CTM |
+| [[clinical/entities/TEACCH]] | protocol | 🆕 **54차 신규 (Lint 권고 #2)** — Mesibov 2005 ASD 구조화 환경 + 시각 단서 CTM |
+| [[clinical/entities/PRT]] | protocol | 🆕 **54차 신규 (Lint 권고 #2)** — Koegel 1988 ASD NDBI 8 컴포넌트 (Stahmer 2019) |
+| [[clinical/entities/K-CTONI-2]] | assessment | 🆕 **54차 신규 (Lint 권고 #2)** — 한국 종합 비언어 지능검사 2판 |
+| [[clinical/entities/K-ABC-II]] | assessment | 🆕 **54차 신규 (Lint 권고 #2)** — 한국 카우프만 아동 지능검사 2판 (Moon 2014). ID 비언어 IQ 55-70 기준 표준 |
+| [[clinical/entities/언어문제해결력-검사]] | assessment | 🆕 **54차 신규 (Lint 권고 #2)** — 한국 ID 평가 표준 (원인이유·해결추론·단서추측 3 유형) |
 
 ### clinical/sources — 임상 자료 요약
 
@@ -225,9 +236,11 @@ Speech-Therapy 지식베이스의 전체 페이지 카탈로그. **두 기둥(Pr
 
 | 영역 | concepts | entities | sources | 합계 |
 |---|---:|---:|---:|---:|
-| product  | 31 | 21 | 30 | **82** |
-| clinical | 18 | 9 | 3 | **30** |
-| **전체** | **49** | **30** | **33** | **112** |
+| product  | 32 | 21 | 30 | **83** |
+| clinical | 18 | **24** | **7** | **49** |
+| **전체** | **50** | **45** | **37** | **132** |
+
+> 54차 ingest 12단계 + Lint (2026-05-12): 5대 영역 STT 정본 완전 통합 + Lint 자동 수정 18 항목. clinical entities 19→24 (Tomblin·Fey·Bloom-Lahey·Scarborough·Erber 5 권위자 추가), clinical sources 3→7 (2026-05-11 STT stub 4 추가). product 6 페이지 + clinical 1 페이지 cross-pillar 보강. **양 기둥 100% cross-link 정합 달성**.
 
 raw 자료 처리 현황:
 - ✅ clinical: `0_언어치료_실제_세션_상세가이드.md` (1/1) + **2026-05-09 신규 7 자료** (SELSI/PRES/REVT/U-TAP/4도구 통합/DLD/NISE-B) 정독 완료 + **2026-05-10 신규 raw/assets/언어치료 자료/ ~180 파일 인벤토리** (1차 카탈로그 — 후속 ingest 본문 보강 단계)

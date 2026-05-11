@@ -333,6 +333,11 @@ TASKS/03 (Sprint 1 8 코어 + 8 Descope + 88 Task 상태 재배치)
 - [[product/concepts/SRS-evolution]] — V01-V06 timeline (Task가 의존하는 SRS의 진화)
 - [[product/concepts/PRD-evolution]] — V01-V10 (SRS의 직접 기반)
 
+## Clinical 기둥 cross-link
+- [[product/concepts/MVP-clinical-foundation]] — 88 Task 임상 토대 통합본 (F1-a·F11·F15 임상 근거)
+- [[clinical/concepts/조음장애]] — TASK API/FR-C F1-a 영역 임상 토대
+- [[clinical/concepts/언어발달지연]] — TASK API/FR-Q F1-b 영역 임상 토대
+
 ## 보강 필요
 - 88개 개별 TASK_*.md 정독 — 각 80-100줄로 G/W/T·Files·Build·Verify 등 상세 명세 포함. 개별 ingest는 비효율적이라 본 인덱스로 대체.
 - F11 (부모 클로닝) + F15 (LLM 챗봇) + F16 (푸시) Task 추출 — Phase 1 후순위로 의도적 제외. 차기 스프린트 진입 시 추가.

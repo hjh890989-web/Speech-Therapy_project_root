@@ -175,6 +175,11 @@ V04 GPT-4o   ─┘
 - [[product/concepts/MVP-feature-spec]] — V10 종합 정본
 - [[product/sources/54-PRD-V10-Final]] — V10 정독본
 
+## Clinical 기둥 cross-link
+- [[product/concepts/MVP-clinical-foundation]] — V10 임상 토대 통합본 (F1-a·F11·F15 임상 근거)
+- [[clinical/concepts/언어발달지연]] — V10 F1-a 영유아 평가 임상 토대 (DLD 진단)
+- [[clinical/concepts/조음장애]] — V10 F1-a articulation 한국어 특이성
+
 ## 보강 필요
 - V01-V09 중간본 정독 후 각 버전 차이 narrative 정확화.
 - 특히 V08 "VPS 검토 7대 결함" + V09 "품질 18건"의 구체적 결함 항목 — 학습 가치 높음.

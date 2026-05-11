@@ -262,6 +262,11 @@ RH → 카카오톡 → 학부모: 알림 + 전자서명
 - [[product/sources/65-SRS-V06-Final]] — SRS 정본
 - [[product/sources/54-PRD-V10-Final]] § 6 (System & Data Architecture)
 
+## Clinical 기둥 cross-link
+- [[product/concepts/MVP-clinical-foundation]] — 기술 아키텍처가 지원하는 임상 토대 정본
+- [[clinical/concepts/조음장애]] — F1-a 음성 벡터·STT 임상 토대 (pgvector 임베딩 응용)
+- [[clinical/concepts/내러티브-담화-추론-중재]] — F15 LLM 자문 임상 토대 (RAG·multi-LLM 응용)
+
 ## 보강 필요
 - ERD (Supabase PostgreSQL 스키마) 상세 — V06 §6.1 미정독.
 - ADR 3건 (05, 06, 07) — V06 신규 ADR. 각각 어떤 기술 결정인지 미정독.

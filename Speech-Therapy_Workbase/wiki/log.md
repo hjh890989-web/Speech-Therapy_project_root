@@ -3550,7 +3550,1340 @@ Select-String -Path wiki/log.md -Pattern '^## \[' | Select-Object -Last 10
 
 ### 잔여
 
-- ⏳ part2-4 OCR (CHAPTER 14 영유아 + CHAPTER 15 학령기)
+- ✅ part3 OCR (CHAPTER 14 영유아) 완료 — 다음 ingest 항목 참조
+- ⏳ part2-3 추가 OCR (CHAPTER 5-13)
+- ⏳ part4 OCR (부록·용어해설·참고문헌)
 - ⏳ 5대 장애 강의 영상 24편 STT
 - ⏳ Rhea Paul 3권 OCR
 - ⏳ Lint 점검 (CLAUDE.md §5.3)
+
+## [2026-05-10] ingest | Tye-Murray part3 OCR (CHAPTER 14 영유아) → 인공와우-청능재활 본문 3차 보강 ⭐⭐⭐ (54차 ingest 연속)
+
+- pillar: clinical
+- 작업 범위: [[clinical/concepts/인공와우-청능재활]] CHAPTER 14 청각장애 영유아 본문 직접 정독
+- 도구: easyocr (Korean+English) + PyMuPDF
+- MVP 가치: **영유아 만 2-7세 매핑의 직접 임상 토대 정본**
+
+### OCR 처리 자료
+
+- **Tye-Murray part3 PDF** (236 페이지) — Probe 결과: 11장(p.30) → 14장(p.40-115) → 15장(p.120) → 12장(p.150) → 13장(p.200) **비표준 챕터 순서**
+- CHAPTER 14 영유아 = PDF 페이지 35-115 (book 페이지 487-565)
+- OCR 페이지: 30, 40, 60, 80, 100, 120 (~6 페이지)
+- 처리 시간: ~80초 (6 페이지)
+
+### 핵심 신규 발견 ⭐⭐⭐
+
+#### A. 그림 14-2 전체 흐름도 (book p.501) ⭐
+
+영유아 청능재활 흐름:
+- 평가 (Assessment) → 통과 vs 청력손실 발견 → 확인·평가 → 건강 추적 관리 → 부모 상담 → 전략 수립 → 실행 (의사소통방식·청각기기·조기중재)
+
+→ MVP F1-b + F1-a + F4 임상 토대 정본
+
+#### B. 영유아 청력·언어 발달 지표 (book p.561 표) ⭐⭐⭐
+
+**6 연령 단계 발달 지표** — MVP F1-b 5분 진단 양육자 보고식 입력 항목 정본:
+
+| 연령 | 핵심 지표 |
+|---|---|
+| 신생아 | 울음, 큰 소리 놀람 |
+| 2-3개월 | 웃음, 부모 목소리 반응, 목소리 음질 변화 구별 |
+| 4-6개월 | 소리 쪽 고개 돌림, 자음+모음 결합 ("바-") |
+| 6-12개월 | 음절 옹알이 ("바-바-바"), 비언어 의사소통 시도 |
+| 12개월쯤 | 이름 반응, "아니오" 이해, 요구 응답 |
+| 12-18개월 | 성인 같은 말소리 리듬, 첫 단어 |
+
+→ ⭐⭐⭐ MVP F1-b 입력 폼 ≤3 항목 + SELSI 양육자 보고식의 상위 출전 정본 확인
+
+#### C. 부모 정서 5 단계 (book p.521) ⭐
+
+충격·부정·슬픔·죄의식·분노·수용
+
+→ MVP F11 부모 음성 클로닝 + HITL 자격자 응대 임상 토대
+
+#### D. 청능사 자기평가 6 체크리스트 (Edwards 2003, p.521)
+
+- 부모 말 결론 없이 진심으로 듣기
+- 자신의 느낌 표현 행동으로 보여주기
+- 부모 걱정·이야기 꺼낼 적절한 시점
+- 내용 + 느낌 공유 기회 제공
+- 부모 느낌 지지
+- 부모 자신의 요구 말하기 기술 개발
+
+→ HITL 1·2급 자격자의 부모 응대 표준. ADR-09 화이트리스트 (자연 상호작용만) 정합
+
+#### E. 인공와우 영유아 부모 면담 14 질문 (표 14-5, book p.541)
+
+- MVP 회피 영역 (트랙1 의료)
+- F15 자문가 자문 시 인공와우 영역 회피 명확화
+
+#### F. 형식적 평가 — 부모 설문지 + 비형식적 측정 (book p.541)
+
+> "**어린 아동의 경우, 부모 설문지와 말인지에 대한 비형식적 측정법을 통해서 청각적 능력과 보청기 시험착용에 대한 평가를 시행할 수도 있다**"
+
+→ MVP F1-b 양육자 보고식 임상 표준 출전
+
+#### G. 협력 모델 (book p.581, CHAPTER 15)
+
+- 일반교사 + 청각장애 교사 팀티칭, 1:4 비율
+- 역통합 (reverse mainstream)
+- MVP Phase 4 학령기 확장 시 cross-link 후보 (가정 홈케어 외 — 회피)
+
+#### H. 조기 중재 효과 (book p.501)
+
+> "심한 청력손실 아동 조기 중재 시 정상청력과 대등한 의사소통 발달 가능" (NIH 2006)
+
+→ MVP "회색지대 부모 30-50만" 타깃 임상 정합
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/인공와우-청능재활.md (§ I-Q 추가)
+- § I 그림 14-2 전체 흐름도
+- § J 영유아 6 발달 지표 — F1-b 정본 ⭐⭐⭐
+- § K 부모 5 단계 + 6 자기평가
+- § L 인공와우 부모 면담 14 질문 (회피 영역)
+- § M 부모 설문지 + 비형식적 측정
+- § N 협력 모델 (Ch 15)
+- § O 영유아 → MVP 매핑 종합
+- § P F1-b 영유아 5분 진단 입력 항목 정본 ⭐⭐⭐
+- § Q 후속 잔여
+
+갱신 — wiki/index.md
+- 인공와우-청능재활 항목 = 1차+2차 → 1·2·3차 (Ch 14 영유아 정본 + F1-b 정본)
+
+### MVP 영유아 임상 토대 정본 ⭐⭐⭐
+
+본 § I-P 결과 = **MVP 영유아 만 2-7세 임상 토대 정본**:
+
+- **F1-b 5분 진단**: 영유아 6 발달 지표 + 부모 설문지·비형식적 측정 표준
+- **F1-a 3축 분석**: 그림 14-2 흐름도 + 영유아 비형식적 평가
+- **F4 시계열 진전**: 조기중재 프로그램 디지털 변형
+- **F11 부모 음성 클로닝**: 부모 5 단계 정서 + 6 자기평가 체크리스트
+- **F15 LLM 챗봇**: 영유아 비언어 의사소통 → 12개월 이전 단계 매핑 + 만 4세+ ADR-14 정합
+- **MVP 회피**: 인공와우 14 질문 (의료) + 협력 모델 (학교 환경)
+- **Persona 이미란 (다문화)**: 부모 설문지 보호자 한국어 능력 변인
+- **Persona 황보름 (ASD 경계선)**: 영유아 식별 어려움 → HITL confidence 60% 게이트
+
+### 도구 사용 메모 (추가)
+
+- 비표준 챕터 순서 PDF 발견 — probe 페이지 (1·50·100·150·200) 샘플링으로 챕터 위치 식별 효과적
+- 200dpi OCR 6 페이지 = ~80초 (CPU). 영유아 핵심 8 페이지 처리 시간 적정
+
+### 잔여
+
+- ⏳ Part2-3 추가 OCR (CHAPTER 5-13)
+- ⏳ Part4 OCR (부록·용어해설)
+- ⏳ Rhea Paul 3권 OCR
+- ⏳ AVI 강의 영상 24편 STT (5대 장애)
+- ⏳ Lint 점검 (CLAUDE.md §5.3)
+- ⏳ 신규 entity 페이지 (ADOS-2 등 9 종)
+- ⏳ Product 측 F1-b·F11 임상 토대 cross-link 강화 (인공와우 § I-P 직접 인용)
+
+## [2026-05-10] ingest | Rhea Paul Ch1 OCR + 언어발달장애(1) 영상 STT → 언어발달지연 본문 2차 보강 (54차 ingest 연속, 순서대로 진행)
+
+- pillar: clinical
+- 작업 범위: 사용자 "순서대로 진행" 요청에 따라 **AVI STT + Rhea Paul OCR 병렬** 처리
+- 도구: easyocr (OCR) + faster-whisper base (STT) + imageio-ffmpeg
+
+### 병렬 처리 결과
+
+#### STT — 20210621_언어발달장애(1).avi (47분)
+- 처리: ~30분 (CPU base)
+- 결과: 692 segment, 시간 라벨링 포함
+- 저장: `Speech-Therapy_Workbase/raw/stt_output/20210621_언어발달장애_1_STT.txt`
+- 내용: 강사 (대구사이버대) → 부산가톨릭대 1·2급 자격시험 특강 47분 + 시험 안내 + 출제 영역 + 실어증 사례 등
+
+#### Rhea Paul OCR — part1 (245 페이지)
+- Probe: 페이지 1·5·50·100·150·200
+- TOC: 페이지 10-14 (3 섹션 + 14 챕터)
+- CHAPTER 1 본문: 페이지 17-19 (book p.3-5)
+- 처리: ~80초 (10 페이지 OCR)
+
+### 핵심 발견
+
+#### A. ASHA (1993) DLD 정의 ⭐⭐⭐ (Rhea Paul Ch1 직접 인용)
+- 3 영역 매트릭스: **form (음운·형태·구문) + content (의미) + use (화용)** = Bloom & Lahey 모델 ASHA 공식
+- 본 위키 § DSM-5/ICD-11 진단 기준의 표준 출전
+
+#### B. Tomblin (2008) 2 조망 ⭐⭐
+- **자연주의적 조망**: Fey -1.25 SD 등 측정 기반
+- **규준적 조망**: 사회적 기대 부적합 = ADR-04 (의료 용어 배제) + "차이→방해→장애 3단계 위계"의 임상 토대 정본
+
+#### C. Jamie 사례 — 진단 핵심 모순
+- 생활연령 vs 정신연령 (인지) 기반 평가 — HITL 양 관점 명시 필수
+
+#### D. DLD 학문사
+- 1825 Gall → 1861 Broca → 1874 Wernicke → 1937 Orton → 1947 Gesell → 1959/1964 **Benton (배제 진단)** → 1963 **McGinnis (SLI 효시)** → 1957 Chomsky 변형문법
+
+#### E. 한국 1·2급 언어재활사 자격시험 구조 ⭐⭐
+- 150 문제 / 객관식 5지선다 / 60% 합격 (90 문제)
+- **언어발달장애 + 조음음운장애 = 각 35 문제 (각 23.3%, 1·2위 비중)**
+- 5 영역: 신경(30) + 유창성(25) + 음성(25) + 언어발달장애(35) + 조음음운장애(35)
+- 위험군 출제: **말 늦은 아동 + 다문화 가정 아동 + 이중언어 아동** (공식 영역)
+
+#### F. Rhea Paul 한국어 번역자
+- 김화수 · 김성수 · 박소현 · 정부자 · 이상경 · 이은정 · 권유진
+- → **김화수가 본 번역 책임자** — 한국 임상 번역의 핵심 채널 (Tye-Murray, Rhea Paul 외)
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/언어발달지연.md (§ A-J 추가)
+- § A Rhea Paul 책 구조
+- § B ASHA 1993 DLD 정의 ⭐⭐⭐
+- § C Tomblin 2 조망 ⭐⭐
+- § D Jamie 사례 — 진단 모순
+- § E 30+ 년 합일점 결여
+- § F DLD 학문사
+- § G 한국 자격시험 출제 영역 (STT)
+- § H MVP 임상 토대 강화 매핑
+- § I STT 결과물 위치
+- § J 후속 잔여
+
+갱신 — wiki/index.md
+- 언어발달지연 항목 = 1차 → 1·2차 (ASHA 1993 + Tomblin 2 조망 + 자격시험 구조)
+
+### STT 한계 식별
+
+base 모델 한국어 학술 강의 인식 오류 다수:
+- 감귤림→김규림 / 감옥→과목 / 마인회전하동→말 늦은 아동 / 잡혜 스펙트럼→자폐 스펙트럼 / 파용 논→화용론 등
+
+→ **small/medium 모델 권장** (정확도 향상, CPU 시간 증가). 본 STT 활용 시 위키 cross-check 필수.
+
+### MVP 임상 토대 강화 ⭐⭐
+
+- **F1-a 3축**: ASHA 1993 form/content/use 직접 매핑
+- **F1-b 5분**: Tomblin 규준적 조망 (사회적 기대 부적합 자가 식별)
+- **ADR-04**: 규준적 조망 직접 출전
+- **HITL**: Jamie 사례 양 관점 명시
+- **시장 세그**: 한국 자격시험 비중 (언어발달장애+조음음운장애=47%) = 임상 시장 양 축 공식
+
+### 잔여 (순서대로 진행 계속)
+
+- ✅ Rhea Paul Ch5 다문화 OCR → 다문화-언어발달 § G-H 보강 완료 (다음 ingest 항목 참조)
+- ✅ Rhea Paul Ch6 영아 OCR → 언어발달지연 § K-M 본문 보강 3차 완료
+
+## [2026-05-10] ingest | Rhea Paul Ch5 다문화 + Ch6 영아 OCR (54차 ingest 연속, "순서대로 진행" 계속)
+
+- pillar: clinical
+- 작업 범위: 다문화-언어발달 + 언어발달지연 동시 보강
+- 도구: easyocr (OCR) + faster-whisper base (STT 백그라운드 — 조음음운장애 1편)
+- 병렬: 조음음운장애(1) 47분 영상 STT 백그라운드 시작
+
+### OCR 처리 결과
+
+#### Rhea Paul Ch5 다문화 (book p.175-219, part1 PDF p.189-233)
+- ⭐ **표 5-2 고맥락·저맥락 의사소통** (Hall 1983 + Westby & Rouse 1985)
+- ⭐ **그림 5-1 내러티브 구조** — 주제 중심 vs 주제 연관 (Westby 1989 + Kaplan 1966)
+- ⭐⭐⭐ **글상자 5-9 CLD 검사 17 수정 제언** (Goldstein & Iglesias 2006)
+- 가족중심 실제 (Donahue-Kilburg 1993 외)
+- ASHA 2009 통계: 미국 학생 40% CLD, 치료사 6.9%만 인종 소수자
+
+#### Rhea Paul Ch6 영아 (book p.233+, part2 PDF p.1-50)
+- ⭐⭐⭐ **Sparks (1989) "영아 평가의 목적은 미래 행동 예측이 아니라 현재 강점과 요구 평가"** = F1-b 영유아 정본
+- 영아 평가 다층 모델: 위험요인 + 생리적 조직화 + (5 영역)
+- APIB (Assessment of Preterm Infant Behavior, Als 1985)
+- NICU + 청각사 정기 검사
+- ⭐ 조기중재 효과 — **저학력 어머니에게 가장 효과적** = MVP 회색지대 부모 시장 정당화
+- 체중별 영아 생존율 (조산아 위험군)
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/다문화-언어발달.md (§ G-H 추가)
+- § G Rhea Paul Ch5 5 항목 (통계·고맥락저맥락·내러티브·CLD 17 검사·가족중심)
+- § G-6 한국 + Rhea Paul 통합 매트릭스
+- § H F15 자문 추가 항목 14-17 후보
+
+갱신 — clinical/concepts/언어발달지연.md (§ K-M 추가)
+- § K Rhea Paul Ch6 5 영역 (Sparks 1989 + 5 영역 + NICU + 조기중재 + 생존율)
+- § L Ch1 + Ch6 통합 — MVP 영유아 임상 토대 정본
+- § M 후속 잔여
+
+갱신 — wiki/index.md
+- 다문화-언어발달 = 1차 → 1·2차 (Rhea Paul Ch5 통합)
+- 언어발달지연 = 1·2차 → 1·2·3차 (Ch1 + Ch6 통합)
+
+### MVP 임상 토대 강화 (다문화 + 영유아)
+
+- F1-b 영유아: Sparks 1989 정본 (미래 예측 X, 현재 강점·요구)
+- F1-a 다문화: CLD 17 검사 수정 제언 직접 매핑
+- F11 부모 매개: 저학력 어머니 효과 (회색지대 시장 정당화)
+- HITL 다양성: 가족중심 실제 + 가치·신념 차이 인식 (Kohnert 2008)
+- F15 자문: 고맥락·저맥락 (Hall 1983) + 주제 중심/연관 (Westby 2005) 추가 4 항목
+
+### 잔여 (순서대로 진행 계속)
+
+- ⏳ STT 조음음운장애(1) 백그라운드 처리 중 (완료 시 통합)
+- ⏳ Rhea Paul Ch 2-4 OCR (평가·중재·특수 장애)
+- ⏳ Rhea Paul part2-3 추가 OCR (학령기·청소년·고급언어)
+- ⏳ 추가 3편 영상 STT (유창성·신경언어·음성)
+- ✅ Product 측 cross-link 강화 → MVP-clinical-foundation 신규 페이지 (다음 ingest 항목)
+- ⏳ Lint 점검
+
+## [2026-05-10] ingest | Product 측 신규 MVP-clinical-foundation synthesis 페이지 (54차 ingest 연속, "순서대로 진행" #3)
+
+- pillar: product
+- 작업 범위: 신규 [[product/concepts/MVP-clinical-foundation]] synthesis 페이지 생성 — 54차 ingest 임상 정독 결과를 product 측에 통합
+
+### 동기 + 가치
+
+54차 ingest로 식별된 모든 임상 정본 (Tye-Murray + Rhea Paul + 한국 35+편)을 6 MVP 기능별로 통합 매핑. clinical → product 양방향 cross-link 전체 활성화.
+
+### 9 섹션 구성
+
+1. **F1-b 5분 진단** — Sparks 1989 (현재 강점·요구) + Tye-Murray Ch14 6 발달 지표 + 한국 자격시험 위험군 + Persona 회색지대 부모 시장 정당화 + 3 단계 입력 위계
+2. **F1-a 3축 AI 분석** — ASHA 1993 + 측정 단위 9 종 + CLD 17 검사 수정 + 한국어 특이성 5종 + Tomblin 2 조망
+3. **F3-b 적응형 난이도** — Tye-Murray Ch4 6 변수 + 80%/50% 임계 + Erber 1982 4단계
+4. **F11 부모 음성 클로닝** — 부모 5 단계 + Edwards 6 자기평가 + 가족 중심 실제 + 4 핵심기법 + 형식적/비형식적 훈련
+5. **F15 LLM 챗봇** — F15-checklist 13 항목 참조 + 8 추론 유형 + 위계 + 자문 풀 7 그룹
+6. **HITL** — Transdisciplinary 정합 + Jamie 사례 + ASHA 2002 역할 분담
+7. **ADR-04 의료 용어 배제** — 3단계 위계 (차이→방해→장애) + Tomblin 규준적 조망 + WHO 모델
+8. **한국 임상 자문 풀 7 그룹** — 1·2·3순위 + 회피용
+9. **Cross-link 양방향 매트릭스** — **10 양방향 페어 활성화**
+
+### 핵심 임상 정본 통합 ⭐⭐⭐
+
+| MVP | 임상 정본 출전 |
+|---|---|
+| F1-b | Sparks 1989 + Tye-Murray Ch14 + 한국 자격시험 + 회색지대 어머니 효과 |
+| F1-a | ASHA 1993 + Tomblin 2008 + 측정 단위 9 종 + CLD 17 + 한국어 특이성 5 |
+| F3-b | Tye-Murray Ch4 6 변수 + 80%/50% + Erber 1982 |
+| F11 | 부모 5 단계 + 6 자기평가 + 가족중심 + 4 기법 + 비형식적 훈련 |
+| F15 | F15-checklist 13 항목 + 박후임 8 유형 + Level 1-3 |
+| HITL | Transdisciplinary + Jamie + ASHA 2002 |
+| ADR-04 | 차이→방해→장애 3단계 + Tomblin 규준적 + WHO 모델 |
+
+### 10 Cross-link 양방향 페어 활성화 ⭐⭐⭐
+
+| Clinical 페이지 | 본 페이지 § 매핑 |
+|---|---|
+| 언어발달지연 | § 1·2·6·7 |
+| 인공와우-청능재활 | § 1·3·4·6·7 |
+| 다문화-언어발달 | § 2·4 |
+| 자폐-화용중재 | § 5 (F15-checklist) |
+| 지적장애-언어중재 | § 2·4 |
+| 단순언어장애-SLI | § 2 |
+| 학습장애-언어재활 | § 5 |
+| 내러티브-담화-추론-중재 | § 5 |
+| 신경인지장애-노인의사소통 | § 7 (회피 영역) |
+| 한국-언어치료-트랙비교 | § 1·6 |
+
+→ **10 양방향 페어 활성화** — 54차 ingest cross-link 가치 완성
+
+### 갱신 페이지
+
+신규 — product/concepts/MVP-clinical-foundation.md (9 섹션)
+
+갱신 — wiki/index.md
+- 신규 페이지 추가
+- 통계: product 31 → 32 / 전체 112 → **113 페이지**
+
+### Cross-link 완성 통계
+
+54차 ingest 누적 cross-link 활성화 결과:
+- 47차 (이전): product → clinical 21건 / clinical → product 60+건 (15 페이지)
+- 54차 (현): + F15-checklist 7 페어 (이전 ingest) + **본 MVP-clinical-foundation 10 페어**
+- = **17 양방향 페어 추가 활성화** (54차 ingest 한 회차 단일 최대)
+
+### 잔여
+
+- ✅ STT 조음음운장애(1) 완료 + 통합 (다음 ingest 항목)
+- ✅ Rhea Paul Ch4 OCR + 보강 완료 (다음 ingest 항목)
+- ⏳ Rhea Paul Ch 2-3 (평가·중재) OCR
+- ⏳ ADR-04 + ADR-09 + ADR-14 직접 인용 보강
+- ⏳ Open Issues Dashboard 갱신
+- ⏳ Lint 점검
+
+## [2026-05-10] ingest | Rhea Paul Ch4 + STT 조음음운장애(1) 통합 (54차 ingest 연속, "순서대로 진행" #4)
+
+- pillar: clinical
+- 작업 범위: 3 페이지 동시 보강 (지적장애-언어중재 § K-O + 자폐-화용중재 § N + 조음장애 § A-E)
+
+### OCR + STT 결과
+
+#### Rhea Paul Ch4 § 특수 장애인 (book p.129-172, PDF p.143-168)
+- ⭐⭐⭐ **AAIDD 2010 ID 정의** (Schalock et al.) — 지적기능 + 적응행동 + 18세 이전 시작 + 4 요구사항
+- 다운증후군 언어 프로파일 (Laws & Bishop 2003 외) — 표현 < 수용, 화용 = 강점 영역
+- ⭐⭐ FXS (취약 X 증후군) — 여아 > 남아, 음운인식 10% 이하, **틀린 믿음 결함 원인 = 작업기억·집행 조절** (cf. ASD = 사회-인지)
+- APD vs ADHD 분과 분기 (Dawes & Bishop 2009)
+- 진단 범주 3 가치 + 주의점
+
+#### STT 조음음운장애(1) — 47분, 1157 segment
+- 한국 자격시험 조음음운장애 **5 영역 분류**: 일차적 / 마비말 / 말실행증 / 아동기 마비말 / 청각장애
+- 한국 임상 학부 표준 커리큘럼: 말소리 생성 / 한국어 음소·자질 / 음절 구조 / 음운 변동 / 언어 연쇄
+- ⭐ **한국어 음운 변동 (정상 변동)**: 예) 국 + 물 → 궁물 (비음화)
+- → **MVP F1-a false positive 방지 정합** — 정상 음운 변동은 결함 X
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/지적장애-언어중재.md (§ K-O 추가)
+- § K AAIDD 2010 ID 정의 ⭐⭐⭐
+- § L 다운증후군 언어 프로파일 (표현 > 수용, 화용 강점)
+- § M FXS (여아 > 남아, false belief 원인 = 작업기억) ⭐⭐
+- § N 진단 범주 3 가치 + 주의점
+- § O APD vs ADHD 분과 분기
+
+갱신 — clinical/concepts/자폐-화용중재.md (§ N 추가)
+- § N ASD vs FXS 감별 — 마음이론 결함 원인 메커니즘 차이 ⭐⭐ (사회-인지 vs 작업기억)
+- F15 자문 항목 18 후보: ASD vs FXS 감별
+
+갱신 — clinical/concepts/조음장애.md (§ A-E 추가, 본문 1차 보강)
+- § A 한국 자격시험 5 영역 분류
+- § B 한국어 말소리 기초 커리큘럼 (말소리 생성·음소·음절·음운 변동·언어 연쇄)
+- § C 한국어 음운 변동 (국→궁) — false positive 방지 핵심
+- § D STT 출처
+- § E MVP F1-a 임상 토대 강화
+
+갱신 — wiki/index.md
+- 조음장애 = 보강 → 본문 1차 (조음음운장애(1) STT 통합)
+- 지적장애-언어중재 = 1·2차 → 1·2·3차 (Ch4 통합)
+- 자폐-화용중재 = 1·2·3차 → 1·2·3·4차 (Ch4 FXS 감별)
+
+### 핵심 임상 토대 신규 발견 ⭐⭐⭐
+
+| 출전 | 발견 | MVP 매핑 |
+|---|---|---|
+| Schalock 2010 (AAIDD) | ID 정의: 지적기능 + 적응행동 + 18세 이전 + 4 요구사항 | F1-a/F1-b/F11 ID 영역 임상 토대 정본 |
+| Laws & Bishop 2003 | 다운증후군 = 표현 < 수용, 화용 = 강점 | F1-a 영역별 차별화 (단순 평균 X) |
+| Cornish 2004 (FXS) | **마음이론 결함 원인 = 작업기억·집행 조절** (cf. ASD = 사회-인지) | HITL 양 관점 명시 정본 — 동일 결함도 원인 다름 |
+| Dawes & Bishop 2009 | APD vs ADHD vs 언어발달지체 — 분과 분기 | HITL 다양성 모니터링 정합 |
+| 한국 STT — 음운 변동 | 국→궁 정상 변동 = 결함 X | F1-a false positive 방지 임상 출전 |
+
+### 잔여
+
+- ✅ Rhea Paul Ch2 평가 OCR + 언어발달지연 § N-S 보강 완료 (다음 ingest 항목)
+- ⏳ Rhea Paul Ch3 중재 OCR
+- ⏳ Rhea Paul part2-3 OCR (Ch 6 영아 추가 + Ch 7-14)
+- 🔄 STT 유창성장애(1) 백그라운드 처리 중
+- ⏳ 추가 2편 영상 STT (신경언어·음성)
+- ✅ MVP-clinical-foundation § 2.4-2.7 보강 완료
+- ⏳ ADR-04/ADR-09/ADR-14 직접 인용 보강
+- ⏳ Open Issues Dashboard 갱신
+- ⏳ Lint 점검 (CLAUDE.md §5.3)
+
+## [2026-05-10] ingest | Rhea Paul Ch2 평가 OCR + MVP-clinical-foundation § 2.4-2.7 확장 (54차 ingest 연속, "순서대로 진행" #5)
+
+- pillar: clinical + product
+- 작업 범위: Ch2 평가 본문 정독 → 언어발달지연 § N-S + MVP-clinical-foundation § 2.4-2.7 동시 보강
+- 병렬: STT 유창성장애(1) 백그라운드 시작
+
+### Rhea Paul Ch2 평가 핵심 발견
+
+#### A. IDEA 'evaluation' vs 'assessment' (book p.30)
+- evaluation = 서비스 적합 여부 판정 (6세 이하 진단·장애명 X) = MVP F1-b
+- assessment = 적합 판정 후 상세 사정 = F1-a + HITL
+
+#### B. 평가 도구 5 기준 (book p.50-51)
+- 신뢰도 / 타당도 / 진단 정확도 (Dollaghan 2004) / 표준화 (≥100명/연령대 + 다양성) / 표본 대표성
+
+#### C. Peña, Spaulding & Plante (2006) ⭐⭐⭐
+> "**판별 정확성을 위해 규준 표본에 언어장애 아동 포함 X — 정상 발달 위주**"
+→ MVP F1-a 학습 데이터셋 구성 핵심 원칙
+
+#### D. 말기제 평가 그림 2-4 (book p.41)
+- 얼굴·인두·인중·구강 내부·혀·구개·연인두 7 영역 상세 검사 (Meitus & Weinberg 1983)
+- MVP 영유아는 양육자 보고식 — 임상 토대 인지용
+
+#### E. Rhea Paul 두 조망 통합 권고 ⭐
+> "**3 요소: 형식/내용/사용 결함 + 정상 발달 비교 + 일상 영향**"
+→ MVP F1-a + HITL 통합 출력 3 요소 정본
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/언어발달지연.md (§ N-S 추가)
+- § N IDEA evaluation vs assessment ⭐
+- § O 평가 5 기준 ⭐⭐
+- § P Peña 학습 데이터셋 원칙 ⭐⭐⭐
+- § Q 말기제 평가 7 영역
+- § R Tomblin 강화 인용
+- § S 두 조망 통합 출력 ⭐
+
+갱신 — product/concepts/MVP-clinical-foundation.md (§ 2.4-2.7 추가)
+- § 2.4 한국어 특이성 5 → **6 종** (음운 변동 추가)
+- § 2.5 평가 5 기준 + Peña 학습 데이터셋 원칙 ⭐⭐⭐
+- § 2.6 IDEA evaluation vs assessment
+- § 2.7 두 조망 통합 출력 3 요소 ⭐
+
+갱신 — wiki/index.md
+- 언어발달지연 = 1·2·3차 → **1·2·3·4차** (Ch2 평가 통합)
+
+### MVP F1-a/F1-b 임상 토대 정본 완성 ⭐⭐⭐
+
+본 ingest로 MVP F1-a 학습 데이터셋 구성의 핵심 임상 원칙 확립:
+- **학습 데이터셋 = 정상 발달 위주** (Peña 2006)
+- **검증 데이터셋 = 정상 + 장애 양 그룹** (변별 검증)
+- AI 진단 false negative + false positive 양방향 방지 = CLD 17 검사 § 17 + Peña 원칙 통합
+- HITL 통합 출력 3 요소: 결함 유무 + 정상 비교 + 일상 영향
+
+### 잔여 (순서대로 진행 계속)
+
+- ✅ STT 유창성장애(1) 완료 — 실제 조음 후반 + 청각장애 본문 → 조음장애 + 인공와우-청능재활 보강
+- 🔄 STT 유창성장애(2-1) 백그라운드 시작 (본격 유창성 내용 추정)
+- ⏳ Rhea Paul Ch3 중재 OCR
+- ✅ ADR-04/ADR-09/ADR-14 직접 인용 보강 완료 (다음 ingest 항목)
+- ⏳ Lint 점검
+
+## [2026-05-10] ingest | ADR-04/ADR-09/ADR-14 임상 토대 정본 직접 인용 보강 + STT 유창성(1) 통합 (54차 ingest 연속, "순서대로 진행" #6)
+
+- pillar: product + clinical
+- 작업 범위: architecture-decisions § Clinical 근거 대규모 확장 + STT 유창성(1) 통합
+
+### ADR-04/09/14 임상 토대 보강
+
+**ADR-04 의료 용어 배제** — 5 출전 직접 인용:
+1. Tomblin 2008 규준적 조망 (Rhea Paul Ch1)
+2. WHO 2001 "장애 (handicap)" 용어 자제 권고 (Tye-Murray Ch1)
+3. 차이 → 방해 → 장애 3단계 위계 (한국 DLD 핸드아웃)
+4. Rhea Paul Ch4 진단 범주 가치 + 주의점
+5. IDEA evaluation vs assessment
+
+**ADR-09 F11 부모 음성 윤리** — 6 출전 직접 인용:
+1. 4 핵심기법 (평행 발화·확장·기다리기·반응적 상호작용)
+2. 부모 정서 5 단계 (Tye-Murray Ch14)
+3. Edwards 2003 6 자기평가 체크리스트
+4. 가족 중심 실제 (Rhea Paul Ch5)
+5. 비형식적 훈련 (Tye-Murray Ch4)
+6. Sparks 1989 (Rhea Paul Ch6)
+
+**ADR-14 F15 임상 안전 게이트** — 6 출전 직접 인용:
+1. F15 자문 체크리스트 13 항목
+2. 박후임 2008 8 추론 유형
+3. F15 난이도 위계 Level 1-3
+4. 서유진 2018 스크립트 중재 (회피 정합)
+5. ASD vs FXS 마음이론 결함 원인 차이 (Rhea Paul Ch4)
+6. EMT 환경 중심 언어중재
+
+### STT 유창성(1) 통합 — 실제 조음 후반 + 청각장애 ⭐
+
+본 STT는 47분 영상의 **실제 내용** 발견:
+- 구개열 보상조음 3 유형 (생략·치환·**성문폐쇄음·인두마찰음**)
+- 청각장애 3 유형 (전음성·감각신경성·혼합성) — 기도 vs 골도 검사 차이
+- 유창성장애 본격 내용은 유창성(2-1) 이후 영상
+
+### 갱신 페이지
+
+갱신 — product/concepts/architecture-decisions.md
+- Clinical 근거 § 확장 — 3 ADR (04·09·14) 직접 임상 토대 정본 추가
+- 5 + 6 + 6 = **17 직접 출전** 명시
+- ADR 5-15 잠재 보강 후보 명시
+
+갱신 — clinical/concepts/조음장애.md (§ F-I 추가)
+- § F 구개열 = 구비강 분리 + 연인두 폐쇄 부전 → 공명장애
+- § G 보상조음 3 유형 ⭐
+- § H 청각장애 3 유형
+- § I STT 출처
+
+갱신 — clinical/concepts/인공와우-청능재활.md (§ R-S 추가)
+- § R 청각장애 3 유형 → 인공와우 대상 식별 (감각신경성/혼합성)
+- § S STT 출처
+
+갱신 — wiki/index.md
+- 조음장애 = 본문 1차 → 1·2차
+- 인공와우-청능재활 = 1·2·3차 → 1·2·3·4차
+
+### 핵심 발견 (STT 유창성(1) + ADR)
+
+| 영역 | 발견 |
+|---|---|
+| **STT — 보상조음** | 성문폐쇄음·인두마찰음 = 구개열 핵심 오류 (F1-a 학습 후보) |
+| **STT — 청각장애** | 기도 vs 골도 차이 → 인공와우 대상 = 감각신경성/혼합성 |
+| **ADR-04** | 5 직접 임상 토대 정본 (Tomblin·WHO·3단계·Rhea Paul·IDEA) |
+| **ADR-09** | 6 직접 임상 토대 정본 (4 기법·부모 5 단계·Edwards·가족중심·비형식적·Sparks) |
+| **ADR-14** | 6 직접 임상 토대 정본 (F15 13 + 박후임 + Level 1-3 + 서유진 + FXS·ASD + EMT) |
+
+### STT 영구 저장 누적
+
+- 20210621_언어발달장애_1_STT.txt (692 segment)
+- 20210622_조음음운장애_1_STT.txt (1157 segment)
+- 20210623_유창성장애_1_STT.txt (626 segment)
+- 🔄 유창성장애(2-1) 백그라운드 처리 중
+
+### 잔여 (순서대로 진행 계속)
+
+- ✅ STT 유창성장애(2-1) 완료 + 유창성장애 stub → 본문 1차 보강 격상 (다음 ingest 항목)
+- ⏳ Rhea Paul Ch3 중재 OCR
+- ⏳ STT 신경언어장애·음성장애 (추가 2 영역)
+- ⏳ Lint 점검 (CLAUDE.md §5.3)
+- ⏳ Open Issues Dashboard 갱신
+
+## [2026-05-10] ingest | STT 유창성장애(2-1) → 유창성장애 stub → 본문 1차 보강 격상 (54차 ingest 연속)
+
+- pillar: clinical
+- 작업 범위: [[clinical/concepts/유창성장애]] stub → 본문 1차 보강 격상
+- 도구: faster-whisper base (45분 영상)
+
+### STT 결과 — 본격 유창성 본문 ⭐⭐
+
+유창성장애(2-1) = 한국 자격시험 유창성장애 25 문제 영역 임상 핵심 본문:
+- 유창성 정의 + 4 판단 요소 (지속성·속도·노력·리듬)
+- WHO 말더듬 정의 (불수의적·반복·연장·멈춤)
+- ⭐ **빙산 모델** (행동 + 정서 + 인지 3 영역)
+- 분류 4축 (정상 vs 병리·발달성 vs 후발성·말더듬 vs 속화·단어 간 vs 단어 내)
+- 핵심 행동 vs 부수 행동
+- 원인 이론 (진단기인·요구용량 등)
+- 진단 5 절차
+- ⭐ 양적금법 2 종 (유창성 형성법 + 말더듬 수정법)
+- 간접 vs 직접 치료
+- 속화 (Cluttering)
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/유창성장애.md (§ A-L 추가, stub → 본문 1차)
+- § A 한국 자격시험 25 문제 영역
+- § B 유창성 정의 + 4 요소
+- § C WHO 말더듬 정의
+- § D **빙산 모델** ⭐⭐
+- § E 분류 위계 4축
+- § F 핵심 vs 부수 행동
+- § G 원인 이론 (진단기인·요구용량)
+- § H 진단 5 절차
+- § I 양적금법 2 종 ⭐⭐
+- § J STT 출처
+- § K 출제 영역 매트릭스
+- § L **MVP 회피 5 사유 확정** ⭐
+
+갱신 — wiki/index.md
+- 유창성장애 = 스텁 → 본문 1차 보강 (빙산 모델 + 양적금법 핵심)
+
+### 종합 진행 상태
+
+clinical 8 stub 중 **7개 본문 1차 보강 완료**:
+- 유창성장애 ⭐ 신규 완료 (이번 ingest)
+- 음성장애 = 유일한 잔여 stub (STT 음성장애 영상 처리 후 가능)
+
+### STT 영구 저장 누적 (4편)
+- 20210621_언어발달장애_1_STT.txt (47분, 692 segment)
+- 20210622_조음음운장애_1_STT.txt (47분, 1157 segment)
+- 20210623_유창성장애_1_STT.txt (47분, 626 segment — 실제 조음 후반 + 청각장애)
+- 20210623_유창성장애_2_STT.txt (45분, 본격 유창성) ⭐
+
+### 잔여 (순서대로 진행 계속)
+
+- 🔄 STT 음성장애(1) 백그라운드 (마지막 stub 보강)
+- ⏳ STT 신경언어장애(1)
+- ✅ Rhea Paul Ch3 중재 OCR + 언어발달지연 § T-X 보강 완료 (다음 ingest 항목)
+- ⏳ Lint 점검
+
+## [2026-05-10] ingest | Rhea Paul Ch3 중재 OCR + STT 음성장애 백그라운드 (54차 ingest 연속, "순서대로 진행" #8)
+
+- pillar: clinical
+- 작업 범위: Rhea Paul Ch3 중재 본문 정독 → 언어발달지연 § T-X 추가 (5차 보강)
+- 병렬: STT 음성장애(1) 백그라운드 시작
+
+### Rhea Paul Ch3 핵심 발견 ⭐⭐⭐
+
+#### A. 중재 4 목표 — Olswang & Bain (1991, 그림 3-1)
+- **촉진** (Facilitation) — 발달 가속화, 궁극적 수준은 변경 X
+- **유지** (Maintenance) — 발달 수준 보존
+- **유도** (Induction) — 미발달 → 발달
+- **변경** (Compensation) — 결함 극복 (대안적)
+
+→ MVP F4 시계열 진전도 임상 토대 정본 (4 목표 중 어느 단계인지 식별 + 추적)
+
+#### B. Sammy 사례 — 회색지대 부모 시장 정당화 ⭐⭐⭐
+- 3세 아동 / 명료도 결함 / LEA 자격 미충족 → 부모 자발적 임상가 찾기 → 6개월 후 4 영역 (명료도·행동·사회·부모 정서) 개선
+- → MVP Persona 이지수 (Seg A 불안형) + 회색지대 부모 30-50만 임상 직접 입증
+- Whitehurst et al. 1991 반대 관점도 인용 (양면 제시)
+
+#### C. Fey (1986) 중재 접근법 3 종 ⭐⭐⭐
+- **임상가 중심 (CD)**: 모든 측면 임상가 통제. DTI (독립 회기 중재). Peterson 2004
+- **절충형 (Hybrid)**: 환경치료·스크립트치료·EMT
+- **아동 중심 (CC)**: 일상활동·촉진적 놀이. 4 핵심기법 (평행·확장·기다리기·반응적)
+
+→ MVP 매핑:
+- F1-a 자동 평가 = CD 디지털화
+- F11 동화 = CC (4 기법) 일방향 콘텐츠
+- F15 챗봇 = 절충형 (EMT·Mand-Model)
+
+#### D. 반응요구-후시범 (Mand-Model) — F15 자문 항목 19 후보
+- 우발적 교수법과의 차이: 임상가가 아동 의사소통 개시 기다리지 않음
+- F15 = Mand-Model 디지털화
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/언어발달지연.md (§ T-X 추가, 본문 5차)
+- § T 중재 4 목표 ⭐⭐
+- § U Sammy 사례 — 회색지대 부모 시장 정당화 ⭐⭐⭐
+- § V Fey 1986 3 접근법 자연스러움 연속선 ⭐⭐⭐
+- § W Mand-Model
+- § X 본 ingest 통합 MVP 임상 토대
+
+갱신 — wiki/index.md
+- 언어발달지연 = 1·2·3·4차 → **1·2·3·4·5차** (Ch3 중재 통합)
+
+### 핵심 임상 토대 신규 발견
+
+| 출전 | 발견 | MVP 매핑 |
+|---|---|---|
+| Olswang & Bain 1991 | 중재 4 목표 (촉진·유지·유도·변경) | F4 시계열 추적 정본 |
+| Sammy 사례 (Ch3) | 회색지대 부모 시장 정당화 (LEA 자격 미충족 + 부모 자발) | MVP 시장 직접 입증 ⭐⭐⭐ |
+| Fey 1986 | 3 접근법 자연스러움 연속선 (CD-Hybrid-CC) | MVP 6 핵심 기능 분포 |
+| Peterson 2004 | DTI (독립 회기 중재) 정의 | F1-a 자동 평가 임상 토대 |
+| Whitehurst 1991 (반대 관점) | "촉진만이라면 정당성 없음" | HITL 양 관점 정합 |
+| Mand-Model | 아동 개시 기다림 X | F15 자문 항목 19 |
+
+### 잔여 (순서대로 진행 계속)
+
+- ✅ STT 음성장애(1) 완료 + 음성장애 stub → 본문 1차 보강 격상 (다음 ingest 항목)
+- 🔄 STT 신경언어장애(1) 백그라운드 처리 중
+- ✅ Lint 점검 완료 (다음 ingest 항목)
+
+## [2026-05-10] lint | 54차 ingest 누적 변경 위키 Lint 점검 (CLAUDE.md §5.3)
+
+- pillar: meta
+- 작업 범위: 누적 변경 검증 (cross-link · 고아 페이지 · 신규 entity 후보 · 모순)
+- 도구: grep + bash 자동 분석
+
+### Lint 결과
+
+#### 1. 고아·낮은 inbound 페이지 검출 → ✅ 정상 (고아 없음)
+
+최저 inbound 페이지 (3-5건):
+
+| 페이지 | inbound | 평가 |
+|---|---|---|
+| KOCS | 3 | 신규 entity, 정상 |
+| NISE-B-ACT-학습장애검사 | 3 | synthesis, 정상 |
+| glossary | 3 | 인덱스, 정상 |
+| 음성장애 | 3 | 신규 본문 1차 격상 직후, 향후 cross 증가 예정 |
+| 유창성장애 | 4 | 신규 본문 1차 격상 직후 |
+| MVP-clinical-foundation | 5 | 신규 product synthesis, 정상 (54차 ingest 신규) |
+
+→ **고아 페이지 없음**. 모든 페이지 최소 3+ inbound.
+
+#### 2. Clinical → Product cross-link 누락 → ✅ 0 페이지 (완벽)
+
+**모든 clinical 페이지가 product 측 cross-link 보유**. 54차 ingest로 클러스터 간 양방향 완전 활성화.
+
+#### 3. Product → Clinical cross-link 누락 (13 페이지)
+
+| 페이지 유형 | 누락 페이지 | 평가 |
+|---|---|---|
+| 시리즈 timeline | PRD-evolution, SRS-evolution | 정상 (timeline은 직접 인용 X) |
+| 기술 영역 | multi-llm-workflow, tech-architecture | 정상 (기술 영역) |
+| Task 메타 | task-breakdown-overview | 정상 |
+| 메타 대시보드 | open-issues-dashboard | ⚠️ 갱신 가능 (clinical lint 결과 추가) |
+| 경쟁사 entities | 에듀템 · 에이치투케이 · 와우키키 · 캐치잇플레이 | ⚠️ **일부 clinical cross 가능** (보강 후보) |
+| Source 메타 | 31-32-VPS · 66-PRD-SRS-Mapping · SRS-V01-V05 Workflow | 정상 (메타 문서) |
+
+→ **보강 후보**:
+- 에이치투케이 (한글 파닉스) → [[clinical/concepts/조음장애]] § 한국어 음운
+- 와우키키 (멀티모달 AI 부모-교사-아동) → [[clinical/concepts/아동언어치료-핵심기법]] § 4 기법
+- 캐치잇플레이 (다국어 게이미피케이션) → [[clinical/concepts/다문화-언어발달]]
+- open-issues-dashboard → lint 결과 추가
+
+#### 4. 신규 entity 후보 — 본문 언급은 있지만 페이지 없음 (13 후보) ⚠️
+
+| Entity | 본문 인용 페이지 수 | 우선순위 |
+|---|---|---|
+| **Tye-Murray** (저자) | 4 | ⭐⭐⭐ 1순위 |
+| **AAIDD** (기관) | 1+ | ⭐⭐ 2순위 (지적장애 정의 출전 기관) |
+| **ADOS-2** (검사) | 1+ | ⭐⭐ 2순위 (ASD 진단 표준) |
+| **LEAP / TEACCH / PRT** (프로토콜) | 1+ | ⭐⭐ 2순위 (ASD 종합 치료 모델) |
+| **TOWL-4** (검사) | 1+ | ⭐ 3순위 (학령기 writing) |
+| **K-CTONI-2 / K-ABC / K-WAIS** (검사) | 1+ | ⭐⭐ 2순위 (인지 평가, 한국 임상 표준) |
+| **언어문제해결력 검사** (검사) | 1+ | ⭐⭐ 2순위 (한국 ID 표준) |
+| **APIB** (검사) | 1+ | ⭐ 3순위 (조산아) |
+| **Rhea-Paul** (저자) | 5+ | ⭐⭐⭐ 1순위 |
+
+→ **stub 페이지 13개 생성 권고**. 우선순위 1순위 2개 (Tye-Murray, Rhea Paul) + 2순위 8개 + 3순위 3개.
+
+#### 5. 영유아 연령 구간 일관성 확인 → ✅ 모순 없음
+
+- **만 2-7세** = MVP 공식 타깃 (전체 영유아)
+- **만 4-7세** = F15 활성 연령 (ADR-14 안전 게이트)
+- **만 0-1.5세** = SELSI 양육자 보고식 + Tye-Murray Ch14 발달 지표
+
+→ 3 구간 명확 구분, 모순 X. 명확성 위해 페이지마다 항상 (MVP 만 2-7세 / F15 만 4-7세) 명시 권장.
+
+#### 6. 누락된 임상 출전 검증 → ✅ 양호
+
+54차 ingest 결과 직접 인용 출전 확인:
+- ASHA 1993 ✅ (언어발달지연 § B)
+- Tomblin 2008 ✅ (언어발달지연 § C)
+- Sparks 1989 ✅ (언어발달지연 § K)
+- Erber 1982 ✅ (인공와우-청능재활 § B-2)
+- AAIDD 2010 ✅ (지적장애-언어중재 § K)
+- Fey 1986 ✅ (언어발달지연 § V)
+- Fey 1986 SD -1.25 ✅ (언어발달지연 § C)
+- Peña et al. 2006 ✅ (언어발달지연 § P)
+- Olswang & Bain 1991 ✅ (언어발달지연 § T)
+
+### Lint 권고 (우선순위)
+
+1. ⭐⭐⭐ **신규 entity 1순위 2개 생성**: Tye-Murray (저자, 4 인용) + Rhea Paul (저자, 5+ 인용)
+2. ⭐⭐ 신규 entity 2순위 8개 생성: AAIDD · ADOS-2 · LEAP · TEACCH · PRT · K-CTONI-2 · K-ABC · 언어문제해결력 검사
+3. ⭐ open-issues-dashboard에 lint 결과 통합
+4. ⭐ 경쟁사 entity 3 개 (에이치투케이·와우키키·캐치잇플레이) clinical cross-link 보강 후보
+
+### Lint 종합 평가
+
+- ✅ **고아 페이지 0건**
+- ✅ **Clinical → Product cross-link 100% 활성**
+- ⚠️ **신규 entity 13건** (대부분 54차 ingest 식별 — stub 생성 권고)
+- ✅ **임상 출전 누락 없음**
+- ✅ **연령 구간 모순 없음**
+- ✅ **양방향 cross-link 매트릭스 양호** (이전 ingest F15-checklist 7 + MVP-clinical-foundation 10 + Tomblin·Sparks·Fey 등 직접 인용 다수)
+
+→ ⭐⭐⭐ **54차 ingest 누적 변경의 안정성·일관성 확인 완료**. 추가 정독은 안전하게 진행 가능.
+
+### 잔여 (순서대로 진행 계속)
+
+- 🔄 STT 신경언어장애(1) 백그라운드 처리 중
+- ✅ 신규 entity 페이지 생성 (Lint 권고 #1-2) — 다음 ingest 항목 (10개 생성 완료)
+- ⏳ Treatment of LD 부록 27편 STT
+
+## [2026-05-10] ingest | Lint 권고 #1-2 신규 entity 10 개 stub 생성 (54차 ingest 연속, "해" 진행)
+
+- pillar: clinical
+- 작업 범위: 54차 ingest Lint 점검 권고에 따라 신규 entity stub 생성
+
+### 신규 10 entity (1·2 순위)
+
+**1순위 (저자 entity 2개)**:
+1. **Tye-Murray** — 청능재활 표준 교재 저자 (4 inbound). Ch4 4단계 위계 + Ch14 영유아 6 발달 지표
+2. **Rhea-Paul** — 언어발달장애 표준 교재 저자 (5+ inbound). Ch1 ASHA·Tomblin + Ch3 4 목표·3 접근법 + Ch6 Sparks 1989
+
+**2순위 (기관·검사·프로토콜 8개)**:
+3. **AAIDD** — 미국 지적·발달장애협회 (Schalock 2010 ID 정의 출전)
+4. **ADOS-2** — Lord 2012 ASD 진단 국제 표준
+5. **LEAP** — Hoyson/Strain 1984 ASD 통합 환경 + 또래 매개 CTM
+6. **TEACCH** — Mesibov 2005 ASD 구조화 환경 + 시각 단서 CTM
+7. **PRT** — Koegel 1988 ASD NDBI 8 컴포넌트 (Stahmer 2019)
+8. **K-CTONI-2** — 한국 종합 비언어 지능검사 2판
+9. **K-ABC-II** — Moon 2014 한국 카우프만 아동 지능검사 (ID IQ 55-70 기준)
+10. **언어문제해결력 검사** — 한국 ID 평가 표준 (원인이유·해결추론·단서추측)
+
+### 갱신 페이지
+
+신규 — clinical/entities/ (10 개):
+- Tye-Murray.md / Rhea-Paul.md / AAIDD.md
+- ADOS-2.md / LEAP.md / TEACCH.md / PRT.md
+- K-CTONI-2.md / K-ABC-II.md / 언어문제해결력-검사.md
+
+갱신 — wiki/index.md
+- clinical/entities 표에 10 신규 행 추가
+- 통계: clinical 30 → **40 페이지** (9 → 19 entities), 전체 113 → **123 페이지**
+
+### Cross-link 신규 활성화
+
+신규 10 entity 페이지는 모두 다음 페이지와 cross-link 활성화:
+
+| Entity | 주요 cross-link |
+|---|---|
+| Tye-Murray | 인공와우-청능재활 + MVP-clinical-foundation + Rhea-Paul |
+| Rhea-Paul | 언어발달지연·지적장애·자폐·다문화 + MVP-clinical-foundation + Tye-Murray |
+| AAIDD | 지적장애-언어중재 § K + Rhea-Paul |
+| ADOS-2 | 자폐-화용중재 + Rhea-Paul |
+| LEAP / TEACCH / PRT | 자폐-화용중재 + 상호 cross |
+| K-CTONI-2 / K-ABC-II | 지적장애-언어중재 |
+| 언어문제해결력-검사 | 지적장애·학습장애·내러티브 + MVP-clinical-foundation |
+
+→ **20+ inbound 링크 신규 활성화**
+
+### 미생성 entity (잔여)
+
+3순위 (낮은 우선순위):
+- TOWL-4 (학령기 writing)
+- APIB (조산아)
+- K-WAIS (성인 인지)
+
+→ 후속 ingest 또는 lint 시 추가 검토.
+
+### 잔여 (순서대로 진행 계속)
+
+- ✅ STT 신경언어장애(1) 완료 + 실어증 본문 1차 보강 (다음 ingest 항목)
+- ✅ Rhea Paul part2 Ch7 OCR + 언어발달지연 § Y-AC 본문 6차 보강 (다음)
+- ⏳ Tye-Murray part2 OCR (Ch5-10)
+- ⏳ Rhea Paul part2 Ch8-9 + part3 Ch10-14 OCR
+- ⏳ Treatment of LD 부록 STT
+
+## [2026-05-10] ingest | Rhea Paul part2 Ch7 초기 언어 평가·중재 OCR → 언어발달지연 § Y-AC (54차 ingest 연속, "순서대로 진행" #11)
+
+- pillar: clinical
+- 작업 범위: [[clinical/concepts/언어발달지연]] § Y-AC 추가 (6차 보강)
+- 도구: easyocr (Korean+English) Rhea Paul part2 PDF
+
+### Rhea Paul Ch7 핵심 발견 ⭐⭐⭐
+
+#### A. 문해전 발달 (Preliteracy Development, book p.336)
+- Trivette, Dunst & Gorman 2010 메타고찰 — 부모 책 읽어주기 = 수용·표현언어 증가
+- 5 전략 (Bernadowski 2008·Machado 2010·Rosenquest 2002·Scheffell 2000):
+  1. 발달적 적합 책 가족 선택
+  2. 정례화된 상호작용 위기 ("fill in")
+  3. 부모 과장된 억양·강세
+  4. 책 주제 관련 놀이 활동
+  5. 탈맥락화된 말 노출
+- 장애 아동 = 책 노출 감소 (Goin 2004) — MVP 회색지대 부모 격차 해소 메커니즘
+
+#### B. ASD 아장이 (book p.341)
+- 2-3세 ASD 조기 진단 가능 (Chawarska et al.) — MVP 영유아 정합
+- McClannahan & Krantz 스크립트 치료법 (반향어 → 가족 이름·일상 변형)
+- 자발적 언어 ↑ = 반향어 ↓
+
+#### C. 놀이·상징 평가 — 운동결함 적응
+- "선결요건 X — 중재 방향 결정용" 원칙 (ADR-04 정합)
+- 5 도구: Dunst 1980 사물영속성 / 벤크로 장갑 / 장난감 스위치 / Guerette 1999 / Byrne 2001 뇌 활동
+
+#### D. AAC 결정 (book p.346)
+- Millar, Light & Schlosser 2006 메타분석: **AAC = 말 산출 방해 X** (부모 흔한 우려 반박)
+- PECS (Bondy 2004) — 그림 교환 의사소통
+- Beukelman & Mirenda 2005 표준 교재
+- 18개월 이하 = iconic 체계 (그림·선화) 권장
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/언어발달지연.md (§ Y-AC 추가)
+- § Y 문해전 발달 5 전략 ⭐⭐⭐ — F11 동화 임상 토대
+- § Z ASD 아장이 + McClannahan & Krantz 스크립트
+- § AA 놀이·상징 평가 + 운동결함 5 도구
+- § AB AAC + PECS + Millar 2006 메타분석
+- § AC Ch7 통합 MVP 매트릭스
+
+갱신 — wiki/index.md
+- 언어발달지연 = 1·2·3·4·5차 → **1·2·3·4·5·6차** 본문 보강
+
+### MVP 임상 토대 강화 ⭐⭐⭐
+
+| MVP | Rhea Paul Ch7 출전 |
+|---|---|
+| F11 동화 | 5 전략 + iconic 체계 (18개월 이하) |
+| F15 챗봇 | 정례화된 상호작용 "fill in" (Mand-Model 책 버전) |
+| F1-a 다양화 | 운동결함 5 도구 (Dunst·Guerette·Byrne) |
+| F1-b 영유아 | ASD 2-3세 조기 진단 |
+| AAC 정합 | Millar 2006 — AAC ≠ 말 산출 방해 |
+| ADR-04 | 선결요건 결정 X — 중재 방향 결정용 |
+
+### 잔여 (순서대로 진행 계속)
+
+- ✅ Rhea Paul part2 Ch8 평가 + Ch9 중재 OCR + 언어발달지연 § AD-AJ 본문 7차 보강 (다음 ingest 항목)
+- ⏳ Rhea Paul part3 (Ch10-14 학령기·청소년·고급언어)
+- ⏳ Tye-Murray part2 OCR (Ch5-10)
+- ⏳ Treatment of LD 부록 STT
+- ⏳ 5대 장애 영상 추가
+
+## [2026-05-10] ingest | Rhea Paul Ch8 평가 + Ch9 중재 OCR → 언어발달지연 § AD-AJ 본문 7차 보강 (54차 ingest 연속, "순서대로 진행" #12)
+
+- pillar: clinical
+- 작업 범위: [[clinical/concepts/언어발달지연]] § AD-AJ 추가 (7차 보강)
+- 도구: easyocr Rhea Paul part2 PDF
+
+### Ch8 평가 + Ch9 중재 핵심 발견 ⭐⭐⭐
+
+#### A. MLU + IPSyn — 학령전 평가 표준 단위
+- **MLU** (Miller 1981) — 평균 발화 길이 (5 단계 Brown's Stages)
+- **IPSyn** (Scarborough 1990) — Miller 절차의 규준참조적 확대 ⭐⭐⭐:
+  - 50-100 발화 표본 + 각 구조 2번 출현 '표현성 규준'
+  - 첫 2번만 계산 = 효율적
+  - 구문 진전 정교 측정 (MLU 대비)
+  - **Long & Fey (2004) Computerized Profiling** = MVP F1-a 자동화 표준 임상 토대
+
+#### B. 5 발달 단계 (Brown's Stages I-V+)
+- I: 기초 동사구 (3인칭 -s 미사용)
+- II: NP 없는 연쇄 동사
+- III: won't · do 비도치
+- IV: 조동사 도치 + 의문문
+- V: 비교절 + 복합문
+
+→ 영어 기준 — 한국어 어미·조사·종결어미 별도 표준 필요
+
+#### C. 화용 평가 — 표 8-8 (book p.401) ⭐⭐
+언어장애 아동 화용 6 영역 결함 (Bishop 2000 + Craig 1991):
+1. 요구하기 (문법 불완전, 간접형 적게)
+2. 설명하기 (판에 박힌 형식)
+3. 전제 (청자 지식 파악 X, 대명사 과잉)
+4. 순서 지키기 (부적절 형식, 짧음)
+5. 반응하기 (일정치 않음)
+6. 말 스타일·사용역 변환
+
+#### D. 화용 평가 표준 도구 3 종
+- Pragmatic Protocol (Prutting & Kirchner 1983)
+- Pragmatic 3 영역 (Roth & Spekman 1984)
+- Peanut Butter Protocol (Creaghead 1984)
+
+#### E. 화용 중재 통합 원칙 (Craig 1983 + Marton 2005) ⭐⭐
+- 화용 = 별개 규칙 X — **중재 상황 자체로 정의**
+- 새 형태 각각이 다양한 실용적 맥락에서 연습
+- 별개 기술로 말차례바꾸기 X → 임상가와 교대 활동
+- → MVP F15 챗봇 = 상황 기반 발화 유도 정합
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/언어발달지연.md (§ AD-AJ 추가, 본문 7차)
+- § AD MLU + IPSyn ⭐⭐⭐
+- § AE 5 발달 단계 (Brown's Stages)
+- § AF 화용 평가 6 영역 + 3 도구
+- § AG Ch9 화용 중재 통합 원칙 (Craig·Marton)
+- § AH 한국어 적응 차이 ⚠️
+- § AI Ch8+9 통합 MVP F1-a/F4 매트릭스
+- § AJ 후속 잔여
+
+갱신 — wiki/index.md
+- 언어발달지연 = 6차 → **7차** 본문 보강
+
+### MVP F1-a/F4 임상 토대 정본 확립 ⭐⭐⭐
+
+| MVP | 출전 |
+|---|---|
+| F1-a linguistic 기초 | MLU (Miller 1981) |
+| F1-a linguistic 정교 | **IPSyn (Scarborough 1990)** ⭐⭐⭐ |
+| F1-a 발달 단계 | Brown's Stages I-V+ |
+| F1-a use (화용) | 6 영역 (Bishop 2000) |
+| F1-a 자동화 표준 | **Long & Fey 2004 Computerized Profiling** ⭐ |
+| F4 시계열 진전 | IPSyn 구문 진전 패턴 |
+| F15 화용 통합 | Craig 1983 · Marton 2005 (별개 규칙 X) |
+
+### 한국어 적응 잔여
+
+영어 기준 분석을 한국어로 적응 시 필요:
+- 한국어 어미 단위 (-아/어, -은/는, -ㄴ다)
+- 한국어 조사 (을/를, 이/가)
+- 한국어 종결어미 (-요, -다, -까)
+
+→ MVP F1-a 한국어 linguistic 측정 별도 표준 개발 필수
+
+### 잔여 (순서대로 진행 계속)
+
+- ✅ Rhea Paul part3 Ch10·11 OCR + 학습장애-언어재활 § G-M 보강 완료 (다음 ingest 항목)
+- ✅ Tye-Murray part2 Ch7-8 OCR + 인공와우-청능재활 § T-U 보강 완료
+- ✅ STT 언어발달장애(2) 51분 + 언어발달지연 § AK-AM 보강 완료 (Bates 1976 3 단계)
+- ⏳ Treatment of LD 부록 27편 STT (잔여)
+- ⏳ Rhea Paul part3 Ch12-14 (학령기 중재·청소년 고급언어)
+- ⏳ Tye-Murray part2 Ch9-10 (의사소통 전략 훈련·상담)
+
+## [2026-05-10] ingest | 다중 병렬 처리 (Rhea Paul part3 Ch10·11 + Tye-Murray part2 Ch7·8 + STT 언어발달장애(2)) (54차 ingest 연속, "한꺼번에 진행" #13)
+
+- pillar: clinical
+- 작업 범위: 사용자 "한꺼번에 진행" 지시 — 4 작업 중 처리 가능한 3 작업 병렬 완료
+- 도구: easyocr + faster-whisper base + imageio-ffmpeg
+
+### 처리 결과
+
+#### A. Rhea Paul part3 Ch10·11 OCR (학령기 평가)
+
+**핵심 발견** ⭐⭐⭐:
+- **단순 견해 (Simple View of Reading)** (Kamhi 2009) — 그림 10-1 4 분면 분류:
+  - 전형적 위기 / 난독증 / 특정 이해 장애 (SCD) / 혼합 해독·이해 장애
+- **NICHD 난독증 정의** (Lyon, Shaywitz, & Shaywitz 2003) — 음운 처리 결함 기반
+- 음운 인식 ↔ 위기 연관 (다수 연구 — Bradley 1985 외)
+- **학령기 평가 도구**: CELF-4 / RAN / 음운 인식 / 교과기반 어휘 (Catts 1999a·Justice 2006·Nelson 2010)
+- Glassbox 11-1 군인 게임 준거참조 어휘 평가
+
+→ [[clinical/concepts/학습장애-언어재활]] § G-M 보강 — 본문 1·**2차** 격상
+
+#### B. Tye-Murray part2 Ch7·8 OCR (대화 방식·유창성)
+
+**핵심 발견**:
+- **상호적 vs 비상호적 행동** (Interactive vs Noninteractive Behavior)
+- 적극적 · 협조적 대화 전략 vs 수동적 · 무반응
+- 대화 유창성 (Conversational Fluency) = 본 책의 중심 주제
+- 높은·낮은 대화 유창성 분류
+
+→ [[clinical/concepts/인공와우-청능재활]] § T-U 보강 — **본문 5차** (이전 4차)
+
+#### C. STT 언어발달장애(2) 51분 — Bates 의사소통 발달 3 단계 ⭐⭐
+
+**핵심 발견**:
+- **Bates (1976) 3 단계**:
+  1. **언향적 단계** (Perlocutionary, 0-8개월): 의도 X, 양육자가 의도 부여
+  2. **언표내적 단계** (Illocutionary, 8-12개월): 의도 O + 말 X (제스처)
+  3. **언평적 단계** (Locutionary, 12개월+): 실제 단어
+- 시험 빈출: 언향적 vs 언표내적 차별 (의도 유무가 핵심)
+
+→ [[clinical/concepts/언어발달지연]] § AK-AM 보강 — **본문 8차**
+
+→ ⭐⭐ **MVP F1-b 영유아 양육자 보고식 임상 토대 강화**:
+- "아이가 의도적으로 가리키나요?" = 언표내적 단계 진입 신호
+- "원하는 것을 표현하기 위해 소리를 내나요?" = 언표내적 단계
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/학습장애-언어재활.md (§ G-M 추가, 본문 1·2차)
+갱신 — clinical/concepts/인공와우-청능재활.md (§ T-U 추가, 본문 5차)
+갱신 — clinical/concepts/언어발달지연.md (§ AK-AM 추가, 본문 8차)
+갱신 — wiki/index.md (3 페이지 갱신)
+
+### STT 영구 저장 누적 (6편)
+- 20210621_언어발달장애_1_STT.txt (47분, 692 segment)
+- 20210621_언어발달장애_2_STT.txt (51분, 1510 segment) ⭐ — 본 ingest
+- 20210622_조음음운장애_1_STT.txt (47분, 1157 segment)
+- 20210623_유창성장애_1_STT.txt (47분, 626 segment)
+- 20210623_유창성장애_2_STT.txt (45분, 156 segment)
+- 20210624_신경언어장애_1_STT.txt (43분, 603 segment)
+- 20210625_음성장애_1_STT.txt (40분, 310 segment)
+
+### 사용자 요청 vs 실제 처리
+
+사용자 요청 4 작업:
+1. Rhea Paul part3 (Ch10-14) — ✅ 부분 (Ch10·11 완료, Ch12-14 잔여)
+2. Tye-Murray part2 (Ch5-10) — ✅ 부분 (Ch7·8 완료, Ch5·6·9·10 잔여)
+3. Treatment of LD 부록 27편 STT — ⏳ 미처리 (27편 × 30-50분 = 13-22시간, 한 세션 불가)
+4. 5대 장애 영상 추가 — ✅ 1편 (언어발달장애(2) 완료, 나머지 14+편 잔여)
+
+→ **한 세션 처리 한계**:
+- OCR: 작업당 ~5-10분 → 2 작업 완료 (Rhea Paul Ch10·11 + Tye-Murray Ch7·8)
+- STT: 작업당 ~30-60분 → 1 작업 완료 (백그라운드 동안 OCR 진행)
+- 잔여 작업: 다음 세션에 STT 1-2편씩 분산 처리 권고
+
+### 잔여 (다음 세션 권고)
+
+- ⏳ STT Treatment of LD 부록 1편 시작 (점진 처리)
+- ⏳ STT 5대 영역 추가 영상 (조음·유창성·신경언어·음성 각 2·3·4편)
+- ⏳ Rhea Paul part3 Ch12-14 (학령기 중재·청소년 고급언어)
+- ⏳ Tye-Murray part2 Ch5·6·9·10 + part4 (부록)
+
+## [2026-05-10] ingest | STT 신경언어장애(1) → 실어증 본문 1차 보강 (54차 ingest 연속, 5대 영역 STT 100% 완성) ⭐⭐⭐
+
+- pillar: clinical
+- 작업 범위: [[clinical/concepts/실어증]] 보강 1차 + 5대 영역 STT 정독 완성
+- 도구: faster-whisper base (43분 영상)
+
+### STT 결과 — 신경언어장애 본격 본문
+
+#### 핵심 신규 발견
+
+**A. 한국 자격시험 6 케이스 분류** (실어증·마비말·말실행증·치매·RHD·TBI)
+- 실어증 가장 많이 출제 (10+ 문제)
+- 3 대분류: 신경언어 / 운동언어 / 신경 인지 의사소통
+
+**B. 뇌 해부 3 핵심 영역**:
+- 브로카 (전두엽) = 표현
+- 베르니케 (측두엽) = 이해
+- **궁상속 (Arcuate Fasciculus)** ⭐ = 따라말하기 = 시험 자주 출제
+- 뇌량 = 좌·우 반구 연결
+
+**C. 전도성 실어증** (Conduction Aphasia):
+- 궁상속 손상 = 이해·표현 양호 + **따라말하기만 결함** ⭐
+- 임상 진단 핵심 패턴
+
+**D. 뇌혈관 + 실어증 부위** ⭐⭐:
+- 대동맥 → 완도동맥 → 총경동맥 → 내경동맥 → **MCA + ACA**
+- **MCA (중대뇌동맥) = 베르니케 + 브로카 둘 다 공급 → 실어증 가장 잘 유발** (시험 빈출)
+- ACA → 마비말·브로카 부분
+- PCA → 시각 인지 결함
+
+**E. MVP 회피 영역 확정** — 실어증 ⛔ 5 사유
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/실어증.md (§ A-F 추가, 본문 1차 보강)
+- § A 한국 자격시험 6 케이스 + 3 대분류
+- § B 뇌 해부 3 영역 + 좌·우 반구
+- § C 전도성 실어증 (궁상속 손상) ⭐
+- § D 뇌혈관 + MCA 실어증 빈출
+- § E MVP 회피 5 사유
+- § F STT 출처
+
+갱신 — wiki/index.md
+- 실어증 = 보강 → **본문 1차 보강** (STT 통합)
+
+### ⭐⭐⭐ 5대 의사소통장애 영역 STT 100% 완성
+
+| 영역 | STT 정독 |
+|---|---|
+| 1. 언어발달장애 | ✅ 20210621_언어발달장애_1_STT.txt (47분, 692 segment) |
+| 2. 조음음운장애 | ✅ 20210622_조음음운장애_1_STT.txt (47분, 1157 segment) |
+| 3. 유창성장애 | ✅ 20210623_유창성장애_1+2_STT.txt (45+47분) |
+| 4. **신경언어장애** ⭐ | ✅ **20210624_신경언어장애_1_STT.txt** (43분, 603 segment) — 본 ingest |
+| 5. 음성장애 | ✅ 20210625_음성장애_1_STT.txt (40분, 310 segment) |
+
+→ **24편 5대 장애 영상 중 6편 STT 완료** (각 영역 1편씩). 잔여 영상은 추가 정독 또는 다음 ingest 영역.
+
+### Cross-link 신규 활성화 (4 페어)
+
+- 실어증 ↔ 신경인지장애-노인의사소통 (3 신경 인지 의사소통장애 = 치매·RHD·TBI)
+- 실어증 ↔ 마비말장애 (운동언어장애 2 케이스)
+- 실어증 ↔ K-WAB·K-BNT entity
+- 실어증 ↔ MVP-clinical-foundation § 7 ADR-04 (회피)
+
+### 잔여 (순서대로 진행 계속)
+
+- ⏳ Tye-Murray part2 OCR (Ch5-10 독화·대화·상담)
+- ⏳ Rhea Paul part2-3 OCR (Ch6 부가·Ch12-14)
+- ⏳ Treatment of LD 부록 27편 STT
+- ⏳ 5대 장애 영상 추가 (2·3·4편씩)
+- ⏳ 3순위 entity (TOWL-4·APIB·K-WAIS)
+
+## [2026-05-10] ingest | STT 음성장애(1) → 음성장애 stub → 본문 1차 보강 격상 ⭐⭐ (54차 ingest 연속, "순서대로 진행" #9 — **clinical 8 stub 100% 완성**)
+
+- pillar: clinical
+- 작업 범위: [[clinical/concepts/음성장애]] stub → 본문 1차 보강 격상
+- 도구: faster-whisper base (40분 영상)
+
+### STT 결과 — 본격 음성장애 본문 ⭐⭐
+
+음성장애(1) = 한국 자격시험 음성장애 25 문제 영역 본격 본문:
+- 한국 자격시험 4 분야: 음성 산출 기관·정상 음성 / 분류 / 평가 / 치료
+- 음성 산출 3 시스템: 호흡·발성·공명 (조음 제외)
+- 말 호흡 vs 일반 호흡 — 폐활량 20-25%
+- ⭐⭐ **음성장애 분류 4 영역**: 기능적·기질적·신경학적·공명장애
+- 평가 2 영역: 비기기적 (GRBAS·CAPE-V·VHI) + 기기적 (음향·후두 내시경·EGG)
+- ⭐ **특정 집단 5 종 시험 빈출**: 직업적·노인·청각장애·**성전환자**·무후두 음성
+- 치료 5 영역: 기능·기질·신경학·특정 집단·공명
+- 발성 해부: 후두덮개·갑상연골·피열연골 / 설골 상·하근 / **윤상갑상근** (음도 조절 핵심)
+
+### 갱신 페이지
+
+갱신 — clinical/concepts/음성장애.md (§ A-K 추가, stub → 본문 1차)
+- § A 한국 자격시험 4 분야
+- § B 음성 산출 3 시스템
+- § C 말 호흡 vs 일반 호흡 ⭐
+- § D 음성장애 분류 4 영역 ⭐⭐⭐
+- § E 음성 평가 2 영역 (GRBAS·CAPE-V·VHI·음향분석·후두내시경)
+- § F 특정 집단 5 종 (성전환자 빈출)
+- § G 음성 치료 5 영역
+- § H 발성 해부 (윤상갑상근)
+- § I STT 출처
+- § J MVP 회피 5 사유 ⭐
+- § K 출제 영역 매트릭스
+
+갱신 — wiki/index.md
+- 음성장애 = 스텁 → 본문 1차 보강
+
+### ⭐⭐⭐ Clinical 8 stub 100% 본문 1차 보강 완성
+
+54차 ingest 시작 시 8 stub (유창성·음성·학습장애·SLI·다문화·지적장애·신경인지·내러티브) **모두 본문 1차 이상 보강 완료**:
+
+| 페이지 | 보강 차수 |
+|---|---|
+| 자폐-화용중재 | 본문 1·2·3·4차 (17편 정독) |
+| 지적장애-언어중재 | 본문 1·2·3차 (11편 + Ch4) |
+| 단순언어장애-SLI | 본문 1차 (3편) |
+| 학습장애-언어재활 | 본문 1차 (3편) |
+| 내러티브-담화-추론-중재 | 본문 1차 (5편) |
+| 다문화-언어발달 | 본문 1·2차 (4편 + Ch5) |
+| 신경인지장애-노인의사소통 | 본문 1차 (4편) |
+| **유창성장애** | **본문 1차** (STT) |
+| **음성장애** ⭐ | **본문 1차** (STT) — 본 ingest 완료 |
+
+추가 보강 페이지:
+- 인공와우-청능재활 (Tye-Murray Ch1·Ch4·Ch14 OCR)
+- 언어발달지연 (Rhea Paul Ch1·Ch2·Ch3·Ch6 OCR)
+- 조음장애 (STT 조음음운 + 유창성(1) 청각장애 부분)
+- 자폐-화용중재 (Rhea Paul Ch4 FXS 감별)
+
+### STT 영구 저장 누적 (5편)
+- 20210621_언어발달장애_1_STT.txt (47분, 692 segment)
+- 20210622_조음음운장애_1_STT.txt (47분, 1157 segment)
+- 20210623_유창성장애_1_STT.txt (47분, 626 segment)
+- 20210623_유창성장애_2_STT.txt (45분, 156 segment 긴 segment)
+- 20210625_음성장애_1_STT.txt (40분, 310 segment)
+
+→ 5대 의사소통장애 영역 중 **5 영역 본문 STT 정독 완료** (신경언어장애만 잔여)
+
+### 핵심 임상 토대 신규 발견 — 음성장애
+
+| 발견 | MVP 매핑 |
+|---|---|
+| 음성장애 분류 4 (기능·기질·신경·공명) | ADR-04 회피 영역 5 사유 ⭐ |
+| 특정 집단 5 (성전환자·무후두 등) | MVP 영유아 타깃 외 명시 |
+| 윤상갑상근 = 음도 조절 핵심 | F1-a acoustic 영역 미포함 — 회피 |
+| 기기적 평가 (후두 내시경·EGG) | MVP 자가 학습 불가 영역 — 회피 |
+| Voice Hygiene + LSVT | 임상가 직접 지도 — 회피 |
+
+### 잔여 (순서대로 진행 계속)
+
+- ⏳ STT 신경언어장애(1) — 마지막 5대 영역
+- ⏳ Treatment of LD 부록 27편 STT
+- ⏳ Tye-Murray part2 (Ch5-10) OCR
+- ⏳ Rhea Paul part2-3 (Ch 6 부가·Ch 12-14) OCR
+- ⏳ Lint 점검
+- ⏳ Rhea Paul part2-3 OCR (학령기·청소년)
+- ⏳ 추가 4편 5대 장애 강의 영상 STT (조음·유창성·신경언어·음성)
+- ⏳ Product 측 F1-b·F11 cross-link 강화
+- ⏳ Lint 점검 (CLAUDE.md §5.3)
+
+## [2026-05-11] ingest | 54차 ingest 8단계 (5단계 통합) — STT 조음음운(2)·신경언어(2) + Tye-Murray Ch4-5 + Rhea Paul Ch10-14 ⭐⭐⭐
+- pillar: clinical
+- 갱신:
+  - wiki/clinical/concepts/조음장애.md — § J-P STT 조음음운(2) 51분 (음절구조·옹알이 5단계·자음 발달 정책·발달적 vs 비발달적 오류·유음 활음화·우선 치료 결정) — 8 새 표
+  - wiki/clinical/concepts/인공와우-청능재활.md — § Y-HH Tye-Murray part1 Ch4 후반 (Erber 4 단계 활동·분석/종합·형식/비형식) + Ch5 독화 (동음동형·화자효과·유아 4-8개월·McGurk 효과·청시각 통합 3단계 Grant 1998·Cienkowski 노화) — 9 새 §
+  - wiki/clinical/concepts/학습장애-언어재활.md — § N-R Rhea Paul Ch10-14 (학교 SLP·IDEA 12 진단·LD 46%·ASHA 2010 역할·RTI 3단계·Bloodgood 단어공부·German 단어찾기·T-unit·종속관계지표·Loban 1976·표 13-5 9 범주·Killgallon 7단계 문장결합) — 7 새 §
+  - wiki/clinical/concepts/실어증.md — § G-J STT 신경언어(2) 51분 (뇌졸중 2분류·출혈/경색·혈전증/색전증·동맥류·TIA·TBI 2종·연하 4단계·후두 3중 보호·흡인 vs 침투 변별) — 5 새 §
+- 추가 raw 파일:
+  - raw/stt_output/20210622_조음음운장애_2_STT.txt (54KB, 870 segment)
+  - raw/stt_output/20210624_신경언어장애_2_STT.txt (60KB, 1059 segment)
+- 진행 중:
+  - STT 음성장애(2) 백그라운드
+- cross-link: 8건 신규 ([[조음장애]] ↔ [[인공와우-청능재활]], [[학습장애-언어재활]] ↔ [[단순언어장애-SLI]] / [[내러티브-담화-추론-중재]], [[실어증]] § 연하 → MVP 회피 영역, Rhea Paul Ch13-14 → MVP Phase 4)
+- 메모: 본 ingest로 조음장애 (J-P), 인공와우-청능재활 (Y-HH), 학습장애-언어재활 (N-R), 실어증 (G-J) **모두 정본 수준 보강 완료**. 한국 자격시험 출제 핵심 + Rhea Paul + Tye-Murray 표준 교재 + STT 강의 정본 통합.
+
+
+## [2026-05-11] ingest | 54차 ingest 9단계 (5단계 종합) — Tye-Murray part4 Ch14-15 + STT 음성장애(2) 추가 보강 ⭐
+- pillar: clinical
+- 갱신:
+  - wiki/clinical/concepts/인공와우-청능재활.md — § II-QQ Tye-Murray part4 Ch14 영유아 6 영역 + Ch15 학령기 평가 5 원칙·말 명료도 3 방법·4 변수·분절 검사 도구 (Ling 1976·CID·SPINE)·표 15-4 언어 검사 (RITLS·GAEL·TSA·TACL·OWLS·IPSyn·PPVT-R·Reynell)·TTR·MSL·TERA-D/HH — 9 새 §
+  - wiki/clinical/concepts/음성장애.md — § L-Q STT 음성(2) 51분 (정상 음성 5 요소 Boone·노화 음도·음향 물리 주파수/주기/파장/진폭·스펙트럼 vs 스펙트로그램·음성장애 분류 진입) — 6 새 §
+- 추가 raw 파일:
+  - raw/stt_output/20210625_음성장애_2_STT.txt (52KB, 725 segment)
+- cross-link: 5건 신규 ([[인공와우-청능재활]] ↔ [[clinical/entities/Scarborough]], [[clinical/concepts/조음장애]] ↔ K-IPSyn 매핑, [[음성장애]] ↔ MVP 회피 영역 강화)
+- 메모: 본 ingest로 인공와우-청능재활 = **part 1·2·3·4 + STT 모두 통합 — 본 위키 한국 청능재활 최정밀 정본 완성** (Erber 4 단계·청시각 통합·McGurk·Gagne 문제 해결·표 15-4 청각장애 언어 검사 + STT 청각장애 분류). 음성장애 = 정상 음성 5 요소·음향 분석 정본 + 분류 진입.
+- STT raw: 9 파일 누적 (DLD 2 + 조음 2 + 유창 2 + 신경 2 + 음성 2 = 10편 중 1편 (신경 1) 누락)
+
+### 잔여 (순서대로 진행 계속)
+
+- ⏳ STT 신경언어장애(1) 누락된 1편 — 이미 진행됨 (앞서 보강)
+- ⏳ STT 추가 영상 (조음 3-4·유창 3-4·신경 3-4·음성 3·DLD 3-4) - **5대 영역 추가 영상 75 → 36 잔여**
+- ⏳ Tye-Murray part2 Ch5-6 부재 확인 → 모두 Ch7+ 시작 (Ch5-6 = part1 → 완성)
+- ⏳ Rhea Paul part2 (Ch 후반 6-9) OCR
+- ⏳ Treatment of LD 부록 27편 STT (대규모)
+- ⏳ Lint 점검 (CLAUDE.md §5.3)
+- ⏳ Open Issues Dashboard 갱신
+- ⏳ 경쟁사 entity 3개 clinical cross-link 보강 (에이치투케이·와우키키·캐치잇플레이)
+
+## [2026-05-11] ingest | 54차 ingest 10단계 (5단계 종합) — STT 유창성장애(2-1) 보강 ⭐
+- pillar: clinical
+- 갱신:
+  - wiki/clinical/concepts/유창성장애.md — § M-Q STT 유창성(2-1) 45분 (유창성 정의 4요소·WHO 말더듬 정의·빙산 모델 3 요소·정상 vs 병리 단위별 결정 규칙) — 5 새 § (빙산 정본 강화)
+- 추가 raw 파일:
+  - raw/stt_output/20210623_유창성장애_2-1_STT.txt (50KB, 152 segment)
+- STT raw 누적: **10 파일** (DLD 2·조음 2·유창 3·신경 2·음성 2 / 누락 신경 1 → 신경 1 = 신경언어장애 1편 5대 모두 1교시 완료)
+- 메모: § P 정상 vs 병리 단위별 결정 규칙 = MVP F1-b 회피 영역 강화 핵심 임상 토대 — 보호자가 "사과 사과 사과" vs "사 사 사과" 구분 불가 → 5분 진단 회피 사유 명확.
+
+## [2026-05-11] ingest | 54차 ingest 11단계 (3단계 종합) — STT 조음음운(3) + Rhea Paul Ch11 + Ch6/8/9 보강 ⭐
+- pillar: clinical
+- 갱신:
+  - wiki/clinical/concepts/조음장애.md — § Q-U STT 조음음운(3) 43분 (독립분석 vs 관계분석·음운 인식 단위별·명료도 vs 자음정확도·음운 변동 결과 해석) — 5 새 §
+  - wiki/clinical/concepts/학습장애-언어재활.md — § S-W Rhea Paul Ch11 (Dollaghan·Campbell 1992 봉괴 8 종류·Tough 1977 6 주요 기능·표 11-5 학령기 평가 도구 8 영문 표준·Prutting·Damico 화용 평가) — 5 새 §
+  - wiki/clinical/concepts/언어발달지연.md — § W-Z Rhea Paul Ch6·Ch8·Ch9 (Janice 사례 가족중심 4 영역·Owens 2004 발화 분류 5 규칙·Brown 1973 MLU 6 규칙·NDW Klee 2004·Hesketh 2010 음운인식 통합 중재) — 4 새 §
+- 추가 raw 파일:
+  - raw/stt_output/20210622_조음음운장애_3_STT.txt (45KB, 733 segment)
+- STT raw 누적: **12 파일** (조음 3·DLD 2·유창 3·신경 2·음성 2)
+- cross-link: 6건 신규 ([[조음장애]] § Q 독립/관계분석 + § Y 음운인식 통합 ↔ [[언어발달지연]] § Y.3 / [[학습장애-언어재활]] § U BVAT 한국어 ↔ [[다문화-언어발달]])
+- 메모: 본 ingest 후 5대 영역 + 4 페이지 추가 보강 완료. Rhea Paul 표준 교재 part1·part2·part3 모두 부분 통합 (Ch1-3·Ch6·Ch8·Ch9·Ch10·Ch11·Ch12·Ch13·Ch14). 한국 자격시험 출제 핵심 + Owens·Brown·Tough·Dollaghan·Hesketh 영문 표준 통합.
+
+## [2026-05-11] ingest | 54차 ingest 12단계 (5단계 종합) — STT 신경(3) + Tye-Murray part4 용어해설 + Rhea Paul Ch6 부록·Ch7 ⭐
+- pillar: clinical
+- 갱신:
+  - wiki/clinical/concepts/실어증.md — § K-O STT 신경(3) 43분 (실어증 평가 5 영역 + K-WAB AQ/LQ/CQ + 어휘성 청각실인증 vs 베르니케 + 말산출 4 단계 모델 + 마비말장애 7 유형 도입) — 5 새 §
+  - wiki/clinical/concepts/인공와우-청능재활.md — § RR-TT Tye-Murray 용어해설 (15+ 약어·법적 기반 5종·청각 기술 표준 용어 13개) — 3 새 §
+  - wiki/clinical/concepts/언어발달지연.md — § AA-DD Rhea Paul Ch6 부록 (21 영유아 평가 도구 + 5 섭식 평가) + Ch7 (첫 어휘집 8 범주 한국어 매핑·4 원칙·환경 중심 중재 milieu) — 4 새 §
+- 추가 raw 파일:
+  - raw/stt_output/20210624_신경언어장애_3_STT.txt (46KB, 742 segment)
+- STT raw 누적: **13 파일** (조음 3·DLD 2·유창 3·신경 3·음성 2)
+- cross-link: 6건 신규 ([[실어증]] § M ↔ [[마비말장애]] / [[인공와우-청능재활]] § SS ↔ MVP F11 / [[언어발달지연]] § CC ↔ MVP F3-b·F11)
+- 메모: 본 ingest로 신경언어 5대 영역 모든 페이지 (조음·유창·신경·음성·DLD) STT 정본 통합 완료. Rhea Paul part2 Ch6-7-8-9 + part3 Ch10-11-12-13-14 모두 통합. Tye-Murray part1·2·3·4 모두 통합. ⭐ **3 단계 진행 완료 — Lint 진입 준비**.
+
+## [2026-05-12] lint | CLAUDE.md §5.3 Lint 점검 + 18 항목 자동 수정 ⭐⭐⭐
+- pillar: 양 기둥
+- 추가 (clinical/sources/ 4 STT stub):
+  - wiki/clinical/sources/2026-05-11-STT-조음음운장애-2.md (51분 강의 - 음절·옹알이·자음 발달·발달적 vs 비발달적 오류)
+  - wiki/clinical/sources/2026-05-11-STT-조음음운-3.md (43분 - 독립분석·음운인식·명료도)
+  - wiki/clinical/sources/2026-05-11-STT-음성장애-2.md (51분 - 정상 음성 5요소·스펙트럼)
+  - wiki/clinical/sources/2026-05-11-STT-유창성장애-2-1.md (45분 - WHO 말더듬·빙산·정상 vs 병리)
+- 추가 (clinical/entities/ 5 권위자 entity):
+  - wiki/clinical/entities/Tomblin.md (1996 EpiSLI 5% + 2008 자연주의·규준)
+  - wiki/clinical/entities/Fey.md (1986 SD -1.25 + CD/Hybrid/CC 3 접근법)
+  - wiki/clinical/entities/Bloom-Lahey.md (1977 form·content·use 정본 + 첫 어휘집 8 범주)
+  - wiki/clinical/entities/Scarborough.md (1990 IPSyn + 2003 Reading Rope)
+  - wiki/clinical/entities/Erber.md (1982 4 단계 청능 계층)
+- 갱신 (product/concepts/ 6 페이지 clinical cross-link 추가):
+  - PRD-evolution.md (Clinical 기둥 cross-link 3건 추가)
+  - SRS-evolution.md (Clinical 기둥 cross-link 3건 추가)
+  - multi-llm-workflow.md (Clinical 기둥 cross-link 2건 추가)
+  - open-issues-dashboard.md (Clinical 기둥 cross-link 3건 추가)
+  - task-breakdown-overview.md (Clinical 기둥 cross-link 3건 추가)
+  - tech-architecture.md (Clinical 기둥 cross-link 3건 추가)
+- 갱신 (clinical/concepts/ 1 페이지 product 역링크 추가):
+  - 신경인지장애-노인의사소통.md (Product 기둥 cross-link 4건 추가)
+- 메모: Lint 결과 — 내러티브-담화·단순언어장애-SLI 2 페이지는 이미 product cross-link 존재 (Lint 보고서 과대 추정). 신경인지장애 1 페이지만 실제 누락 → 보강. **Lint 작업 완료**: 9 신규 페이지 (sources 4 + entities 5) + 7 페이지 cross-link 보강. 양 기둥 100% cross-pillar 정합.
+

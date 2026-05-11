@@ -130,6 +130,11 @@ TASKS/ 100+ (별도 인덱스 page 필요)
 - [[product/concepts/tech-architecture]] — V06의 C-TEC 정본
 - [[product/concepts/MVP-descope-plan]] — 67 Descope 정본
 
+## Clinical 기둥 cross-link
+- [[product/concepts/MVP-clinical-foundation]] — V06 SRS 임상 토대 통합본 (F1-a·F11·F15 임상 근거)
+- [[clinical/concepts/조음장애]] — F1-a articulation 인수 기준 임상 토대
+- [[clinical/concepts/언어발달지연]] — F1-b 5분 진단 인수 기준 임상 토대
+
 ## 보강 필요
 - V01-V05 중간본 정독 — Action Plan(58), Remediation Plan(61), Comparison(63) 의 구체적 결함 항목.
 - 55 (Prompt Compatibility) + 56 (Generation Prompt) 정독 — 프롬프트 엔지니어링 학습 가치.

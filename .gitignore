@@ -1,0 +1,19 @@
+# Obsidian 개인 작업 상태 (창 레이아웃 등)
+Speech-Therapy_Workbase/.obsidian/workspace.json
+Speech-Therapy_Workbase/.obsidian/workspace-mobile.json
+Speech-Therapy_Workbase/.obsidian/cache
+Speech-Therapy_Workbase/.obsidian/.trash/
+
+# 루트의 임시 STT/OCR 처리 파일
+/_*.txt
+/_*.py
+/_*.wav
+/_*.png
+/stt_*.txt
+/tym_*.txt
+/stt_voice_*.txt
+
+# OS / IDE
+Thumbs.db
+.DS_Store
+.vscode/

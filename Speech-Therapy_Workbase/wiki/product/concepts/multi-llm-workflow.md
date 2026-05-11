@@ -249,6 +249,10 @@ V09 감점 2건 모두 패치 → **SRS Readiness Gate 100%** → SRS 진입.
 - [[product/sources/66-PRD-to-SRS-Mapping-Review]] — 최종 9 기준 PASS 검증
 - [[product/concepts/architecture-decisions]] — V05/V06 신규 ADR-05~07
 
+## Clinical 기둥 cross-link
+- [[product/concepts/MVP-clinical-foundation]] — 본 멀티 LLM 워크플로의 임상 콘텐츠 생성 응용 가능성 토대
+- [[clinical/concepts/내러티브-담화-추론-중재]] — F15 LLM 자문 챗봇 콘텐츠 생성에 본 워크플로 적용 가능 임상 영역
+
 ## 보강 필요
 - 다른 LLM 조합 (Claude + GPT-4o, Sonnet + Gemini 등) 의 강점 비교 일반화.
 - "Editor" 메타 LLM 도입 가능성 (검토·비교 단계의 자동화).
