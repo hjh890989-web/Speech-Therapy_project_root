@@ -10,9 +10,11 @@ datasource db {
   provider = "sqlite"
 }
 
-// === DB-002 — User 엔터티 (모든 사용자 관련 FK 의 부모) ===
+// ============================================================================
+// DB-002 — User (모든 사용자 관련 FK 의 부모)
 // Refs: SRS §2 Stakeholders, §6.1 ERD users, REQ-NF-019 RBAC.
-// 개인정보 최소화 원칙 (R4): 자녀 식별정보 미저장, 월령만 저장.
+// 개인정보 최소화 원칙 (R4): 자녀 식별정보 미저장, 월령만.
+// ============================================================================
 
 enum Role {
   parent
@@ -29,16 +31,202 @@ enum SubscriptionTier {
 }
 
 model User {
-  /// UUID — Supabase Auth user.id 와 동일 키 (API-010 에서 연동)
+  /// UUID — Supabase Auth user.id 와 동일 키 (API-010).
   id               String           @id @default(uuid())
-  /// 인증용 이메일 (Supabase Auth 와 일치). 무로그인 진단 사용자는 null.
+  /// 인증용 이메일 (Supabase Auth 일치). 무로그인 진단 사용자는 null.
   email            String?          @unique
   /// RBAC 역할. REQ-NF-019 의 키.
   role             Role
-  /// 부모 사용자의 자녀 월령 (만 2~7세 = 24~84). 부모 외 역할은 null.
+  /// 부모의 자녀 월령 (만 2~7세 = 24~84). 부모 외 역할은 null.
   childAgeMonths   Int?
   /// 구독 등급. 기본 free.
   subscriptionTier SubscriptionTier @default(free)
   /// 가입 시각.
   createdAt        DateTime         @default(now())
+
+  // --- DB-003 추가 컬럼 (B2B) ---
+  /// parent 는 nullable, teacher/principal 은 비즈니스 로직 레벨로 필수.
+  institutionId String?
+  institution   Institution? @relation(fields: [institutionId], references: [id])
+  /// parent: 자녀가 속한 반 / teacher: 담당 반.
+  classId       String?
+  class         Class?       @relation(fields: [classId], references: [id])
+
+  // --- 역방향 관계 (FK 자체는 자식 쪽 모델에서 정의) ---
+  sessionLogs       SessionLog[]
+  evaluationResults EvaluationResult[]
+  weeklyReports     WeeklyReport[]
+  rewardProgress    RewardProgress?
+
+  @@index([institutionId])
+  @@index([classId])
+}
+
+// ============================================================================
+// DB-003 — Institution / Class (B2B 다중 테넌트)
+// Refs: §6.1 ERD institutions, REQ-FUNC-046/047, REQ-NF-019.
+// ============================================================================
+
+model Institution {
+  id                    String    @id @default(uuid())
+  name                  String
+  principalName         String
+  principalEmail        String?   @unique
+  phone                 String?
+  address               String?
+  /// F10 동의서 완료 여부.
+  consentStatus         Boolean   @default(false)
+  /// Supabase Storage path (DB-002 추가 후 Storage 연동 시 사용).
+  logoUri               String?
+  subscriptionStartedAt DateTime?
+  /// "trial" | "annual_500k" | "annual_1m" — 진입 SKU.
+  subscriptionTier      String    @default("trial")
+  createdAt             DateTime  @default(now())
+
+  // 역방향
+  classes Class[]
+  users   User[]
+}
+
+model Class {
+  id            String      @id @default(uuid())
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  name          String
+  /// 담임 교사 (User.role = teacher).
+  teacherId     String?
+  createdAt     DateTime    @default(now())
+
+  users User[]
+
+  @@index([institutionId])
+}
+
+// ============================================================================
+// DB-004 — SessionLog (발화 세션 메타데이터)
+// Refs: §6.1 ERD session_logs, REQ-FUNC-005, C-TEC-003.
+// D6 단순화: audioVectorUri 는 컬럼만 확보 (Sprint 1엔 항상 null), pgvector
+// 활성화는 P2 별도 마이그레이션.
+// ============================================================================
+
+model SessionLog {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 진단 세션은 null. 미션 세션이면 MissionCard.id.
+  missionId     String?
+  mission       MissionCard? @relation(fields: [missionId], references: [id])
+  startTime     DateTime @default(now())
+  durationSec   Int
+  /// TODO: P2 pgvector 활성화 시 vector(768) 타입으로 마이그레이션.
+  audioVectorUri String?
+  createdAt     DateTime @default(now())
+
+  evaluationResult EvaluationResult?
+
+  @@index([userId, startTime])
+}
+
+// ============================================================================
+// DB-005 — EvaluationResult (3축 점수 + 백분위 + Confidence)
+// Refs: §6.1 ERD evaluation_results, REQ-FUNC-001~003 / 012~013.
+// 횡단 CON-04: aiCushionText 는 금칙어 0건 (Server Action 진입 시 검증, FR-C-005).
+// ============================================================================
+
+model EvaluationResult {
+  id                 String   @id @default(uuid())
+  /// SessionLog 1:1.
+  sessionId          String   @unique
+  sessionLog         SessionLog @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 3축 점수 (0~100 비즈니스 규칙, Zod 검증 책임).
+  articulationScore  Float
+  linguisticScore    Float
+  acousticScore      Float
+  /// 또래 백분위 (0~100).
+  peerPercentile     Float
+  /// 0~100, < 70 시 HITL 이관 (FR-C-002).
+  confidence         Float
+  /// 전문가 검토 완료 여부.
+  hitlReviewed       Boolean  @default(false)
+  /// 금칙어 0건 보장 (CON-04). 부모용 쿠션 텍스트.
+  aiCushionText      String?
+  targetPhoneme      String
+  childAgeMonths     Int
+  createdAt          DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ============================================================================
+// DB-006 — MissionCard (음소·난이도별 카탈로그)
+// Refs: §6.1 ERD mission_cards, REQ-FUNC-015, 021~022.
+// ============================================================================
+
+model MissionCard {
+  id              String   @id @default(uuid())
+  /// 한국어 음소 (예: "ㅅ").
+  targetPhoneme   String
+  /// 1~5.
+  difficultyLevel Int
+  /// "star" | "tree" | "drawing".
+  rewardType      String
+  title           String
+  /// 지시문. 금칙어("진단", "장애" 등) 금지.
+  instructionText String
+  mediaUri        String?
+  /// 월령 (만 2~7세 = 24~84).
+  ageRangeMin     Int
+  ageRangeMax     Int
+  createdAt       DateTime @default(now())
+
+  sessionLogs SessionLog[]
+
+  @@index([targetPhoneme, difficultyLevel])
+}
+
+// ============================================================================
+// DB-007 — WeeklyReport (주간 추이 + 예측)
+// Refs: §6.1 ERD weekly_reports, REQ-FUNC-027/028/044, REQ-NF-004.
+// scoreTrend Json 스키마: lib/weekly-report.ts 의 ScoreTrend 타입 + Zod.
+// ============================================================================
+
+model WeeklyReport {
+  id                   String   @id @default(uuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// ISO 8601 주차 (1~53).
+  weekNumber           Int
+  year                 Int
+  /// ScoreTrend[] JSON 배열 (date / phoneme / 3축 / peerPercentile).
+  scoreTrend           Json
+  /// 회귀 모델 예측 점수.
+  predictedNextScore   Float?
+  /// 신뢰구간.
+  predictionConfidence Float?
+  articulationAvg      Float
+  linguisticAvg        Float
+  acousticAvg          Float
+  peerPercentileAvg    Float
+  sessionCount         Int
+  generatedAt          DateTime @default(now())
+
+  @@unique([userId, year, weekNumber])
+  @@index([userId, generatedAt])
+}
+
+// ============================================================================
+// DB-008 — RewardProgress (별·나무·AI그림 누적, userId 1:1)
+// Refs: §6.1 ERD reward_progress, REQ-FUNC-024~026, REQ-NF-005.
+// ============================================================================
+
+model RewardProgress {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cumulativeStars  Int      @default(0)
+  treeGrowthLevel  Int      @default(0)
+  aiDrawingCount   Int      @default(0)
+  updatedAt        DateTime @updatedAt
 }
