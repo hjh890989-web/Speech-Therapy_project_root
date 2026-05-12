@@ -139,6 +139,6 @@ journey
 ---
 
 ## 9. 근거(Proof)
-- **VPS V09 마스터 문서**: [39_VPS_V09_final_UX_reinforce.md](file:///e:/Antigavity%20Workspace/Speech-Therapy-From-Analysis-to-VPS-/From%20Analysis%20to%20VPS/39_VPS_V09_final_UX_reinforce.md)
+- **VPS V09 마스터 문서**: [39_VPS_V09_final_UX_reinforce.md](39_VPS_V09_final_UX_reinforce.md)
 - **시장 데이터**: 국민건강보험공단 영유아 건강검진 통계 (발달 지연 우려군 15%).
 - **사용자 검증**: JTBD 심층 인터뷰 로그 (총 50인 대상, "불안 해소"가 가장 큰 결제 트리거임을 확인).

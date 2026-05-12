@@ -23,7 +23,7 @@
 - **Seg B (데이터형 개입자)**: 노력의 가시적인 성과 증명(시계열 데이터 점수화)을 통해 가족을 설득하고자 함. (3~5만 가구)
 - **Seg D-1 (유치원 원장)**: 학부모 민원 방어 및 원아 퇴소 예방 목적의 공신력 있는 외부 증명 데이터가 필요함. (B2B 결제자)
 - **Seg D-2 (보육 교사)**: 학부모와 상담 시 감정 소모를 피하고, 추가 업무 가중 없이 시스템을 사용하길 원함. (B2B 게이트키퍼)
-*🔗 연관 링크: [39_VPS_V09_final_UX_reinforce.md - §1.3 문제-해결 매핑](file:///e:/Antigavity%20Workspace/Speech-Therapy-From-Analysis-to-VPS-/From%20Analysis%20to%20VPS/39_VPS_V09_final_UX_reinforce.md)*
+*🔗 연관 링크: [39_VPS_V09_final_UX_reinforce.md - §1.3 문제-해결 매핑](39_VPS_V09_final_UX_reinforce.md)*
 
 ## 3. 사용자 스토리와 수용 기준(AC, Acceptance Criteria)
 
@@ -133,6 +133,6 @@ flowchart LR
 - **효율 우위**: 기존 오프라인 대면 영업 및 퍼포먼스 마케팅에 의존하는 대안 대비, B2C 웹뷰 바이럴 파이프라인으로 유입 단가를 대폭 하락.
 
 ## 9. 근거(Proof)
-- [원본 파일 참조: 39_VPS_V09_final_UX_reinforce.md](file:///e:/Antigavity%20Workspace/Speech-Therapy-From-Analysis-to-VPS-/From%20Analysis%20to%20VPS/39_VPS_V09_final_UX_reinforce.md) (가치 제안, AOS/DOS 기회 통합 매트릭스 및 Phase 로드맵 통합 분석 문서)
+- [원본 파일 참조: 39_VPS_V09_final_UX_reinforce.md](39_VPS_V09_final_UX_reinforce.md) (가치 제안, AOS/DOS 기회 통합 매트릭스 및 Phase 로드맵 통합 분석 문서)
 - JTBD 및 FGI 심층 분석 인터뷰 결과: 타겟 페르소나별 전환 트리거 입증
 - B2B 기관 원장 ROI 시뮬레이션: 퇴소 1명 방어 시 1,100% 자금 회수 논리 구조 산출

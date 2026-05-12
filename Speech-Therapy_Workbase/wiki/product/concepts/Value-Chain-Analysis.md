@@ -77,7 +77,7 @@ Porter's Value Chain 프레임워크로 5개 주요 경쟁사를 분해하고, �
 | 자본력 | 낮음 | 낮음 | **210억** | 낮음 | 25억 |
 | 규제 해자 | DTx 임상승인 | — | 추진 중 | 의료기기 추진 | — |
 
-상세는 [[product/sources/06-Competitive-Value-Chain]] 또는 각 [[product/entities/]] 페이지.
+상세는 [[product/sources/06-Competitive-Value-Chain]] 또는 각 경쟁사 entity 페이지 ([[product/concepts/competitive-landscape]] 참조).
 
 ## 본 프로젝트의 가치사슬 (잠정)
 
