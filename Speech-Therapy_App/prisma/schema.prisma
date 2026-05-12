@@ -57,6 +57,10 @@ model User {
   evaluationResults EvaluationResult[]
   weeklyReports     WeeklyReport[]
   rewardProgress    RewardProgress?
+  /// DB-009: 본인이 검토 대상이 된 HITL 큐 (parent role 일반적).
+  hitlQueues        HITLQueue[]        @relation("HITLSubject")
+  /// DB-009: expert 로 지정되어 검토 담당하는 HITL 큐.
+  assignedHITLs     HITLQueue[]        @relation("AssignedExpert")
 
   @@index([institutionId])
   @@index([classId])
@@ -156,6 +160,9 @@ model EvaluationResult {
   childAgeMonths     Int
   createdAt          DateTime @default(now())
 
+  /// DB-009 역방향: Confidence < 70 시 1:1 매핑된 HITL 큐.
+  hitlQueue          HITLQueue?
+
   @@index([userId, createdAt])
 }
 
@@ -229,4 +236,45 @@ model RewardProgress {
   treeGrowthLevel  Int      @default(0)
   aiDrawingCount   Int      @default(0)
   updatedAt        DateTime @updatedAt
+}
+
+// ============================================================================
+// DB-009 — HITLQueue (Confidence < 70 자동 이관 대기열)
+// Refs: §3.5 hitl/queue, REQ-FUNC-003/032/HITL-001~003, §3.6.2.
+// D4 단순화: Supabase Realtime 미사용. 알림은 Slack 웹훅, 운영은 Supabase Studio.
+// 횡단 R4: expertComment / groundTruthScore 는 자녀 식별 불가능한 형식 강제.
+// ============================================================================
+
+enum HITLStatus {
+  pending
+  in_review
+  completed
+  escalated
+  dismissed
+}
+
+model HITLQueue {
+  id               String     @id @default(uuid())
+  /// EvaluationResult.sessionId 와 1:1.
+  sessionId        String     @unique
+  evaluationResult EvaluationResult @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+  /// 검토 대상 사용자 (parent 일반적).
+  userId           String
+  user             User       @relation("HITLSubject", fields: [userId], references: [id], onDelete: Cascade)
+  confidenceScore  Float
+  status           HITLStatus @default(pending)
+  /// Supabase Studio 수동 할당 (expert role).
+  assignedExpertId String?
+  assignedExpert   User?      @relation("AssignedExpert", fields: [assignedExpertId], references: [id])
+  expertComment    String?
+  /// 보정 3축 점수 {articulation, linguistic, acoustic, peerPercentile}.
+  groundTruthScore Json?
+  /// 등록 시각 + 48h (REQ-NF-012).
+  slaDueAt         DateTime
+  /// 24h 초과 시 Cron 이 자동 마킹 (FR-C-014).
+  escalatedAt      DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime   @default(now())
+
+  @@index([status, slaDueAt])
 }
