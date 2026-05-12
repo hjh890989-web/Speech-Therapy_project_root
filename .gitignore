@@ -23,3 +23,39 @@ Thumbs.db
 
 # 정리 작업 임시 백업 (안전 확인 후 사용자가 직접 삭제)
 .git_backup/
+
+# === Next.js 앱 (Speech-Therapy_App) ===
+# 의존성
+Speech-Therapy_App/node_modules/
+# Next.js 빌드 산출물
+Speech-Therapy_App/.next/
+Speech-Therapy_App/out/
+Speech-Therapy_App/build/
+# 환경변수 (시크릿)
+Speech-Therapy_App/.env
+Speech-Therapy_App/.env.local
+Speech-Therapy_App/.env.development.local
+Speech-Therapy_App/.env.test.local
+Speech-Therapy_App/.env.production.local
+# Prisma 로컬 DB (Prisma 7는 prisma.config.ts 의 dotenv 가 프로젝트 루트 기준으로 path 해석)
+Speech-Therapy_App/dev.db
+Speech-Therapy_App/dev.db-journal
+Speech-Therapy_App/prisma/dev.db
+Speech-Therapy_App/prisma/dev.db-journal
+# Prisma Client 생성물 (앱 시작 시 prisma generate)
+Speech-Therapy_App/app/generated/
+# Vercel
+Speech-Therapy_App/.vercel/
+# TypeScript 빌드 캐시
+Speech-Therapy_App/*.tsbuildinfo
+Speech-Therapy_App/next-env.d.ts
+# 디버그
+Speech-Therapy_App/npm-debug.log*
+Speech-Therapy_App/yarn-debug.log*
+Speech-Therapy_App/yarn-error.log*
+Speech-Therapy_App/.pnpm-debug.log*
+# 테스트 산출물
+Speech-Therapy_App/coverage/
+Speech-Therapy_App/test-results/
+Speech-Therapy_App/playwright-report/
+Speech-Therapy_App/.swc/
