@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../app/generated/prisma"
@@ -10,4 +8,37 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+}
+
+// === DB-002 — User 엔터티 (모든 사용자 관련 FK 의 부모) ===
+// Refs: SRS §2 Stakeholders, §6.1 ERD users, REQ-NF-019 RBAC.
+// 개인정보 최소화 원칙 (R4): 자녀 식별정보 미저장, 월령만 저장.
+
+enum Role {
+  parent
+  teacher
+  principal
+  expert
+  admin
+}
+
+enum SubscriptionTier {
+  free
+  basic
+  premium
+}
+
+model User {
+  /// UUID — Supabase Auth user.id 와 동일 키 (API-010 에서 연동)
+  id               String           @id @default(uuid())
+  /// 인증용 이메일 (Supabase Auth 와 일치). 무로그인 진단 사용자는 null.
+  email            String?          @unique
+  /// RBAC 역할. REQ-NF-019 의 키.
+  role             Role
+  /// 부모 사용자의 자녀 월령 (만 2~7세 = 24~84). 부모 외 역할은 null.
+  childAgeMonths   Int?
+  /// 구독 등급. 기본 free.
+  subscriptionTier SubscriptionTier @default(free)
+  /// 가입 시각.
+  createdAt        DateTime         @default(now())
 }
