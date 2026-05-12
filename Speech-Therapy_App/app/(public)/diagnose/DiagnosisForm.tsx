@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSpeechRecognition } from "@/lib/hooks/useSpeechRecognition";
+import { mockSuccessHigh, mockSuccessLow } from "@/lib/mocks/diagnosis";
 
 const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
 const SAMPLE_WORDS: Record<(typeof PHONEMES)[number], string> = {
@@ -25,7 +26,8 @@ export function DiagnosisForm() {
   const [agreed, setAgreed] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { status, transcript, errorCode, isSupported, start, reset } = useSpeechRecognition();
+  const { status, transcript, errorCode, isSupported, isMounted, start, reset } =
+    useSpeechRecognition();
 
   const handleSubmit = async () => {
     if (!agreed) {
@@ -39,15 +41,15 @@ export function DiagnosisForm() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      // Sprint 1 단계: MOCK 통합으로 동작. 실제 호출은 FR-C-001 구현 후 활성.
-      // 임시: 결과 데이터를 query string 으로 전달.
+      // Sprint 1 단계: analyzeDiagnosis 실제 호출은 FR-C-001 구현 후.
+      // 현재는 transcript 길이로 high/low 분기 → MOCK sessionId 로 결과 페이지 이동.
+      const mockResult = transcript.length >= 2 ? mockSuccessHigh : mockSuccessLow;
       const params = new URLSearchParams({
-        mock: "success-high",
         phoneme: targetPhoneme,
         age: String(childAgeMonths),
         transcript,
       });
-      router.push(`/diagnose/result?${params.toString()}`);
+      router.push(`/diagnose/result/${mockResult.sessionId}?${params.toString()}`);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "알 수 없는 오류");
     } finally {
@@ -126,31 +128,34 @@ export function DiagnosisForm() {
           {targetPhoneme} 소리가 들어간 단어를 또렷하게 들려주세요. 예: {SAMPLE_WORDS[targetPhoneme]}
         </p>
 
-        {!isSupported && (
+        {/* mount 전엔 placeholder — SSR HTML 과 hydration 일치 보장. */}
+        {!isMounted ? (
+          <div className="h-10" aria-hidden />
+        ) : !isSupported ? (
           <p className="text-sm text-amber-700 dark:text-amber-300">
             현재 브라우저에서는 음성 인식이 지원되지 않습니다. 모바일 Chrome 또는 Edge 를 사용해
             주세요.
           </p>
+        ) : (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                reset();
+                start();
+              }}
+              disabled={status === "listening"}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {status === "listening" ? "듣는 중..." : "발화 시작"}
+            </button>
+            {transcript && (
+              <div className="text-sm">
+                들린 단어: <span className="font-semibold">{transcript}</span>
+              </div>
+            )}
+          </div>
         )}
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              reset();
-              start();
-            }}
-            disabled={!isSupported || status === "listening"}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {status === "listening" ? "듣는 중..." : "발화 시작"}
-          </button>
-          {transcript && (
-            <div className="text-sm">
-              들린 단어: <span className="font-semibold">{transcript}</span>
-            </div>
-          )}
-        </div>
 
         {errorCode === "permission_denied" && (
           <p className="text-sm text-red-700 dark:text-red-300">
