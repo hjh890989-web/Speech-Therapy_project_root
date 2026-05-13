@@ -5,10 +5,12 @@
 // P1: proxy.ts 가 응답 본문 스트리밍 스캔에 사용 (Sprint 1 엔 placeholder).
 
 /// 1차 금칙어: 의료·진단 단정 표현.
-export const PRIMARY_BANNED = /(진단|장애|치료|환자|병|증상|처방|병원)/g;
+/// `g` flag 는 의도적으로 미부착 — `.test()` 가 lastIndex 누적되어 false positive 발생.
+/// findBannedTerms 안에서 매번 `new RegExp(source, 'g')` 로 사용한다.
+export const PRIMARY_BANNED = /(진단|장애|치료|환자|병|증상|처방|병원)/;
 
 /// 2차 금칙어: 부정·낙인 표현.
-export const SECONDARY_BANNED = /(아프|장애아|문제아|이상)/g;
+export const SECONDARY_BANNED = /(아프|장애아|문제아|이상)/;
 
 /// 화이트리스트: 의료적 표현이 아닌 직업·장소·과목 명사. 정규식 매칭 후 제외.
 /// 예: "치료실"(장소), "치료사"(직업), "병행"(다른 의미) 은 차단 대상 아님.
