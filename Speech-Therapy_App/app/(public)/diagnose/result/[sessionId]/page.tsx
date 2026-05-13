@@ -7,9 +7,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { mockSuccessHigh, mockSuccessLow } from "@/lib/mocks/diagnosis";
-import { sanitizeUserFacingText } from "@/lib/text-safety";
 import type { DiagnosisOutput } from "@/lib/schemas/diagnosis";
 import { RewardOnMount } from "./RewardOnMount";
+import { CushionAsync } from "./CushionAsync";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -25,12 +25,18 @@ interface FetchedResult {
   output: DiagnosisOutput;
   /// FR-C-009 reward 호출용. mock 데이터엔 null → 보상 미발급.
   userId: string | null;
+  /// DB 의 aiCushionText 원본 (null = 아직 생성 안 됨 → CushionAsync 가 후속 호출).
+  cushionFromDb: string | null;
 }
 
 // FR-C-001 통합: MOCK sessionId 는 우선 매핑, 그 외엔 evaluation_results 조회.
 async function fetchEvaluationResult(sessionId: string): Promise<FetchedResult | null> {
-  if (sessionId === mockSuccessHigh.sessionId) return { output: mockSuccessHigh, userId: null };
-  if (sessionId === mockSuccessLow.sessionId) return { output: mockSuccessLow, userId: null };
+  if (sessionId === mockSuccessHigh.sessionId) {
+    return { output: mockSuccessHigh, userId: null, cushionFromDb: mockSuccessHigh.aiCushionText };
+  }
+  if (sessionId === mockSuccessLow.sessionId) {
+    return { output: mockSuccessLow, userId: null, cushionFromDb: mockSuccessLow.aiCushionText };
+  }
   try {
     const row = await prisma.evaluationResult.findUnique({ where: { sessionId } });
     if (!row) return null;
@@ -47,6 +53,7 @@ async function fetchEvaluationResult(sessionId: string): Promise<FetchedResult |
         disclaimerRequired: true,
       },
       userId: row.userId,
+      cushionFromDb: row.aiCushionText,
     };
   } catch (err) {
     // DB 일시 장애 시 사용자에게는 404 가 자연스러움. 로깅만.
@@ -78,7 +85,6 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
   const result = fetched.output;
 
   const nudgeCopy = getNudgeCopy(result.peerPercentile);
-  const safeCushion = sanitizeUserFacingText(result.aiCushionText);
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
@@ -119,7 +125,7 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
         </div>
         <PercentileBar value={result.peerPercentile} />
         <p className="mt-3 text-sm font-medium">{nudgeCopy}</p>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{safeCushion}</p>
+        <CushionAsync sessionId={sessionId} initialText={fetched.cushionFromDb} />
         <p
           data-testid="disclaimer"
           className="mt-3 text-xs text-gray-500 dark:text-gray-400"
