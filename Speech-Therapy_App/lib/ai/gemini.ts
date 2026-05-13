@@ -13,7 +13,9 @@ import { google } from "@ai-sdk/google";
 import { generateObject, generateText } from "ai";
 import type { ZodTypeAny, z } from "zod";
 
-const DEFAULT_MODEL = "gemini-1.5-flash";
+// gemini-1.5-flash 는 2026 봄에 v1beta 에서 deprecated → 404 NOT_FOUND.
+// 무료 티어에 사용 가능한 최신 빠른 모델 사용.
+const DEFAULT_MODEL = "gemini-2.5-flash";
 const LLM_TIMEOUT_MS = 15_000;
 
 export class LLMTimeoutError extends Error {
