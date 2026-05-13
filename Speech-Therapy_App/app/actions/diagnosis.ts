@@ -28,6 +28,7 @@ import { compositeScore, computePeerPercentile } from "@/lib/peer-percentile";
 import { hasBannedTerm } from "@/lib/forbidden-words";
 import { sanitizeUserFacingText } from "@/lib/text-safety";
 import { enqueueForReview } from "@/lib/hitl";
+import { notifyHITLBySlack } from "@/lib/notifications/slack";
 import { getDiagnosisMock } from "@/lib/mocks/diagnosis";
 import {
   DiagnosisInputSchema,
@@ -143,9 +144,19 @@ export async function analyzeDiagnosis(
         },
       });
 
-      // ── 7단계: Confidence < 70 → HITL 큐 등록 (FR-C-002 핵심 동작) ──
+      // ── 7단계: Confidence < 70 → HITL 큐 등록 + Slack 웹훅 (FR-C-002) ──
       if (requiresHITL) {
-        await enqueueForReview(sessionId, userId, scoring.confidence);
+        const queue = await enqueueForReview(sessionId, userId, scoring.confidence);
+        // D4: Slack 알림. 실패해도 사용자 응답 막지 않음 (graceful degradation).
+        const slackResult = await notifyHITLBySlack({
+          sessionId,
+          queueId: queue.id,
+          confidenceScore: scoring.confidence,
+          slaDueAt: queue.slaDueAt,
+        });
+        if (!slackResult.ok && !slackResult.skipped) {
+          console.warn("HITL Slack 알림 실패:", slackResult.error);
+        }
       }
     } catch (err) {
       // DB 저장 실패는 사용자 응답을 막지 않음 (R8 free-tier 가용성 보호).
