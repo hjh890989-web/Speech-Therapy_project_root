@@ -12,9 +12,11 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
-  const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
-  });
+  // Sprint 1: DATABASE_URL (pgBouncer 6543) 가 인증 실패하는 환경 대응 →
+  // DIRECT_URL 우선 사용. 단일 사용자 / Vercel free tier 의 connection 한계 안에서 문제 없음.
+  // 본격 prod 트래픽 시 DATABASE_URL pooler 우선으로 다시 전환 (별도 PR).
+  const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+  const adapter = new PrismaPg({ connectionString });
   return new PrismaClient({ adapter });
 }
 
