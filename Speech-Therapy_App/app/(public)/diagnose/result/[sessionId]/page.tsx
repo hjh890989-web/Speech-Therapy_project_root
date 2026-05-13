@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db";
 import { mockSuccessHigh, mockSuccessLow } from "@/lib/mocks/diagnosis";
 import { sanitizeUserFacingText } from "@/lib/text-safety";
 import type { DiagnosisOutput } from "@/lib/schemas/diagnosis";
+import { RewardOnMount } from "./RewardOnMount";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -20,23 +21,32 @@ export const metadata = {
   description: "또래 비교 결과를 부모님께 안내합니다. 본 결과는 의료적 판단이 아닌 발달 참고 자료입니다.",
 };
 
+interface FetchedResult {
+  output: DiagnosisOutput;
+  /// FR-C-009 reward 호출용. mock 데이터엔 null → 보상 미발급.
+  userId: string | null;
+}
+
 // FR-C-001 통합: MOCK sessionId 는 우선 매핑, 그 외엔 evaluation_results 조회.
-async function fetchEvaluationResult(sessionId: string): Promise<DiagnosisOutput | null> {
-  if (sessionId === mockSuccessHigh.sessionId) return mockSuccessHigh;
-  if (sessionId === mockSuccessLow.sessionId) return mockSuccessLow;
+async function fetchEvaluationResult(sessionId: string): Promise<FetchedResult | null> {
+  if (sessionId === mockSuccessHigh.sessionId) return { output: mockSuccessHigh, userId: null };
+  if (sessionId === mockSuccessLow.sessionId) return { output: mockSuccessLow, userId: null };
   try {
     const row = await prisma.evaluationResult.findUnique({ where: { sessionId } });
     if (!row) return null;
     return {
-      sessionId: row.sessionId,
-      articulationScore: row.articulationScore,
-      linguisticScore: row.linguisticScore,
-      acousticScore: row.acousticScore,
-      peerPercentile: row.peerPercentile,
-      confidence: row.confidence,
-      aiCushionText: row.aiCushionText ?? "",
-      requiresHITL: !row.hitlReviewed && row.confidence < 70,
-      disclaimerRequired: true,
+      output: {
+        sessionId: row.sessionId,
+        articulationScore: row.articulationScore,
+        linguisticScore: row.linguisticScore,
+        acousticScore: row.acousticScore,
+        peerPercentile: row.peerPercentile,
+        confidence: row.confidence,
+        aiCushionText: row.aiCushionText ?? "",
+        requiresHITL: !row.hitlReviewed && row.confidence < 70,
+        disclaimerRequired: true,
+      },
+      userId: row.userId,
     };
   } catch (err) {
     // DB 일시 장애 시 사용자에게는 404 가 자연스러움. 로깅만.
@@ -63,8 +73,9 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
   const age = typeof sp.age === "string" ? sp.age : "";
   const transcript = typeof sp.transcript === "string" ? sp.transcript : "";
 
-  const result = await fetchEvaluationResult(sessionId);
-  if (!result) notFound();
+  const fetched = await fetchEvaluationResult(sessionId);
+  if (!fetched) notFound();
+  const result = fetched.output;
 
   const nudgeCopy = getNudgeCopy(result.peerPercentile);
   const safeCushion = sanitizeUserFacingText(result.aiCushionText);
@@ -78,6 +89,9 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
       >
         본 결과는 의료적 판단이 아닌 발달 참고 자료입니다.
       </p>
+
+      {/* FR-C-009 — 실 사용자만 별 적립. mock 데이터엔 미발급. */}
+      {fetched.userId && <RewardOnMount userId={fetched.userId} sessionId={sessionId} />}
 
       <header className="mb-6 space-y-2">
         <h1 className="text-2xl font-bold sm:text-3xl">{phoneme} 발음 확인 결과</h1>

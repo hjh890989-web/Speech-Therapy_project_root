@@ -1,19 +1,57 @@
 "use server";
 
-// API-002 — getCurriculum() Server Action 시그니처 stub.
-// 구현은 FR-C-008 책임.
+// FR-C-008 — getCurriculum Server Action.
+// API-002 Zod 입력 검증 → lib/curriculum.ts 비즈니스 로직 위임.
+// REQ-FUNC-021~023 (3연속 실패 -1 / 5연속 성공 +1 / 음소 마스터 switch / 전환 < 0.5s).
 
-import type { CurriculumInput, CurriculumOutput } from "@/lib/schemas/curriculum";
-import { CurriculumInputSchema } from "@/lib/schemas/curriculum";
+import { prisma } from "@/lib/db";
+import {
+  analyzeStreaks,
+  decideRecommendation,
+  prismaMissionDeps,
+  resolveMission,
+} from "@/lib/curriculum";
+import {
+  CurriculumInputSchema,
+  type CurriculumInput,
+  type CurriculumOutput,
+} from "@/lib/schemas/curriculum";
 
-export async function getCurriculum(
-  rawInput: unknown,
-): Promise<CurriculumOutput> {
-  const _input: CurriculumInput = CurriculumInputSchema.parse(rawInput);
+export async function getCurriculum(rawInput: unknown): Promise<CurriculumOutput> {
+  const input: CurriculumInput = CurriculumInputSchema.parse(rawInput);
 
-  // FR-C-008 구현:
-  //    - recentSessions 분석 → 3연속 실패 / 5연속 성공 패턴 판정
-  //    - DB-006 MissionCard 카탈로그 조회 (음소 + 난이도 + 월령 매칭)
-  //    - reason 분기: continue / level_down / level_up / phoneme_switch
-  throw new Error("Not implemented — see FR-C-008");
+  // 최근 세션의 미션 메타 (난이도/음소) 를 1회만 추가 조회 → streak 의 currentLevel 결정.
+  const latest = input.recentSessions[0];
+  let recentDifficulty: number | null = null;
+  let recentPhoneme: string | null = null;
+  if (latest) {
+    const mission = await prisma.missionCard.findUnique({
+      where: { id: latest.missionId },
+      select: { difficultyLevel: true, targetPhoneme: true },
+    });
+    if (mission) {
+      recentDifficulty = mission.difficultyLevel;
+      recentPhoneme = mission.targetPhoneme;
+    }
+  }
+
+  const streak = analyzeStreaks(input.recentSessions, recentDifficulty, recentPhoneme);
+  const preferred = input.targetPhoneme ?? (recentPhoneme as CurriculumInput["targetPhoneme"]) ?? "ㅅ";
+  const decision = decideRecommendation(streak, 1, preferred);
+
+  const missionId = await resolveMission(input, decision, prismaMissionDeps);
+  if (!missionId) {
+    throw new Error("NO_MISSIONS_AVAILABLE");
+  }
+
+  return {
+    recommendedMissionId: missionId,
+    recommendedDifficulty: decision.difficulty,
+    reason: decision.reason,
+    ...(decision.suggestedNextPhoneme && { suggestedNextPhoneme: decision.suggestedNextPhoneme }),
+    streakInfo: {
+      successCount: streak.successCount,
+      failureCount: streak.failureCount,
+    },
+  };
 }
