@@ -7,5 +7,23 @@
     "app/api/**/*.ts": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/weekly-reports",
+      "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/cron/audio-cleanup",
+      "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/cron/hitl-monitor",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/consent-reminder",
+      "schedule": "0 9 * * *"
+    }
+  ]
 }
