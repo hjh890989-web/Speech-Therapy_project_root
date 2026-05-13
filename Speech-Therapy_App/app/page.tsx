@@ -1,65 +1,71 @@
-import Image from "next/image";
+// 루트 / — Speech-Therapy 홈 (서비스 소개 + 3 CTA).
+// PWA start_url = "/" 이므로 홈화면 설치 후 첫 진입 화면이 본 페이지.
+
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="mx-auto flex min-h-full max-w-2xl flex-col px-4 py-10 sm:py-16">
+      {/* Disclaimer 1중 */}
+      <p
+        data-testid="disclaimer"
+        className="mb-6 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+      >
+        본 서비스는 의료적 판단이 아닌, 부모님께 발달 확인 정보를 안내하는 보조 도구입니다.
+      </p>
+
+      <header className="mb-10 space-y-3">
+        <h1 className="text-3xl font-bold sm:text-4xl">Speech-Therapy</h1>
+        <p className="text-base text-gray-700 dark:text-gray-300">
+          회원가입 없이 <strong>5분</strong> 안에 아이의 발음 발달 단계를 또래와 비교해 확인할 수
+          있어요. 매일 짧은 미션으로 즐겁게 이어가요.
+        </p>
+      </header>
+
+      <section className="space-y-3" aria-label="주요 메뉴">
+        <Link
+          href="/diagnose"
+          className="block rounded-lg border-2 border-emerald-500 bg-emerald-50 p-5 transition hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-950/50"
+        >
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+            5분 발음 확인
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          <h2 className="mb-1 text-lg font-bold">오늘 아이의 발음을 확인해 보세요</h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            월령과 음소를 골라 한 단어만 들려주면 또래 비교 결과를 안내해 드려요.
+          </p>
+        </Link>
+
+        <Link
+          href="/missions"
+          className="block rounded-lg border border-gray-300 p-5 transition hover:border-emerald-400 dark:border-gray-700"
+        >
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            오늘의 미션
+          </p>
+          <h2 className="mb-1 text-lg font-bold">짧은 발음 미션으로 이어가기</h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            하루 1~3분, 발달 단계에 맞춘 미션 카드를 둘러보세요.
+          </p>
+        </Link>
+
+        <Link
+          href="/rewards"
+          className="block rounded-lg border border-gray-300 p-5 transition hover:border-emerald-400 dark:border-gray-700"
+        >
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            보상 도감
+          </p>
+          <h2 className="mb-1 text-lg font-bold">모은 별과 나무를 함께 보기</h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            아이와 함께 모은 보상을 시각으로 확인하며 격려해 주세요.
+          </p>
+        </Link>
+      </section>
+
+      <footer className="mt-10 text-xs text-gray-500 dark:text-gray-400">
+        본 결과는 의료적 판단이 아니며, 발달이 우려되는 경우 전문가 상담을 권장합니다.
+      </footer>
+    </main>
   );
 }
