@@ -129,6 +129,22 @@ Speech-Therapy_App/
 - PR 코멘트에 Preview URL 자동 게시
 - `vercel.json` 의 `maxDuration: 60` 적용 (Pro 플랜에서만)
 
+### Cron Jobs (INFRA-002)
+
+| Path | Schedule | 책임 | 활성 |
+|---|---|---|---|
+| `/api/cron/hitl-monitor` | `0 0 * * *` (매일 0시 UTC) | HITL 24h+ pending → escalated + Slack alert | ✅ Hobby |
+| `/api/cron/weekly-reports` | `0 3 * * 0` (일요일 3시 UTC) | 주간 리포트 집계 → upsert | 🟡 Pro 권장 |
+| `/api/cron/audio-cleanup` | `0 3 * * 0` | 음성 7일 폐기 (D6 — Sprint 1 No-op) | 🟡 Pro 권장 |
+| `/api/cron/consent-reminder` | `0 9 * * *` | D+3 동의서 미서명 리마인더 (P2 stub) | 🟡 Pro 권장 |
+
+> **Vercel Hobby 한도**: cron 1개 + 일 단위 schedule. 현재는 `hitl-monitor` 만 매일 활성.
+> **Pro 전환 시**: `vercel.json` 의 `crons` 배열에 나머지 3개 항목 추가 + `hitl-monitor` schedule 을 `0 * * * *` (매시간) 으로 변경.
+
+### CRON_SECRET 인증
+Cron 핸들러는 `Authorization: Bearer ${CRON_SECRET}` 검증. Vercel Dashboard → Environment Variables 에서 등록.
+- 미설정 시 dev / preview 에선 통과, production 에선 401 반환 (외부 차단).
+
 ### 비용 가드 (G2)
 - Vercel Pro: $20/월 고정
 - Bandwidth / Function 호출 임계 시 알림 설정 권장
