@@ -46,8 +46,11 @@ async function fetchEvaluationResult(sessionId: string): Promise<DiagnosisOutput
 }
 
 function getNudgeCopy(peerPercentile: number): string {
+  // 99% 이상은 "상위 0%" 같은 어색한 표현 회피.
+  if (peerPercentile >= 99) return "또래 중 최상위에 가까워요!";
   if (peerPercentile >= 80) {
-    return `또래의 상위 ${100 - Math.round(peerPercentile)}% 안에 들어요.`;
+    const top = Math.max(1, 100 - Math.round(peerPercentile));
+    return `또래의 상위 ${top}% 안에 들어요.`;
   }
   if (peerPercentile >= 40) return "또래와 비슷한 수준이에요.";
   return "조금 더 연습하면 좋아져요.";
