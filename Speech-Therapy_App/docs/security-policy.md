@@ -31,13 +31,28 @@ REQ-NF-019 (RBAC + RLS + Audit Log) + R4 (영유아 음성·식별정보 보호)
 - 음성 원본은 **클라이언트 측 Web Speech API** 에서 텍스트로 변환된 후 즉시 폐기
 - 서버에는 **transcript 텍스트** 만 전송, 음성 binary 는 미전송
 - `session_logs.audioVectorUri` 는 항상 `null` (DB 스키마는 P2 활성 가능하도록 nullable 컬럼만 보유)
+- Supabase Storage `audio` 버킷은 Sprint 1엔 미운영 (생성 자체 선택 사항)
+
+### 7일 폐기 cron (`/api/cron/audio-cleanup`)
+
+FR-C-004 + INFRA-002 — Sprint 1엔 실질 No-op, P2 활성 시 즉시 동작.
+
+1. `session_logs.audioVectorUri` 가 7일 이상 경과한 row → `null` 처리 (DB 컬럼 청소)
+2. Supabase Storage `audio` 버킷 객체 중 `created_at < now - 7d` 삭제
+3. `SUPABASE_SERVICE_ROLE_KEY` 미설정 시 → `storageStatus: "skipped_no_admin_client"` (graceful)
+4. 버킷 미존재 시 → `storageStatus: "skipped_bucket_missing"` (graceful)
+
+### Vercel Cron 등록 상태
+
+- Hobby 플랜 슬롯 1개를 `hitl-monitor` 가 점유 → `audio-cleanup` 은 수동/Preview 호출만
+- Pro 업그레이드 시 `vercel.json crons` 에 `{"path": "/api/cron/audio-cleanup", "schedule": "0 3 * * 0"}` (매주 일요일 03:00 UTC) 등록
 
 ### P2 활성 시 정책
 
-- Supabase Storage `audio` 버킷에 7일간 보관 후 자동 삭제
+- Supabase Storage `audio` 버킷에 7일간 보관 후 자동 삭제 (위 cron 그대로 동작)
 - AES-256 암호화 (Supabase 기본)
 - TLS 1.3 전송 (Vercel + Supabase 기본)
-- 7일 폐기 cron: `/api/cron/audio-cleanup` (INFRA-002, 현재 No-op)
+- 버킷 RLS: 익명 차단, authenticated 자기 파일만 업로드, admin/service_role 만 삭제
 
 ---
 
