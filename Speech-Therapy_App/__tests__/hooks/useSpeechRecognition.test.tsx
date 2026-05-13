@@ -67,3 +67,32 @@ describe("useSpeechRecognition — 미지원 환경", () => {
     expect(result.current.errorCode).toBe("not_supported");
   });
 });
+
+// FR-C-003 — 재시도 1회 정책.
+describe("useSpeechRecognition — 자동 재시도 (FR-C-003)", () => {
+  it("초기 retryCount = 0", async () => {
+    const { useSpeechRecognition } = await import("@/lib/hooks/useSpeechRecognition");
+    const { result } = renderHook(() => useSpeechRecognition());
+    expect(result.current.retryCount).toBe(0);
+  });
+
+  it("start() → retryCount 0 + status listening", async () => {
+    const { useSpeechRecognition } = await import("@/lib/hooks/useSpeechRecognition");
+    const { result } = renderHook(() => useSpeechRecognition());
+    act(() => {
+      result.current.start();
+    });
+    expect(result.current.retryCount).toBe(0);
+    expect(result.current.status).toBe("listening");
+  });
+
+  it("reset() → retryCount 0 + status idle", async () => {
+    const { useSpeechRecognition } = await import("@/lib/hooks/useSpeechRecognition");
+    const { result } = renderHook(() => useSpeechRecognition());
+    act(() => {
+      result.current.reset();
+    });
+    expect(result.current.retryCount).toBe(0);
+    expect(result.current.status).toBe("idle");
+  });
+});

@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { prisma } from "@/lib/db";
 import { mockSuccessHigh, mockSuccessLow } from "@/lib/mocks/diagnosis";
 import { sanitizeUserFacingText } from "@/lib/text-safety";
 import type { DiagnosisOutput } from "@/lib/schemas/diagnosis";
@@ -19,11 +20,29 @@ export const metadata = {
   description: "또래 비교 결과를 부모님께 안내합니다. 본 결과는 의료적 판단이 아닌 발달 참고 자료입니다.",
 };
 
-// Sprint 1: MOCK 매핑. FR-C-001 후 prisma.evaluationResult.findUnique 로 교체.
+// FR-C-001 통합: MOCK sessionId 는 우선 매핑, 그 외엔 evaluation_results 조회.
 async function fetchEvaluationResult(sessionId: string): Promise<DiagnosisOutput | null> {
   if (sessionId === mockSuccessHigh.sessionId) return mockSuccessHigh;
   if (sessionId === mockSuccessLow.sessionId) return mockSuccessLow;
-  return null;
+  try {
+    const row = await prisma.evaluationResult.findUnique({ where: { sessionId } });
+    if (!row) return null;
+    return {
+      sessionId: row.sessionId,
+      articulationScore: row.articulationScore,
+      linguisticScore: row.linguisticScore,
+      acousticScore: row.acousticScore,
+      peerPercentile: row.peerPercentile,
+      confidence: row.confidence,
+      aiCushionText: row.aiCushionText ?? "",
+      requiresHITL: !row.hitlReviewed && row.confidence < 70,
+      disclaimerRequired: true,
+    };
+  } catch (err) {
+    // DB 일시 장애 시 사용자에게는 404 가 자연스러움. 로깅만.
+    console.error("evaluationResult fetch failed:", err);
+    return null;
+  }
 }
 
 function getNudgeCopy(peerPercentile: number): string {

@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSpeechRecognition } from "@/lib/hooks/useSpeechRecognition";
-import { mockSuccessHigh, mockSuccessLow } from "@/lib/mocks/diagnosis";
+import { analyzeDiagnosis } from "@/app/actions/diagnosis";
 
 const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
 const SAMPLE_WORDS: Record<(typeof PHONEMES)[number], string> = {
@@ -26,7 +26,7 @@ export function DiagnosisForm() {
   const [agreed, setAgreed] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { status, transcript, errorCode, isSupported, isMounted, start, reset } =
+  const { status, transcript, errorCode, isSupported, isMounted, retryCount, start, reset } =
     useSpeechRecognition();
 
   const handleSubmit = async () => {
@@ -41,17 +41,28 @@ export function DiagnosisForm() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      // Sprint 1 단계: analyzeDiagnosis 실제 호출은 FR-C-001 구현 후.
-      // 현재는 transcript 길이로 high/low 분기 → MOCK sessionId 로 결과 페이지 이동.
-      const mockResult = transcript.length >= 2 ? mockSuccessHigh : mockSuccessLow;
+      // FR-C-001 호출 — Gemini + DB INSERT + Confidence < 70 시 HITL 큐 + Slack 통합.
+      const result = await analyzeDiagnosis({
+        transcript,
+        childAgeMonths,
+        targetPhoneme,
+      });
       const params = new URLSearchParams({
         phoneme: targetPhoneme,
         age: String(childAgeMonths),
         transcript,
       });
-      router.push(`/diagnose/result/${mockResult.sessionId}?${params.toString()}`);
+      router.push(`/diagnose/result/${result.sessionId}?${params.toString()}`);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "알 수 없는 오류");
+      // LLM_TIMEOUT / INTERNAL_ERROR / Zod validation 등.
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("LLM_TIMEOUT")) {
+        setSubmitError("분석에 시간이 오래 걸려요. 잠시 후 다시 시도해 주세요.");
+      } else if (message.includes("GOOGLE_GENERATIVE_AI_API_KEY")) {
+        setSubmitError("AI 분석 서비스 설정이 누락되었어요. 운영자에게 문의해 주세요.");
+      } else {
+        setSubmitError("일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -137,24 +148,35 @@ export function DiagnosisForm() {
             주세요.
           </p>
         ) : (
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                reset();
-                start();
-              }}
-              disabled={status === "listening"}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-            >
-              {status === "listening" ? "듣는 중..." : "발화 시작"}
-            </button>
-            {transcript && (
-              <div className="text-sm">
-                들린 단어: <span className="font-semibold">{transcript}</span>
-              </div>
+          <>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  reset();
+                  start();
+                }}
+                disabled={status === "listening" || status === "retrying"}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {status === "listening"
+                  ? "듣는 중..."
+                  : status === "retrying"
+                    ? "다시 듣고 있어요..."
+                    : "발화 시작"}
+              </button>
+              {transcript && (
+                <div className="text-sm">
+                  들린 단어: <span className="font-semibold">{transcript}</span>
+                </div>
+              )}
+            </div>
+            {retryCount > 0 && status !== "error" && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                자동으로 한 번 더 시도하고 있어요.
+              </p>
             )}
-          </div>
+          </>
         )}
 
         {errorCode === "permission_denied" && (
