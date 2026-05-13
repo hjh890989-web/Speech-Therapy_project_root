@@ -114,54 +114,62 @@ export async function analyzeDiagnosis(
   const aiCushionText = sanitizeUserFacingText(cushion);
 
   // ── 6단계: evaluation_results INSERT ────────────────────────────
+  // Sprint 1: 무로그인 사용자도 분석 결과를 DB 에 저장해야 result 페이지가 동작.
+  // anonymousUserId 또는 새 UUID 로 User row 자동 upsert (role: parent).
   const sessionId = randomUUID();
   const requiresHITL = scoring.confidence < HITL_THRESHOLD;
-  const userId = input.userId ?? input.anonymousUserId;
+  const userId = input.userId ?? input.anonymousUserId ?? randomUUID();
+  const isAnonymous = !input.userId;
 
-  if (userId) {
-    // session_logs 가 user FK 필수라 anonymous 익명 사용자는 INSERT 보류.
-    // (FR-C-001 후속 — anonymous → session_logs 별도 처리 P1)
-    try {
-      await prisma.sessionLog.create({
-        data: {
-          id: sessionId,
-          userId,
-          durationSec: 0,
-        },
-      });
-      await prisma.evaluationResult.create({
-        data: {
-          sessionId,
-          userId,
-          articulationScore: scoring.articulation,
-          linguisticScore: scoring.linguistic,
-          acousticScore: scoring.acoustic,
-          peerPercentile,
-          confidence: scoring.confidence,
-          aiCushionText,
-          targetPhoneme: input.targetPhoneme,
+  try {
+    if (isAnonymous) {
+      // 익명 사용자 user row 자동 생성 (멱등 upsert).
+      await prisma.user.upsert({
+        where: { id: userId },
+        update: {},
+        create: {
+          id: userId,
+          role: "parent",
           childAgeMonths: input.childAgeMonths,
         },
       });
-
-      // ── 7단계: Confidence < 70 → HITL 큐 등록 + Slack 웹훅 (FR-C-002) ──
-      if (requiresHITL) {
-        const queue = await enqueueForReview(sessionId, userId, scoring.confidence);
-        // D4: Slack 알림. 실패해도 사용자 응답 막지 않음 (graceful degradation).
-        const slackResult = await notifyHITLBySlack({
-          sessionId,
-          queueId: queue.id,
-          confidenceScore: scoring.confidence,
-          slaDueAt: queue.slaDueAt,
-        });
-        if (!slackResult.ok && !slackResult.skipped) {
-          console.warn("HITL Slack 알림 실패:", slackResult.error);
-        }
-      }
-    } catch (err) {
-      // DB 저장 실패는 사용자 응답을 막지 않음 (R8 free-tier 가용성 보호).
-      console.error("evaluation_result INSERT failed:", err);
     }
+
+    await prisma.sessionLog.create({
+      data: { id: sessionId, userId, durationSec: 0 },
+    });
+    await prisma.evaluationResult.create({
+      data: {
+        sessionId,
+        userId,
+        articulationScore: scoring.articulation,
+        linguisticScore: scoring.linguistic,
+        acousticScore: scoring.acoustic,
+        peerPercentile,
+        confidence: scoring.confidence,
+        aiCushionText,
+        targetPhoneme: input.targetPhoneme,
+        childAgeMonths: input.childAgeMonths,
+      },
+    });
+
+    // ── 7단계: Confidence < 70 → HITL 큐 등록 + Slack 웹훅 (FR-C-002) ──
+    if (requiresHITL) {
+      const queue = await enqueueForReview(sessionId, userId, scoring.confidence);
+      // D4: Slack 알림. 실패해도 사용자 응답 막지 않음 (graceful degradation).
+      const slackResult = await notifyHITLBySlack({
+        sessionId,
+        queueId: queue.id,
+        confidenceScore: scoring.confidence,
+        slaDueAt: queue.slaDueAt,
+      });
+      if (!slackResult.ok && !slackResult.skipped) {
+        console.warn("HITL Slack 알림 실패:", slackResult.error);
+      }
+    }
+  } catch (err) {
+    // DB 저장 실패는 사용자 응답을 막지 않음 (R8 free-tier 가용성 보호).
+    console.error("evaluation_result INSERT failed:", err);
   }
 
   // ── 8단계: 출력 스키마 검증 + 반환 ──────────────────────────────
