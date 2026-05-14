@@ -13,9 +13,10 @@ import { google } from "@ai-sdk/google";
 import { generateObject, generateText } from "ai";
 import type { ZodTypeAny, z } from "zod";
 
-// gemini-1.5-flash 는 2026 봄에 v1beta 에서 deprecated → 404 NOT_FOUND.
-// 무료 티어에 사용 가능한 최신 빠른 모델 사용.
-const DEFAULT_MODEL = "gemini-2.5-flash";
+// gemini-2.5-flash-lite — gemini-2.5-flash 대비 thinking 모드 없음 → 응답 속도 ~50% 빠름.
+// 진단 스코어링은 JSON 4 필드 단순 분류 → lite 품질로 충분.
+// gemini-1.5-flash 는 2026 봄 v1beta 에서 deprecated → 404 NOT_FOUND 회피.
+const DEFAULT_MODEL = "gemini-2.5-flash-lite";
 const LLM_TIMEOUT_MS = 15_000;
 
 export class LLMTimeoutError extends Error {
