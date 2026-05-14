@@ -20,6 +20,8 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { compositeScore, computePeerPercentile } from "@/lib/peer-percentile";
 import { computePhoneticSimilarity } from "@/lib/phonetic-similarity";
+import { computeLinguisticScore } from "@/lib/linguistic-score";
+import { computeAcousticScore } from "@/lib/acoustic-score";
 import { enqueueForReview } from "@/lib/hitl";
 import { notifyHITLBySlack } from "@/lib/notifications/slack";
 import { getDiagnosisMock } from "@/lib/mocks/diagnosis";
@@ -88,13 +90,13 @@ export async function analyzeDiagnosis(
     });
   }
 
-  // ── 3단계: phonetic similarity → articulationScore + 또래 백분위 ─
-  // Sprint 2 §2: deterministic. STT transcript 가 의도 단어와 자모 단위로 얼마나 다른지.
-  // linguistic / acoustic 은 Sprint 3 에서 별도 재설계 — 현재는 articulation 동값 노출
-  // (3 축 분리 노이즈 회피, 사용자에게 단일 신호로 일관성 있게 표시).
+  // ── 3단계: 3축 점수 계산 (Sprint 3 §1 분리 재설계) ────────────────
+  // - articulation: 자모 단위 정확도 (phonetic similarity).
+  // - linguistic: 음절 단위 어휘 완성도 (의도 단어를 끝까지 발화했는가).
+  // - acoustic: 자모 길이 합리성 + STT 인식 명료성.
   const articulationScore = computePhoneticSimilarity(input.intendedWord, input.transcript);
-  const linguisticScore = articulationScore;
-  const acousticScore = articulationScore;
+  const linguisticScore = computeLinguisticScore(input.intendedWord, input.transcript);
+  const acousticScore = computeAcousticScore(input.intendedWord, input.transcript);
 
   // 결정적 알고리즘이므로 confidence 는 항상 높음 (95). HITL 트리거는 articulationScore 기반.
   const confidence = 95;

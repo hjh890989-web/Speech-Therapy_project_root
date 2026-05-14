@@ -56,6 +56,16 @@ function substitutionCost(a: string, b: string): number {
   return 1;
 }
 
+/** 문자열의 한글 완성형 음절 (가-힣) 개수. linguistic/acoustic 점수 계산용 공유 헬퍼. */
+export function countHangulSyllables(text: string): number {
+  let count = 0;
+  for (const ch of text) {
+    const code = ch.codePointAt(0);
+    if (code !== undefined && code >= HANGUL_BASE && code <= HANGUL_END) count += 1;
+  }
+  return count;
+}
+
 /**
  * 한글 문자열을 자모 배열로 분해.
  * 한글 음절이 아닌 문자 (공백 / 영문 / 숫자 / 구두점) 는 그대로 1 자모로 취급.
