@@ -5,7 +5,7 @@
 // 입력 항목 ≤ 3개: 자녀 월령 / 타겟 음소 / 동의 체크.
 // CON-04 — 모든 카피는 "치료/진단/장애" 금칙어 0건 (발달 확인 / 발음 등 비의료 표현).
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSpeechRecognition } from "@/lib/hooks/useSpeechRecognition";
 import { analyzeDiagnosis } from "@/app/actions/diagnosis";
@@ -19,6 +19,15 @@ const SAMPLE_WORDS: Record<(typeof PHONEMES)[number], string> = {
   ㄹ: "라면, 로봇, 라디오",
 };
 
+// 분석 진행 단계 카피 — 실제 Server Action 의 진척과 시간 매핑은 근사값.
+// Gemini 호출 (5~8s) > DB nested write (~0.5s) > 페이지 이동 (~0.5s).
+const PROGRESS_STAGES: ReadonlyArray<{ ms: number; label: string }> = [
+  { ms: 0, label: "발음을 듣고 있어요..." },
+  { ms: 1_500, label: "또래와 비교하는 중이에요..." },
+  { ms: 5_000, label: "결과를 정리하는 중이에요..." },
+  { ms: 9_000, label: "조금만 더 기다려 주세요..." },
+];
+
 export function DiagnosisForm() {
   const router = useRouter();
   const [childAgeMonths, setChildAgeMonths] = useState(36);
@@ -26,8 +35,30 @@ export function DiagnosisForm() {
   const [agreed, setAgreed] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [progressLabel, setProgressLabel] = useState<string>(PROGRESS_STAGES[0].label);
+  const progressTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const { status, transcript, errorCode, isSupported, isMounted, retryCount, start, reset } =
     useSpeechRecognition();
+
+  // unmount 시 잔여 progress 타이머 정리 (메모리 누수 방지).
+  useEffect(() => {
+    return () => {
+      progressTimersRef.current.forEach((t) => clearTimeout(t));
+      progressTimersRef.current = [];
+    };
+  }, []);
+
+  const startProgressTimers = () => {
+    progressTimersRef.current.forEach((t) => clearTimeout(t));
+    progressTimersRef.current = PROGRESS_STAGES.slice(1).map((stage) =>
+      setTimeout(() => setProgressLabel(stage.label), stage.ms),
+    );
+  };
+
+  const clearProgressTimers = () => {
+    progressTimersRef.current.forEach((t) => clearTimeout(t));
+    progressTimersRef.current = [];
+  };
 
   const handleSubmit = async () => {
     if (!agreed) {
@@ -40,6 +71,8 @@ export function DiagnosisForm() {
     }
     setIsSubmitting(true);
     setSubmitError(null);
+    setProgressLabel(PROGRESS_STAGES[0].label);
+    startProgressTimers();
     try {
       // FR-C-001 호출 — Gemini + DB INSERT + Confidence < 70 시 HITL 큐 + Slack 통합.
       const result = await analyzeDiagnosis({
@@ -64,6 +97,7 @@ export function DiagnosisForm() {
         setSubmitError("일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
       }
     } finally {
+      clearProgressTimers();
       setIsSubmitting(false);
     }
   };
@@ -209,6 +243,20 @@ export function DiagnosisForm() {
       >
         {isSubmitting ? "분석 중..." : "결과 확인"}
       </button>
+
+      {isSubmitting && (
+        <div
+          className="mt-3 flex items-center gap-3 rounded-md bg-emerald-50 px-4 py-3 dark:bg-emerald-950/40"
+          role="status"
+          aria-live="polite"
+        >
+          <span
+            className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent"
+            aria-hidden
+          />
+          <span className="text-sm text-emerald-900 dark:text-emerald-100">{progressLabel}</span>
+        </div>
+      )}
     </form>
   );
 }

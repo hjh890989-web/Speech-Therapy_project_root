@@ -1,0 +1,53 @@
+# Keep-warm cron — Vercel Hobby plan 의 cold start 완화 목적.
+#
+# 설정 절차 (1회):
+#   1. Vercel Production URL 확인 (예: https://speech-therapy.vercel.app)
+#   2. GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+#   3. Name: KEEP_WARM_URL, Value: https://<your-vercel-domain>  (끝에 슬래시 없이)
+#
+# 동작:
+#   - 5분마다 /api/health (경량) + /diagnose (Server Action 번들 워밍업) 동시 GET
+#   - 응답 코드만 기록 (실패해도 다음 사이클로 진행 — 사용자 영향 없음)
+#
+# 비용:
+#   - GitHub Actions: public repo 무료 / private repo 월 2,000분 무료 (본 워크플로 < 5분/월 사용)
+#   - Vercel: Invocations 만 발생 — Hobby 100GB-Hours/월 한도 안에서 무시 가능 수준
+
+name: keep-warm
+
+on:
+  schedule:
+    # 매 5분마다. GitHub Actions cron 은 UTC + 분산 부하로 최대 ~5분 지연 가능.
+    - cron: "*/5 * * * *"
+  # 수동 실행도 가능 (Actions 탭에서 Run workflow).
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Validate secret
+        run: |
+          if [ -z "${{ secrets.KEEP_WARM_URL }}" ]; then
+            echo "::warning::KEEP_WARM_URL secret 미설정 → 워크플로 종료 (정상)."
+            exit 0
+          fi
+
+      - name: Ping /api/health
+        if: ${{ env.KEEP_WARM_URL != '' }}
+        env:
+          KEEP_WARM_URL: ${{ secrets.KEEP_WARM_URL }}
+        run: |
+          echo "→ GET $KEEP_WARM_URL/api/health"
+          status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$KEEP_WARM_URL/api/health" || echo "TIMEOUT")
+          echo "health status: $status"
+
+      - name: Ping /diagnose (warm Server Action bundle)
+        if: ${{ env.KEEP_WARM_URL != '' }}
+        env:
+          KEEP_WARM_URL: ${{ secrets.KEEP_WARM_URL }}
+        run: |
+          echo "→ GET $KEEP_WARM_URL/diagnose"
+          status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$KEEP_WARM_URL/diagnose" || echo "TIMEOUT")
+          echo "diagnose status: $status"
