@@ -13,6 +13,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { dailyMissionFixtures, type MissionFixture } from "@/lib/mocks/missions";
 import { mockContinue } from "@/lib/mocks/curriculum";
 import { analyzeStreaks, decideRecommendation } from "@/lib/curriculum";
@@ -94,10 +95,23 @@ async function computeRecommendation(userId: string | undefined): Promise<Missio
   }
 }
 
-export default async function MissionsPage() {
-  // FR-C-008: 익명 사용자 cookie → SessionLog 분석 → 적응형 추천.
+async function resolveUserId(): Promise<string | undefined> {
+  // 1순위: 인증된 Supabase 사용자.
+  try {
+    const supabase = await getSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    if (data.user?.id) return data.user.id;
+  } catch {
+    // env 미설정 시 익명 폴백.
+  }
+  // 2순위: 익명 cookie.
   const cookieStore = await cookies();
-  const userId = cookieStore.get(ANONYMOUS_USER_COOKIE)?.value;
+  return cookieStore.get(ANONYMOUS_USER_COOKIE)?.value;
+}
+
+export default async function MissionsPage() {
+  // FR-C-008: 인증/익명 사용자 cookie → SessionLog 분석 → 적응형 추천.
+  const userId = await resolveUserId();
   const recommendation = await computeRecommendation(userId);
   const recommended = recommendation.mission;
 

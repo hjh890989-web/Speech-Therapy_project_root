@@ -6,6 +6,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: "보상 도감 — Speech-Therapy",
@@ -36,10 +37,23 @@ async function fetchRewardProgress(userId: string | undefined): Promise<RewardSn
   }
 }
 
-export default async function RewardsPage() {
+async function resolveUserId(): Promise<string | undefined> {
+  // 1순위: 인증된 Supabase 사용자.
+  try {
+    const supabase = await getSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    if (data.user?.id) return data.user.id;
+  } catch {
+    // env 미설정 시 익명 폴백.
+  }
+  // 2순위: 익명 cookie.
   const cookieStore = await cookies();
-  const anonymousUserId = cookieStore.get(ANONYMOUS_USER_COOKIE)?.value;
-  const progress = await fetchRewardProgress(anonymousUserId);
+  return cookieStore.get(ANONYMOUS_USER_COOKIE)?.value;
+}
+
+export default async function RewardsPage() {
+  const userId = await resolveUserId();
+  const progress = await fetchRewardProgress(userId);
   const hasRewards = progress !== null && progress.cumulativeStars + progress.treeGrowthLevel + progress.aiDrawingCount > 0;
 
   return (

@@ -33,18 +33,24 @@ import {
 } from "@/lib/schemas/diagnosis";
 
 import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
- * Sprint 2 §4 — userId 우선순위 재정렬 (별 누적 1개 고착 fix).
- *  1. input.userId (인증 사용자, 최우선)
- *  2. input.anonymousUserId (클라이언트 localStorage 권위, useAnonymousUserId hook 과 동일 방향)
- *  3. cookie 의 anonymous_user_id (proxy.ts 가 발급한 stale 값일 수 있음 — 폴백)
- *  4. randomUUID (방어적, 정상 흐름엔 도달 안 함)
- *
- * 폐기 사유: §3 의 "cookie 우선" 은 proxy.ts 가 ITP 클리어 후 새 UUID 를 발급하면
- * 보상이 새 userId 에 분산 저장되는 root cause 였음. localStorage 권위로 통일.
+ * Sprint 2 §4 + API-010 — userId 우선순위.
+ *  1. Supabase 인증 사용자 (최우선, /rewards 와 동일 권위)
+ *  2. input.userId (legacy, 미사용 — schema 호환)
+ *  3. input.anonymousUserId (localStorage 권위, useAnonymousUserId hook 과 동일)
+ *  4. cookie 의 anonymous_user_id (proxy.ts 가 발급한 stale 값일 수 있음 — 폴백)
+ *  5. randomUUID (방어적, 정상 흐름엔 도달 안 함)
  */
 async function resolveUserId(input: DiagnosisInput): Promise<string> {
+  try {
+    const supabase = await getSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    if (data.user?.id) return data.user.id;
+  } catch {
+    // Supabase env 미설정 등 — 익명 폴백.
+  }
   if (input.userId) return input.userId;
   if (input.anonymousUserId) return input.anonymousUserId;
   const cookieStore = await cookies();
