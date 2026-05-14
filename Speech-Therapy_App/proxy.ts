@@ -1,11 +1,10 @@
 // Next.js 16 `proxy` convention (옛 middleware).
-// REQ-NF-019 RBAC + FR-C-005 금칙어 검사의 진입점.
+// REQ-NF-019 RBAC + FR-C-005 금칙어 검사 + Sprint 2 §3 anonymousUserId cookie 권위.
 //
-// Sprint 1 단계 범위:
-// - 모든 요청에 대해 통과만 (no-op). 향후 API-010 (Supabase Auth + RBAC) 가
-//   확장 가능한 골격 마련.
-// - 금칙어 검사는 lib/text-safety.ts 의 페이지 인라인 sanitize 가 담당.
-// - 응답 본문 스트리밍 스캔은 P1 단계에서 본 proxy 에 흡수 (FR-C-005 §AC).
+// Sprint 2 §3 추가: cookie 부재 시 서버 측 Set-Cookie 응답 헤더로 발급.
+//   - iOS Safari ITP 의 JS-set cookie 7-day 캡 우회 (Set-Cookie 응답은 full TTL 존중)
+//   - 모든 페이지 진입 시 cookie 보장 → /rewards 가 RSC 단계에서 안정적으로 cookie 조회
+//   - 클라이언트 hook 은 이 cookie 를 읽어 localStorage 와 동기화
 //
 // Next.js 16 변경점:
 // - 파일명: middleware.ts → proxy.ts (root)
@@ -15,14 +14,31 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function proxy(_request: NextRequest) {
+const ANONYMOUS_USER_COOKIE = "anonymous_user_id";
+const COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 365; // 1년
+
+export function proxy(request: NextRequest) {
+  const response = NextResponse.next();
+
+  // Sprint 2 §3 — cookie 부재 시 서버 측 발급.
+  if (!request.cookies.has(ANONYMOUS_USER_COOKIE)) {
+    response.cookies.set({
+      name: ANONYMOUS_USER_COOKIE,
+      value: crypto.randomUUID(),
+      path: "/",
+      maxAge: COOKIE_MAX_AGE_SEC,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: false, // 클라이언트 hook 도 읽어 localStorage 동기화 필요.
+    });
+  }
+
   // P1 (API-010): 보호 경로 prefix 체크 + Supabase 세션 갱신 + 역할 기반 차단.
   // P1 (FR-C-005): 응답 본문 정규식 스캔 + audit log INSERT.
-  return NextResponse.next();
+  return response;
 }
 
 // matcher: 정적 자산·이미지 제외, 모든 페이지·API 만 통과.
-// (Sprint 1 엔 no-op 라 부담 없음 — P1 확장 시 인증 가드 필요한 경로만 좁힐 수 있음.)
 export const config = {
   matcher: [
     /*

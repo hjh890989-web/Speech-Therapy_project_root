@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const userUpsertMock = vi.fn();
 const sessionLogCreateMock = vi.fn();
 const hitlUpsertMock = vi.fn();
+const cookieGetMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -27,6 +28,13 @@ vi.mock("@/lib/db", () => ({
       findUnique: vi.fn(),
     },
   },
+}));
+
+// Sprint 2 §3 — analyzeDiagnosis 가 cookie 를 읽음.
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: (name: string) => cookieGetMock(name),
+  }),
 }));
 
 vi.mock("@/lib/peer-percentile", async () => {
@@ -62,6 +70,9 @@ beforeEach(() => {
   userUpsertMock.mockReset();
   sessionLogCreateMock.mockReset();
   hitlUpsertMock.mockReset();
+  cookieGetMock.mockReset();
+  // 기본: cookie 미존재 시 undefined 반환 → analyzeDiagnosis 가 input.anonymousUserId 또는 randomUUID fallback.
+  cookieGetMock.mockReturnValue(undefined);
 
   userUpsertMock.mockResolvedValue({ id: "mocked-user" });
   sessionLogCreateMock.mockResolvedValue({ id: "mocked-session" });

@@ -62,4 +62,29 @@ describe("useAnonymousUserId", () => {
     const second = renderHook(() => useAnonymousUserId());
     await waitFor(() => expect(second.result.current).toBe(firstId));
   });
+
+  it("Sprint 2 §3 — cookie 가 있으면 우선 사용 + localStorage 도 cookie 값으로 동기화", async () => {
+    const COOKIE_ONLY_ID = "11111111-2222-4333-8444-555555555555";
+    // proxy.ts 가 발급한 cookie 시뮬레이션 (localStorage 는 다른 값).
+    document.cookie = `${ANONYMOUS_USER_COOKIE}=${COOKIE_ONLY_ID}; path=/`;
+    localStorage.setItem("anonymousUserId", VALID_UUID); // 다른 값
+
+    const { result } = renderHook(() => useAnonymousUserId());
+    await waitFor(() => expect(result.current).toBe(COOKIE_ONLY_ID));
+
+    // localStorage 가 cookie 값으로 덮어쓰여야 함 — 권위는 cookie.
+    expect(localStorage.getItem("anonymousUserId")).toBe(COOKIE_ONLY_ID);
+  });
+
+  it("Sprint 2 §3 — cookie 없고 localStorage 만 있으면 localStorage 복구 + cookie 재발급", async () => {
+    // cookie 클리어 (iOS ITP 시뮬레이션), localStorage 만 보존.
+    const LOCAL_ONLY_ID = "22222222-3333-4444-8555-666666666666";
+    localStorage.setItem("anonymousUserId", LOCAL_ONLY_ID);
+
+    const { result } = renderHook(() => useAnonymousUserId());
+    await waitFor(() => expect(result.current).toBe(LOCAL_ONLY_ID));
+
+    // cookie 재발급 확인.
+    expect(document.cookie).toContain(`${ANONYMOUS_USER_COOKIE}=${LOCAL_ONLY_ID}`);
+  });
 });

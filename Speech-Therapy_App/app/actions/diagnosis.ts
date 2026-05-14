@@ -15,6 +15,7 @@
 // Gemini 호출 제거 → 응답 시간 ~5~10s 추가 단축 기대.
 
 import { randomUUID } from "node:crypto";
+import { cookies } from "next/headers";
 
 import { prisma } from "@/lib/db";
 import { compositeScore, computePeerPercentile } from "@/lib/peer-percentile";
@@ -28,6 +29,24 @@ import {
   type DiagnosisInput,
   type DiagnosisOutput,
 } from "@/lib/schemas/diagnosis";
+
+const ANONYMOUS_USER_COOKIE = "anonymous_user_id";
+
+/**
+ * Sprint 2 §3 — userId 우선순위:
+ *  1. input.userId (인증 사용자, 최우선)
+ *  2. cookie 의 anonymous_user_id (proxy.ts 가 발급, /rewards 와 동일 권위)
+ *  3. input.anonymousUserId (클라이언트 localStorage 폴백 — cookie 클리어 케이스)
+ *  4. randomUUID (방어적, 정상 흐름엔 도달 안 함)
+ */
+async function resolveUserId(input: DiagnosisInput): Promise<string> {
+  if (input.userId) return input.userId;
+  const cookieStore = await cookies();
+  const cookieUserId = cookieStore.get(ANONYMOUS_USER_COOKIE)?.value;
+  if (cookieUserId) return cookieUserId;
+  if (input.anonymousUserId) return input.anonymousUserId;
+  return randomUUID();
+}
 
 // Sprint 2 §2: HITL 게이트 재정의 — confidence 가 아닌 phonetic similarity 기반.
 // articulationScore < 50 → 발음과 의도 자모 차이가 큼 → 전문가 검토 추천.
@@ -49,8 +68,9 @@ export async function analyzeDiagnosis(
   }
 
   // ── 2단계: (익명 시) user upsert ────────────────────────────────
+  // Sprint 2 §3: cookie 우선 → /rewards 와 동일 userId 보장.
   const sessionId = randomUUID();
-  const userId = input.userId ?? input.anonymousUserId ?? randomUUID();
+  const userId = await resolveUserId(input);
   const isAnonymous = !input.userId;
 
   if (isAnonymous) {
