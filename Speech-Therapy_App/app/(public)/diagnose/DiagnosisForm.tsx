@@ -9,6 +9,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSpeechRecognition } from "@/lib/hooks/useSpeechRecognition";
 import { useAnonymousUserId } from "@/lib/hooks/useAnonymousUserId";
+import { useSilenceDetection } from "@/lib/hooks/useSilenceDetection";
+import { useNetworkAware } from "@/lib/hooks/useNetworkAware";
 import { analyzeDiagnosis } from "@/app/actions/diagnosis";
 
 const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
@@ -44,6 +46,25 @@ export function DiagnosisForm() {
   const { status, transcript, errorCode, isSupported, isMounted, retryCount, start, reset } =
     useSpeechRecognition();
 
+  // FR-C-006 — 60s 침묵 감지 → 부모 개입 격려 카피.
+  // intervention 은 hook 의 state 직접 사용 (transcript 변경 시 reportSpeech → reset 으로 null 복귀).
+  const {
+    reportSpeech,
+    reset: resetSilence,
+    intervention: silenceWarning,
+  } = useSilenceDetection({
+    thresholdMs: 60_000,
+    enabled: status === "listening" || status === "retrying",
+  });
+
+  // FR-C-007 — navigator.onLine 구독 + Server Action 1회 자동 재시도.
+  const { isOnline, runWithRetry } = useNetworkAware();
+
+  // transcript 변경 시 silence 카운터 reset.
+  useEffect(() => {
+    if (transcript) reportSpeech();
+  }, [transcript, reportSpeech]);
+
   // unmount 시 잔여 progress 타이머 정리 (메모리 누수 방지).
   useEffect(() => {
     return () => {
@@ -77,20 +98,27 @@ export function DiagnosisForm() {
       setSubmitError("발화 결과가 비어 있어요. 다시 한 번 들려주세요.");
       return;
     }
+    if (!isOnline) {
+      setSubmitError("인터넷 연결을 확인하고 다시 시도해 주세요.");
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError(null);
     setProgressLabel(PROGRESS_STAGES[0].label);
     startProgressTimers();
     try {
       // FR-C-001 (Sprint 2 §2) — phonetic similarity 기반 점수 산출.
+      // FR-C-007 — runWithRetry: 네트워크 일시 단절 시 1회 자동 재시도.
       // anonymousUserId: localStorage 영구 식별자 → /rewards 페이지가 동일 사용자 인식.
-      const result = await analyzeDiagnosis({
-        intendedWord,
-        transcript,
-        childAgeMonths,
-        targetPhoneme,
-        anonymousUserId: anonymousUserId ?? undefined,
-      });
+      const result = await runWithRetry(() =>
+        analyzeDiagnosis({
+          intendedWord,
+          transcript,
+          childAgeMonths,
+          targetPhoneme,
+          anonymousUserId: anonymousUserId ?? undefined,
+        }),
+      );
       const params = new URLSearchParams({
         phoneme: targetPhoneme,
         age: String(childAgeMonths),
@@ -122,6 +150,13 @@ export function DiagnosisForm() {
         void handleSubmit();
       }}
     >
+      {/* FR-C-007 — 오프라인 배너 */}
+      {isMounted && !isOnline && (
+        <div className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+          오프라인 상태입니다. 인터넷 연결 후 다시 시도해 주세요.
+        </div>
+      )}
+
       {/* 1) 자녀 월령 */}
       <div className="space-y-2">
         <label htmlFor="childAgeMonths" className="block text-sm font-medium">
@@ -238,10 +273,11 @@ export function DiagnosisForm() {
                 type="button"
                 onClick={() => {
                   reset();
+                  resetSilence();
                   start();
                 }}
                 disabled={
-                  !intendedWord || status === "listening" || status === "retrying"
+                  !intendedWord || status === "listening" || status === "retrying" || !isOnline
                 }
                 className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
@@ -263,6 +299,12 @@ export function DiagnosisForm() {
             {retryCount > 0 && status !== "error" && (
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 자동으로 한 번 더 시도하고 있어요.
+              </p>
+            )}
+            {/* FR-C-006 — 60s 침묵 시 부모 개입 격려 (mirror/tooltip 모두 동일 카피, Sprint 2 단순화) */}
+            {silenceWarning && (
+              <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                어렵죠? 부모님과 함께 한 번 더 해볼까요?
               </p>
             )}
           </>
@@ -293,10 +335,10 @@ export function DiagnosisForm() {
 
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || !isOnline}
         className="w-full rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
       >
-        {isSubmitting ? "분석 중..." : "결과 확인"}
+        {isSubmitting ? "분석 중..." : !isOnline ? "오프라인 — 연결 후 시도" : "결과 확인"}
       </button>
 
       {isSubmitting && (
