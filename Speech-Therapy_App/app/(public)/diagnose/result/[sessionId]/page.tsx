@@ -79,12 +79,17 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
   const phoneme = typeof sp.phoneme === "string" ? sp.phoneme : "ㅅ";
   const age = typeof sp.age === "string" ? sp.age : "";
   const transcript = typeof sp.transcript === "string" ? sp.transcript : "";
+  const intendedWord = typeof sp.intendedWord === "string" ? sp.intendedWord : "";
 
   const fetched = await fetchEvaluationResult(sessionId);
   if (!fetched) notFound();
   const result = fetched.output;
 
   const nudgeCopy = getNudgeCopy(result.peerPercentile);
+  const heardWord = result.heardWord ?? transcript;
+  const displayIntended = result.intendedWord ?? intendedWord;
+  const isPerfectMatch =
+    displayIntended.length > 0 && heardWord.length > 0 && displayIntended === heardWord;
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
@@ -101,16 +106,42 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
 
       <header className="mb-6 space-y-2">
         <h1 className="text-2xl font-bold sm:text-3xl">{phoneme} 발음 확인 결과</h1>
-        {(age || transcript) && (
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {age && `${age} 개월`}
-            {age && transcript && " · "}
-            {transcript && `들린 단어: ${transcript}`}
-          </p>
+        {age && (
+          <p className="text-sm text-gray-600 dark:text-gray-400">{age} 개월</p>
         )}
       </header>
 
-      {/* 3축 점수 카드 */}
+      {/* Sprint 2 §2 — 의도 vs 실현 비교 */}
+      {displayIntended && (
+        <section
+          className={`mb-6 rounded-lg border p-4 ${
+            isPerfectMatch
+              ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30"
+              : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30"
+          }`}
+          aria-label="발음 비교"
+        >
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-xs text-gray-600 dark:text-gray-400">의도한 단어</p>
+              <p className="mt-1 text-lg font-semibold">{displayIntended}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600 dark:text-gray-400">들린 단어</p>
+              <p className="mt-1 text-lg font-semibold">
+                {heardWord || "—"}
+                {isPerfectMatch && (
+                  <span className="ml-2 text-sm text-emerald-700 dark:text-emerald-300">
+                    ✓ 일치
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 3축 점수 카드 (Sprint 3 에서 분리 재설계 예정 — 현재 모두 articulation 동값) */}
       <section className="mb-6 grid grid-cols-3 gap-3" aria-label="3축 점수">
         <ScoreCard label="조음" value={result.articulationScore} />
         <ScoreCard label="언어" value={result.linguisticScore} />

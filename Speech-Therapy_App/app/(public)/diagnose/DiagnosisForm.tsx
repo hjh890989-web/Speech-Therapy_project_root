@@ -12,12 +12,12 @@ import { useAnonymousUserId } from "@/lib/hooks/useAnonymousUserId";
 import { analyzeDiagnosis } from "@/app/actions/diagnosis";
 
 const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
-const SAMPLE_WORDS: Record<(typeof PHONEMES)[number], string> = {
-  ㄱ: "거북, 가위, 고양이",
-  ㄴ: "나무, 누나, 노래",
-  ㅅ: "사과, 시계, 사자",
-  ㅈ: "자동차, 주스, 종이",
-  ㄹ: "라면, 로봇, 라디오",
+const SAMPLE_WORDS: Record<(typeof PHONEMES)[number], ReadonlyArray<string>> = {
+  ㄱ: ["거북", "가위", "고양이"],
+  ㄴ: ["나무", "누나", "노래"],
+  ㅅ: ["사과", "시계", "사자"],
+  ㅈ: ["자동차", "주스", "종이"],
+  ㄹ: ["라면", "로봇", "라디오"],
 };
 
 // 분석 진행 단계 카피 — 실제 Server Action 의 진척과 시간 매핑은 근사값.
@@ -33,6 +33,8 @@ export function DiagnosisForm() {
   const router = useRouter();
   const [childAgeMonths, setChildAgeMonths] = useState(36);
   const [targetPhoneme, setTargetPhoneme] = useState<(typeof PHONEMES)[number]>("ㅅ");
+  /// Sprint 2 §2 — 부모가 발화 전에 선택하는 의도 단어. 미선택 시 발화/제출 차단.
+  const [intendedWord, setIntendedWord] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,6 +69,10 @@ export function DiagnosisForm() {
       setSubmitError("아래 안내 확인 후 동의 체크를 부탁드려요.");
       return;
     }
+    if (!intendedWord) {
+      setSubmitError("먼저 자녀가 발음할 단어를 선택해 주세요.");
+      return;
+    }
     if (!transcript) {
       setSubmitError("발화 결과가 비어 있어요. 다시 한 번 들려주세요.");
       return;
@@ -76,9 +82,10 @@ export function DiagnosisForm() {
     setProgressLabel(PROGRESS_STAGES[0].label);
     startProgressTimers();
     try {
-      // FR-C-001 호출 — Gemini + DB INSERT + Confidence < 70 시 HITL 큐 + Slack 통합.
+      // FR-C-001 (Sprint 2 §2) — phonetic similarity 기반 점수 산출.
       // anonymousUserId: localStorage 영구 식별자 → /rewards 페이지가 동일 사용자 인식.
       const result = await analyzeDiagnosis({
+        intendedWord,
         transcript,
         childAgeMonths,
         targetPhoneme,
@@ -87,6 +94,7 @@ export function DiagnosisForm() {
       const params = new URLSearchParams({
         phoneme: targetPhoneme,
         age: String(childAgeMonths),
+        intendedWord,
         transcript,
       });
       router.push(`/diagnose/result/${result.sessionId}?${params.toString()}`);
@@ -143,7 +151,12 @@ export function DiagnosisForm() {
         <select
           id="targetPhoneme"
           value={targetPhoneme}
-          onChange={(event) => setTargetPhoneme(event.target.value as (typeof PHONEMES)[number])}
+          onChange={(event) => {
+            setTargetPhoneme(event.target.value as (typeof PHONEMES)[number]);
+            // 음소 변경 시 의도 단어 + 발화 결과 모두 초기화 (잔여값 혼동 방지).
+            setIntendedWord(null);
+            reset();
+          }}
           className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900"
         >
           {PHONEMES.map((p) => (
@@ -152,10 +165,41 @@ export function DiagnosisForm() {
             </option>
           ))}
         </select>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          예시 단어: {SAMPLE_WORDS[targetPhoneme]}
-        </p>
       </div>
+
+      {/* 2-b) Sprint 2 §2 — 의도 단어 선택 */}
+      <fieldset className="space-y-2">
+        <legend className="block text-sm font-medium">자녀가 발음할 단어를 골라 주세요</legend>
+        <div className="flex flex-wrap gap-2">
+          {SAMPLE_WORDS[targetPhoneme].map((word) => {
+            const isSelected = word === intendedWord;
+            return (
+              <button
+                key={word}
+                type="button"
+                onClick={() => {
+                  setIntendedWord(word);
+                  // 새 의도 단어 선택 시 이전 발화 결과 제거 → 짝이 맞지 않는 transcript 사용 방지.
+                  reset();
+                }}
+                className={`min-h-[44px] rounded-md border px-4 py-2 text-sm font-medium transition ${
+                  isSelected
+                    ? "border-emerald-600 bg-emerald-600 text-white"
+                    : "border-gray-300 bg-white text-gray-800 hover:border-emerald-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                }`}
+                aria-pressed={isSelected}
+              >
+                {word}
+              </button>
+            );
+          })}
+        </div>
+        {intendedWord && (
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            선택한 단어: <span className="font-semibold">{intendedWord}</span>
+          </p>
+        )}
+      </fieldset>
 
       {/* 3) 동의 체크 */}
       <label className="flex items-start gap-2 text-sm">
@@ -174,7 +218,9 @@ export function DiagnosisForm() {
       {/* 발화 영역 */}
       <div className="space-y-3 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
         <p className="text-sm">
-          {targetPhoneme} 소리가 들어간 단어를 또렷하게 들려주세요. 예: {SAMPLE_WORDS[targetPhoneme]}
+          {intendedWord
+            ? `자녀에게 "${intendedWord}" 를 또렷하게 들려달라고 해 주세요.`
+            : "먼저 위에서 발음할 단어를 골라 주세요."}
         </p>
 
         {/* mount 전엔 placeholder — SSR HTML 과 hydration 일치 보장. */}
@@ -194,7 +240,9 @@ export function DiagnosisForm() {
                   reset();
                   start();
                 }}
-                disabled={status === "listening" || status === "retrying"}
+                disabled={
+                  !intendedWord || status === "listening" || status === "retrying"
+                }
                 className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 {status === "listening"
@@ -206,6 +254,9 @@ export function DiagnosisForm() {
               {transcript && (
                 <div className="text-sm">
                   들린 단어: <span className="font-semibold">{transcript}</span>
+                  {intendedWord && transcript === intendedWord && (
+                    <span className="ml-2 text-emerald-600 dark:text-emerald-400">✓ 일치</span>
+                  )}
                 </div>
               )}
             </div>

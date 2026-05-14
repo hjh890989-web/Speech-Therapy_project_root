@@ -10,9 +10,10 @@ import {
   mockSuccessLow,
 } from "@/lib/mocks/diagnosis";
 
-describe("DiagnosisInputSchema", () => {
+describe("DiagnosisInputSchema (Sprint 2 §2 — intendedWord 필수)", () => {
   it("정상 입력 검증 통과", () => {
     const valid = {
+      intendedWord: "사과",
       transcript: "사과",
       childAgeMonths: 36,
       targetPhoneme: "ㅅ" as const,
@@ -20,9 +21,20 @@ describe("DiagnosisInputSchema", () => {
     expect(() => DiagnosisInputSchema.parse(valid)).not.toThrow();
   });
 
+  it("intendedWord 누락 → 차단", () => {
+    expect(() =>
+      DiagnosisInputSchema.parse({
+        transcript: "사과",
+        childAgeMonths: 36,
+        targetPhoneme: "ㅅ",
+      }),
+    ).toThrow();
+  });
+
   it("빈 transcript 차단", () => {
     expect(() =>
       DiagnosisInputSchema.parse({
+        intendedWord: "사과",
         transcript: "",
         childAgeMonths: 36,
         targetPhoneme: "ㅅ",
@@ -33,6 +45,7 @@ describe("DiagnosisInputSchema", () => {
   it("월령 범위 외 차단 (만 8세 = 96)", () => {
     expect(() =>
       DiagnosisInputSchema.parse({
+        intendedWord: "사과",
         transcript: "사과",
         childAgeMonths: 96,
         targetPhoneme: "ㅅ",
@@ -43,6 +56,7 @@ describe("DiagnosisInputSchema", () => {
   it("targetPhoneme 시드 5종 외 차단", () => {
     expect(() =>
       DiagnosisInputSchema.parse({
+        intendedWord: "사과",
         transcript: "사과",
         childAgeMonths: 36,
         targetPhoneme: "ㅎ", // 시드 외

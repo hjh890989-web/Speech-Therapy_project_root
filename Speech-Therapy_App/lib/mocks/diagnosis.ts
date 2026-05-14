@@ -12,6 +12,8 @@ const SESSION_ID_LOW = "22222222-2222-4222-8222-222222222222";
 
 export const mockSuccessHigh: DiagnosisOutput = {
   sessionId: SESSION_ID_HIGH,
+  intendedWord: "사과",
+  heardWord: "사과",
   articulationScore: 88,
   linguisticScore: 85,
   acousticScore: 84,
@@ -24,6 +26,8 @@ export const mockSuccessHigh: DiagnosisOutput = {
 
 export const mockSuccessLow: DiagnosisOutput = {
   sessionId: SESSION_ID_LOW,
+  intendedWord: "사과",
+  heardWord: "샤과",
   articulationScore: 42,
   linguisticScore: 35,
   acousticScore: 38,
