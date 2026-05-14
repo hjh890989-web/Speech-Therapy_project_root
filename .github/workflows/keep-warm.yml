@@ -40,7 +40,7 @@ jobs:
           KEEP_WARM_URL: ${{ secrets.KEEP_WARM_URL }}
         run: |
           echo "→ GET $KEEP_WARM_URL/api/health"
-          status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$KEEP_WARM_URL/api/health" || echo "TIMEOUT")
+          status=$(curl -s -L -o /dev/null -w "%{http_code}" --max-time 20 "$KEEP_WARM_URL/api/health" || echo "TIMEOUT")
           echo "health status: $status"
 
       - name: Ping /diagnose (warm Server Action bundle)
@@ -49,5 +49,5 @@ jobs:
           KEEP_WARM_URL: ${{ secrets.KEEP_WARM_URL }}
         run: |
           echo "→ GET $KEEP_WARM_URL/diagnose"
-          status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$KEEP_WARM_URL/diagnose" || echo "TIMEOUT")
+          status=$(curl -s -L -o /dev/null -w "%{http_code}" --max-time 20 "$KEEP_WARM_URL/diagnose" || echo "TIMEOUT")
           echo "diagnose status: $status"
