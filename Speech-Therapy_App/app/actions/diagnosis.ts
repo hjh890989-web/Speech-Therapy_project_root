@@ -33,18 +33,21 @@ import {
 const ANONYMOUS_USER_COOKIE = "anonymous_user_id";
 
 /**
- * Sprint 2 §3 — userId 우선순위:
+ * Sprint 2 §4 — userId 우선순위 재정렬 (별 누적 1개 고착 fix).
  *  1. input.userId (인증 사용자, 최우선)
- *  2. cookie 의 anonymous_user_id (proxy.ts 가 발급, /rewards 와 동일 권위)
- *  3. input.anonymousUserId (클라이언트 localStorage 폴백 — cookie 클리어 케이스)
+ *  2. input.anonymousUserId (클라이언트 localStorage 권위, useAnonymousUserId hook 과 동일 방향)
+ *  3. cookie 의 anonymous_user_id (proxy.ts 가 발급한 stale 값일 수 있음 — 폴백)
  *  4. randomUUID (방어적, 정상 흐름엔 도달 안 함)
+ *
+ * 폐기 사유: §3 의 "cookie 우선" 은 proxy.ts 가 ITP 클리어 후 새 UUID 를 발급하면
+ * 보상이 새 userId 에 분산 저장되는 root cause 였음. localStorage 권위로 통일.
  */
 async function resolveUserId(input: DiagnosisInput): Promise<string> {
   if (input.userId) return input.userId;
+  if (input.anonymousUserId) return input.anonymousUserId;
   const cookieStore = await cookies();
   const cookieUserId = cookieStore.get(ANONYMOUS_USER_COOKIE)?.value;
   if (cookieUserId) return cookieUserId;
-  if (input.anonymousUserId) return input.anonymousUserId;
   return randomUUID();
 }
 

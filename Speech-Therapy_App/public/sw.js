@@ -2,7 +2,7 @@
 // precache: 정적 자산만. dynamic data (Server Action 응답 등) 는 항상 network.
 // IndexedDB / Background Sync 미구현 (D5).
 
-const CACHE_NAME = "speech-therapy-v2";
+const CACHE_NAME = "speech-therapy-v3";
 const PRECACHE_PATHS = [
   "/",
   "/diagnose",

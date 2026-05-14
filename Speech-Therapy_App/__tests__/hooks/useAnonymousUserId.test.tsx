@@ -63,28 +63,38 @@ describe("useAnonymousUserId", () => {
     await waitFor(() => expect(second.result.current).toBe(firstId));
   });
 
-  it("Sprint 2 §3 — cookie 가 있으면 우선 사용 + localStorage 도 cookie 값으로 동기화", async () => {
-    const COOKIE_ONLY_ID = "11111111-2222-4333-8444-555555555555";
-    // proxy.ts 가 발급한 cookie 시뮬레이션 (localStorage 는 다른 값).
-    document.cookie = `${ANONYMOUS_USER_COOKIE}=${COOKIE_ONLY_ID}; path=/`;
-    localStorage.setItem("anonymousUserId", VALID_UUID); // 다른 값
+  it("Sprint 2 §4 — localStorage 권위: cookie 가 다르면 localStorage 값으로 덮어씀", async () => {
+    // proxy.ts 가 발급한 stale cookie (ITP 클리어 후 새 UUID) + 영속된 localStorage.
+    const STALE_COOKIE_ID = "11111111-2222-4333-8444-555555555555";
+    document.cookie = `${ANONYMOUS_USER_COOKIE}=${STALE_COOKIE_ID}; path=/`;
+    localStorage.setItem("anonymousUserId", VALID_UUID);
 
     const { result } = renderHook(() => useAnonymousUserId());
-    await waitFor(() => expect(result.current).toBe(COOKIE_ONLY_ID));
+    await waitFor(() => expect(result.current).toBe(VALID_UUID));
 
-    // localStorage 가 cookie 값으로 덮어쓰여야 함 — 권위는 cookie.
-    expect(localStorage.getItem("anonymousUserId")).toBe(COOKIE_ONLY_ID);
+    // cookie 가 localStorage 값으로 덮어쓰여야 함 — 권위는 localStorage.
+    expect(document.cookie).toContain(`${ANONYMOUS_USER_COOKIE}=${VALID_UUID}`);
+    expect(localStorage.getItem("anonymousUserId")).toBe(VALID_UUID);
   });
 
-  it("Sprint 2 §3 — cookie 없고 localStorage 만 있으면 localStorage 복구 + cookie 재발급", async () => {
-    // cookie 클리어 (iOS ITP 시뮬레이션), localStorage 만 보존.
+  it("Sprint 2 §4 — cookie 없고 localStorage 만 있으면 cookie 재발급 (자가 복구)", async () => {
     const LOCAL_ONLY_ID = "22222222-3333-4444-8555-666666666666";
     localStorage.setItem("anonymousUserId", LOCAL_ONLY_ID);
 
     const { result } = renderHook(() => useAnonymousUserId());
     await waitFor(() => expect(result.current).toBe(LOCAL_ONLY_ID));
 
-    // cookie 재발급 확인.
     expect(document.cookie).toContain(`${ANONYMOUS_USER_COOKIE}=${LOCAL_ONLY_ID}`);
+  });
+
+  it("Sprint 2 §4 — localStorage 비어있고 cookie 만 있으면 cookie 값 채택 (초기 발급 케이스)", async () => {
+    const COOKIE_ONLY_ID = "33333333-4444-4555-8666-777777777777";
+    document.cookie = `${ANONYMOUS_USER_COOKIE}=${COOKIE_ONLY_ID}; path=/`;
+
+    const { result } = renderHook(() => useAnonymousUserId());
+    await waitFor(() => expect(result.current).toBe(COOKIE_ONLY_ID));
+
+    // localStorage 에도 저장 — 다음 호출부터 권위.
+    expect(localStorage.getItem("anonymousUserId")).toBe(COOKIE_ONLY_ID);
   });
 });
