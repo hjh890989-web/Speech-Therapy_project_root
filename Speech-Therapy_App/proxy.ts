@@ -16,6 +16,18 @@ import type { NextRequest } from "next/server";
 import { ANONYMOUS_USER_COOKIE, COOKIE_MAX_AGE_SEC } from "@/lib/anonymous-user";
 
 export function proxy(request: NextRequest) {
+  // API-010 §1 — Supabase signup confirmation 이메일은 Site URL 로 redirect 됨
+  // (emailRedirectTo 무시). 따라서 `/?code=...` 가 루트로 도착 시 `/auth/callback?code=...`
+  // 으로 서버측 redirect. Magic Link 와 signup confirmation 둘 다 호환.
+  const url = new URL(request.url);
+  if (url.pathname === "/" && url.searchParams.has("code")) {
+    const target = new URL("/auth/callback", request.url);
+    target.searchParams.set("code", url.searchParams.get("code")!);
+    const next = url.searchParams.get("next");
+    if (next) target.searchParams.set("next", next);
+    return NextResponse.redirect(target);
+  }
+
   const response = NextResponse.next();
 
   // Sprint 2 §3 — cookie 부재 시 서버 측 발급.
@@ -31,7 +43,7 @@ export function proxy(request: NextRequest) {
     });
   }
 
-  // P1 (API-010): 보호 경로 prefix 체크 + Supabase 세션 갱신 + 역할 기반 차단.
+  // P1 (API-010 §2): 보호 경로 prefix 체크 + 역할 기반 차단.
   // P1 (FR-C-005): 응답 본문 정규식 스캔 + audit log INSERT.
   return response;
 }
