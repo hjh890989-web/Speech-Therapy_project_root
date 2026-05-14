@@ -30,6 +30,8 @@ on:
     paths:
       - "Speech-Therapy_App/**"
       - ".github/workflows/ci.yml"
+  # 수동 트리거 — Actions 탭 "Run workflow" 버튼. 워크플로 자체 변경 검증 + 디버깅용.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
