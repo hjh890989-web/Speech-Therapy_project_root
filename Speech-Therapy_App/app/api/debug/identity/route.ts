@@ -9,8 +9,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-
-const ANONYMOUS_USER_COOKIE = "anonymous_user_id";
+import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 
 export const dynamic = "force-dynamic";
 

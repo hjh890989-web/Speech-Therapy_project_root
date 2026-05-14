@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { ANONYMOUS_USER_COOKIE } from "@/lib/hooks/useAnonymousUserId";
+import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 
 export const metadata = {
   title: "보상 도감 — Speech-Therapy",

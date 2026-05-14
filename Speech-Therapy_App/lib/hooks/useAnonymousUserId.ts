@@ -20,10 +20,13 @@
 // 패턴: useSyncExternalStore (useNetworkAware 와 동일).
 
 import { useSyncExternalStore } from "react";
+import { ANONYMOUS_USER_COOKIE, COOKIE_MAX_AGE_SEC } from "@/lib/anonymous-user";
 
 const STORAGE_KEY = "anonymousUserId";
-export const ANONYMOUS_USER_COOKIE = "anonymous_user_id";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1년
+const COOKIE_MAX_AGE = COOKIE_MAX_AGE_SEC;
+
+// 외부 호출부 호환 — 이전 export 경로 유지.
+export { ANONYMOUS_USER_COOKIE };
 
 // 모듈 캐시 — useSyncExternalStore 의 stable reference 보장.
 let cachedAnonymousId: string | null = null;

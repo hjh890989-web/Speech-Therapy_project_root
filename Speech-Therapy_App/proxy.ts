@@ -13,9 +13,7 @@
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-
-const ANONYMOUS_USER_COOKIE = "anonymous_user_id";
-const COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 365; // 1년
+import { ANONYMOUS_USER_COOKIE, COOKIE_MAX_AGE_SEC } from "@/lib/anonymous-user";
 
 export function proxy(request: NextRequest) {
   const response = NextResponse.next();

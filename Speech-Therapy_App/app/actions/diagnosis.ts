@@ -30,7 +30,7 @@ import {
   type DiagnosisOutput,
 } from "@/lib/schemas/diagnosis";
 
-const ANONYMOUS_USER_COOKIE = "anonymous_user_id";
+import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 
 /**
  * Sprint 2 §4 — userId 우선순위 재정렬 (별 누적 1개 고착 fix).
