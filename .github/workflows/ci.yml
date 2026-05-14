@@ -1,0 +1,75 @@
+# Sprint 1 회귀 게이트 — Speech-Therapy_App 변경 시 자동 검증.
+#
+# 검증 범위:
+#   - tsc --noEmit (타입 안전)
+#   - eslint (코드 스타일 + 잠재 버그)
+#   - vitest run (단위/통합 테스트 128 케이스)
+#
+# 범위 외 (의도적 제외):
+#   - next build / playwright e2e — Vercel CI 가 책임 (이중 비용 회피)
+#   - 로컬 next build 는 E: 드라이브 filesystem 한계로 실패 (Linux runner 는 정상)
+#
+# 트리거:
+#   - main 브랜치 push (직접 푸시 후 회귀 검증)
+#   - PR (머지 전 게이트)
+#   - paths 필터로 docs / 위키 / keep-warm 워크플로 변경 시 스킵
+#
+# 동시성:
+#   - 같은 ref 의 이전 실행은 자동 취소 (rebase / force-push 시 불필요한 실행 방지)
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Speech-Therapy_App/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Speech-Therapy_App/**"
+      - ".github/workflows/ci.yml"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: tsc + lint + test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: Speech-Therapy_App
+
+    # prisma generate / Server Action 코드가 환경변수 참조 — dummy 로 만족시키되,
+    # 실 DB 연결은 발생하지 않음 (테스트는 prisma mock).
+    env:
+      DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+      DIRECT_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+      GOOGLE_GENERATIVE_AI_API_KEY: "ci-dummy-key"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22 + npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: Speech-Therapy_App/package-lock.json
+
+      - name: Install dependencies (npm ci, postinstall prisma generate)
+        run: npm ci
+
+      - name: TypeScript — tsc --noEmit
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Vitest (단위 + 통합 128 케이스)
+        run: npm test
