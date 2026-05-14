@@ -1,19 +1,47 @@
-// FR-Q-004 — 보상 도감 카드 Grid (Sprint 1 단순화).
-// REQ-FUNC-026. shadcn/ui · Framer Motion 컨페티 · AI 그림 갤러리는 별도 PR.
-// Sprint 1: 무로그인 사용자에게는 빈 상태 + 미션 페이지 CTA 노출.
+// FR-Q-004 — 보상 도감 카드 Grid.
+// REQ-FUNC-026. Sprint 2: anonymous_user_id cookie 기반 실 데이터 표시.
+// useAnonymousUserId hook 이 localStorage + cookie 동기화 → 본 RSC 가 cookie 로 user 식별.
 
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { prisma } from "@/lib/db";
+import { ANONYMOUS_USER_COOKIE } from "@/lib/hooks/useAnonymousUserId";
 
 export const metadata = {
   title: "보상 도감 — Speech-Therapy",
   description: "오늘까지 모은 별·나무·AI 그림 컬렉션을 함께 확인해요.",
 };
 
-// Sprint 1: 로그인 없이는 reward_progress 식별 불가 → 빈 상태.
-// API-010 (Auth) + localStorage anonymousUserId 클라이언트 컴포넌트는 별도 PR.
-const HAS_REWARDS = false;
+// cookie 가 client mount 이후에야 설정되므로 매 요청 fresh 읽기.
+export const dynamic = "force-dynamic";
 
-export default function RewardsPage() {
+interface RewardSnapshot {
+  cumulativeStars: number;
+  treeGrowthLevel: number;
+  aiDrawingCount: number;
+}
+
+async function fetchRewardProgress(userId: string | undefined): Promise<RewardSnapshot | null> {
+  if (!userId) return null;
+  try {
+    const row = await prisma.rewardProgress.findUnique({
+      where: { userId },
+      select: { cumulativeStars: true, treeGrowthLevel: true, aiDrawingCount: true },
+    });
+    if (!row) return null;
+    return row;
+  } catch (err) {
+    console.error("rewardProgress fetch failed:", err);
+    return null;
+  }
+}
+
+export default async function RewardsPage() {
+  const cookieStore = await cookies();
+  const anonymousUserId = cookieStore.get(ANONYMOUS_USER_COOKIE)?.value;
+  const progress = await fetchRewardProgress(anonymousUserId);
+  const hasRewards = progress !== null && progress.cumulativeStars + progress.treeGrowthLevel + progress.aiDrawingCount > 0;
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
       <p
@@ -30,11 +58,7 @@ export default function RewardsPage() {
         </p>
       </header>
 
-      {HAS_REWARDS ? (
-        <RewardGrid />
-      ) : (
-        <EmptyState />
-      )}
+      {hasRewards && progress ? <RewardGrid progress={progress} /> : <EmptyState />}
 
       <Link
         href="/missions"
@@ -64,13 +88,27 @@ function EmptyState() {
   );
 }
 
-function RewardGrid() {
-  // Sprint 1 단계엔 미사용. FR-Q-004 후속 PR 에서 prisma.rewardProgress 조회 + 등급 표기.
+function RewardGrid({ progress }: { progress: RewardSnapshot }) {
   return (
     <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      <RewardCard label="별" emoji="⭐" value={0} hint="다음 등급까지 10개" />
-      <RewardCard label="나무" emoji="🌳" value={0} hint="0/10 단계" />
-      <RewardCard label="AI 그림" emoji="🎨" value={0} hint="첫 그림을 모아 보세요" />
+      <RewardCard
+        label="별"
+        emoji="⭐"
+        value={progress.cumulativeStars}
+        hint={`다음 등급까지 ${Math.max(0, 10 - (progress.cumulativeStars % 10))}개`}
+      />
+      <RewardCard
+        label="나무"
+        emoji="🌳"
+        value={progress.treeGrowthLevel}
+        hint={`${progress.treeGrowthLevel}/10 단계`}
+      />
+      <RewardCard
+        label="AI 그림"
+        emoji="🎨"
+        value={progress.aiDrawingCount}
+        hint={progress.aiDrawingCount === 0 ? "첫 그림을 모아 보세요" : "그림을 더 모아 보세요"}
+      />
     </section>
   );
 }

@@ -57,6 +57,8 @@ model User {
   evaluationResults EvaluationResult[]
   weeklyReports     WeeklyReport[]
   rewardProgress    RewardProgress?
+  /// DB-008b: 보상 발급 이력 (멱등성 + 감사).
+  rewardLogs        RewardLog[]
   /// DB-009: 본인이 검토 대상이 된 HITL 큐 (parent role 일반적).
   hitlQueues        HITLQueue[]        @relation("HITLSubject")
   /// DB-009: expert 로 지정되어 검토 담당하는 HITL 큐.
@@ -236,6 +238,28 @@ model RewardProgress {
   treeGrowthLevel  Int      @default(0)
   aiDrawingCount   Int      @default(0)
   updatedAt        DateTime @updatedAt
+}
+
+// ============================================================================
+// DB-008b (Sprint 2) — RewardLog (멱등성 보장 + 감사 로그)
+// Sprint 1 의 process-local Set 멱등성을 다중 인스턴스 안전한 DB unique 제약으로 교체.
+// @@unique([userId, idempotencyKey]) 가 중복 INSERT 를 SQL 레벨에서 차단.
+// 향후 reward 발급 이력 조회 / 통계 / 분쟁 처리에도 활용.
+// ============================================================================
+
+model RewardLog {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "star" | "tree" | "drawing".
+  rewardType      String
+  amount          Int
+  /// FR-C-009 멱등성 키 (예: `${sessionId}-star-1`).
+  idempotencyKey  String
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, createdAt])
 }
 
 // ============================================================================

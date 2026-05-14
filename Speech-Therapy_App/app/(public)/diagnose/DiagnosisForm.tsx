@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSpeechRecognition } from "@/lib/hooks/useSpeechRecognition";
+import { useAnonymousUserId } from "@/lib/hooks/useAnonymousUserId";
 import { analyzeDiagnosis } from "@/app/actions/diagnosis";
 
 const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
@@ -37,6 +38,7 @@ export function DiagnosisForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progressLabel, setProgressLabel] = useState<string>(PROGRESS_STAGES[0].label);
   const progressTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const anonymousUserId = useAnonymousUserId();
   const { status, transcript, errorCode, isSupported, isMounted, retryCount, start, reset } =
     useSpeechRecognition();
 
@@ -75,10 +77,12 @@ export function DiagnosisForm() {
     startProgressTimers();
     try {
       // FR-C-001 호출 — Gemini + DB INSERT + Confidence < 70 시 HITL 큐 + Slack 통합.
+      // anonymousUserId: localStorage 영구 식별자 → /rewards 페이지가 동일 사용자 인식.
       const result = await analyzeDiagnosis({
         transcript,
         childAgeMonths,
         targetPhoneme,
+        anonymousUserId: anonymousUserId ?? undefined,
       });
       const params = new URLSearchParams({
         phoneme: targetPhoneme,
