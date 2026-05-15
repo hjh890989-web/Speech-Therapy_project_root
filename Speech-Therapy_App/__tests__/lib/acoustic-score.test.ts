@@ -41,3 +41,80 @@ describe("computeAcousticScore", () => {
     expect(computeAcousticScore("사과", "abc")).toBe(38);
   });
 });
+
+describe("Sprint 3 §2 A — 신호 기반 점수 (Web Audio API features 우선)", () => {
+  // "사과" = 2 음절 → expectedDuration = 0.8s.
+  // 적정 features: duration ≈ 0.8s, pitchStd 안정, energy 적정.
+
+  it("적정 신호 (duration·pitch·energy 모두 적정) → 100", () => {
+    const score = computeAcousticScore("사과", "사과", {
+      pitchMean: 220,
+      pitchStd: 20,
+      durationSec: 0.8,
+      energy: 0.2,
+    });
+    expect(score).toBe(100);
+  });
+
+  it("너무 짧은 발화 (duration 0.2s) → duration 점수만 감점", () => {
+    // ratio 0.25 → durationScore = 50, pitch 100, energy 100.
+    // total = 0.5*50 + 0.3*100 + 0.2*100 = 25 + 30 + 20 = 75.
+    const score = computeAcousticScore("사과", "사과", {
+      pitchMean: 220,
+      pitchStd: 20,
+      durationSec: 0.2,
+      energy: 0.2,
+    });
+    expect(score).toBe(75);
+  });
+
+  it("pitch 불안정 (std 150+) → pitch 점수 0", () => {
+    // duration 100, pitch 0, energy 100.
+    // total = 0.5*100 + 0.3*0 + 0.2*100 = 70.
+    const score = computeAcousticScore("사과", "사과", {
+      pitchMean: 220,
+      pitchStd: 200,
+      durationSec: 0.8,
+      energy: 0.2,
+    });
+    expect(score).toBe(70);
+  });
+
+  it("무음 수준 energy → energy 점수 0", () => {
+    // duration 100, pitch 100, energy 0.
+    // total = 0.5*100 + 0.3*100 + 0.2*0 = 80.
+    const score = computeAcousticScore("사과", "사과", {
+      pitchMean: 220,
+      pitchStd: 20,
+      durationSec: 0.8,
+      energy: 0.001,
+    });
+    expect(score).toBe(80);
+  });
+
+  it("features 가 모두 null → 텍스트 프록시 폴백", () => {
+    const score = computeAcousticScore("사과", "사과", {
+      pitchMean: null,
+      pitchStd: null,
+      durationSec: null,
+      energy: null,
+    });
+    expect(score).toBe(100); // 프록시 — 의도 = 발화 → 100.
+  });
+
+  it("features=null → 텍스트 프록시 폴백 (인자 자체 미전달과 동일)", () => {
+    expect(computeAcousticScore("사과", "사과", null)).toBe(100);
+  });
+
+  it("durationSec 만 있고 energy null → 신호 신뢰 불가, 프록시 폴백", () => {
+    // durationSec 만 있어도 energy 가 null 이면 무음 가능성 → 프록시 사용.
+    expect(
+      computeAcousticScore("사과", "사과", {
+        pitchMean: null,
+        pitchStd: null,
+        durationSec: 0.8,
+        energy: null,
+      }),
+    ).toBe(100); // 프록시 → 100.
+  });
+});

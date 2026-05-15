@@ -11,6 +11,8 @@ import { useSpeechRecognition } from "@/lib/hooks/useSpeechRecognition";
 import { useAnonymousUserId } from "@/lib/hooks/useAnonymousUserId";
 import { useSilenceDetection } from "@/lib/hooks/useSilenceDetection";
 import { useNetworkAware } from "@/lib/hooks/useNetworkAware";
+import { useAudioAnalyzer } from "@/lib/hooks/useAudioAnalyzer";
+import type { AcousticFeatures } from "@/lib/audio/analyzer";
 import { analyzeDiagnosis } from "@/app/actions/diagnosis";
 
 const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
@@ -60,10 +62,33 @@ export function DiagnosisForm() {
   // FR-C-007 — navigator.onLine 구독 + Server Action 1회 자동 재시도.
   const { isOnline, runWithRetry } = useNetworkAware();
 
+  // Sprint 3 §2 A — Web Audio API 직접 측정 (pitch / duration / energy).
+  // STT 와 동일 user gesture 안에서 start, STT 종료 시점에 stop.
+  const {
+    isSupported: isAudioSupported,
+    status: audioStatus,
+    start: startAudio,
+    stop: stopAudio,
+    reset: resetAudio,
+  } = useAudioAnalyzer();
+  const acousticFeaturesRef = useRef<AcousticFeatures | null>(null);
+  const sttPrevStatusRef = useRef<typeof status>("idle");
+
   // transcript 변경 시 silence 카운터 reset.
   useEffect(() => {
     if (transcript) reportSpeech();
   }, [transcript, reportSpeech]);
+
+  // Sprint 3 §2 A — STT 가 active → 비active 로 전이 시 audio 도 정지 + features 캡처.
+  useEffect(() => {
+    const wasActive =
+      sttPrevStatusRef.current === "listening" || sttPrevStatusRef.current === "retrying";
+    const isActive = status === "listening" || status === "retrying";
+    if (wasActive && !isActive && audioStatus === "recording") {
+      acousticFeaturesRef.current = stopAudio();
+    }
+    sttPrevStatusRef.current = status;
+  }, [status, audioStatus, stopAudio]);
 
   // unmount 시 잔여 progress 타이머 정리 (메모리 누수 방지).
   useEffect(() => {
@@ -110,6 +135,11 @@ export function DiagnosisForm() {
       // FR-C-001 (Sprint 2 §2) — phonetic similarity 기반 점수 산출.
       // FR-C-007 — runWithRetry: 네트워크 일시 단절 시 1회 자동 재시도.
       // anonymousUserId: localStorage 영구 식별자 → /rewards 페이지가 동일 사용자 인식.
+      // Sprint 3 §2 A — audio analyzer 가 STT 종료 시 자동 stop 했어야 함.
+      // 혹시라도 아직 recording 상태면 (timing race) 여기서 강제 stop 후 features 캡처.
+      if (audioStatus === "recording") {
+        acousticFeaturesRef.current = stopAudio();
+      }
       const result = await runWithRetry(() =>
         analyzeDiagnosis({
           intendedWord,
@@ -117,6 +147,7 @@ export function DiagnosisForm() {
           childAgeMonths,
           targetPhoneme,
           anonymousUserId: anonymousUserId ?? undefined,
+          acousticFeatures: acousticFeaturesRef.current ?? undefined,
         }),
       );
       const params = new URLSearchParams({
@@ -188,9 +219,11 @@ export function DiagnosisForm() {
           value={targetPhoneme}
           onChange={(event) => {
             setTargetPhoneme(event.target.value as (typeof PHONEMES)[number]);
-            // 음소 변경 시 의도 단어 + 발화 결과 모두 초기화 (잔여값 혼동 방지).
+            // 음소 변경 시 의도 단어 + 발화 결과 + 음향 측정 모두 초기화 (잔여값 혼동 방지).
             setIntendedWord(null);
             reset();
+            resetAudio();
+            acousticFeaturesRef.current = null;
           }}
           className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900"
         >
@@ -274,7 +307,13 @@ export function DiagnosisForm() {
                 onClick={() => {
                   reset();
                   resetSilence();
+                  acousticFeaturesRef.current = null;
                   start();
+                  // Sprint 3 §2 A — 동일 user gesture 안에서 audio capture 시작 (iOS Safari 정책).
+                  // isSupported=false 또는 권한 거부 시 hook 이 status="error" 로 graceful 처리.
+                  if (isAudioSupported) {
+                    void startAudio();
+                  }
                 }}
                 disabled={
                   !intendedWord || status === "listening" || status === "retrying" || !isOnline

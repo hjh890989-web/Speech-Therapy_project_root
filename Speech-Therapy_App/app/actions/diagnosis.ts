@@ -96,13 +96,17 @@ export async function analyzeDiagnosis(
     });
   }
 
-  // ── 3단계: 3축 점수 계산 (Sprint 3 §1 분리 재설계) ────────────────
+  // ── 3단계: 3축 점수 계산 (Sprint 3 §1 분리 + §2 A 신호 기반 acoustic) ─
   // - articulation: 자모 단위 정확도 (phonetic similarity).
   // - linguistic: 음절 단위 어휘 완성도 (의도 단어를 끝까지 발화했는가).
-  // - acoustic: 자모 길이 합리성 + STT 인식 명료성.
+  // - acoustic: input.acousticFeatures (Web Audio API 신호) 우선, 없으면 텍스트 프록시 폴백.
   const articulationScore = computePhoneticSimilarity(input.intendedWord, input.transcript);
   const linguisticScore = computeLinguisticScore(input.intendedWord, input.transcript);
-  const acousticScore = computeAcousticScore(input.intendedWord, input.transcript);
+  const acousticScore = computeAcousticScore(
+    input.intendedWord,
+    input.transcript,
+    input.acousticFeatures ?? null,
+  );
 
   // 결정적 알고리즘이므로 confidence 는 항상 높음 (95). HITL 트리거는 articulationScore 기반.
   const confidence = 95;
