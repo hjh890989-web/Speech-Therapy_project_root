@@ -4,14 +4,17 @@
 // 환경 변수:
 // - GOOGLE_GENERATIVE_AI_API_KEY (Google AI Studio 발급)
 //
-// Sprint 1 단순화:
-// - Rate Limiter (SEC-004) 미통합 — Google free tier RPM 15 안에서 운용.
-// - Fallback provider (OpenAI/Anthropic) 골격만, 본격은 별도 PR.
-// - 토큰 사용량 로깅은 console + 향후 Supabase 로 확장.
+// Sprint 3 §2 E (SEC-004 §E-1) — In-memory rate limiter 통합:
+//  - 글로벌 RPM 14 (Gemini free tier 15 안전 마진 1)
+//  - 사용자당 일 50회 (REQ-NF-018 비용 보호)
+//  - 다중 인스턴스 안전성은 §E-2 (Upstash Redis) 에서 강화 예정
 
 import { google } from "@ai-sdk/google";
 import { generateObject, generateText } from "ai";
 import type { ZodTypeAny, z } from "zod";
+
+import { checkRateLimit, recordCall, RateLimitedError } from "@/lib/ratelimit";
+export { RateLimitedError } from "@/lib/ratelimit";
 
 // gemini-2.5-flash-lite — gemini-2.5-flash 대비 thinking 모드 없음 → 응답 속도 ~50% 빠름.
 // 진단 스코어링은 JSON 4 필드 단순 분류 → lite 품질로 충분.
@@ -57,8 +60,11 @@ export async function generateJson<S extends ZodTypeAny>(args: {
   prompt: string;
   schema: S;
   model?: string;
+  /// Sprint 3 §2 E — userId 지정 시 rate limiter 적용. 없으면 미적용 (legacy).
+  userId?: string;
 }): Promise<z.infer<S>> {
   ensureApiKey();
+  if (args.userId) enforceRateLimit(args.userId);
   const model = google(args.model ?? DEFAULT_MODEL);
   const result = await withTimeout(
     generateObject({
@@ -68,6 +74,7 @@ export async function generateJson<S extends ZodTypeAny>(args: {
       schema: args.schema,
     }),
   );
+  if (args.userId) recordCall(args.userId);
   // generateObject 의 추론 타입은 InferSchema 헬퍼라 Zod output 과 한 단계 어긋남 →
   // Zod 검증을 한 번 더 통과시켜 z.infer<S> 로 안전 확정.
   return args.schema.parse(result.object) as z.infer<S>;
@@ -78,8 +85,11 @@ export async function generatePlainText(args: {
   system: string;
   prompt: string;
   model?: string;
+  /// Sprint 3 §2 E — userId 지정 시 rate limiter 적용. 없으면 미적용 (legacy).
+  userId?: string;
 }): Promise<string> {
   ensureApiKey();
+  if (args.userId) enforceRateLimit(args.userId);
   const model = google(args.model ?? DEFAULT_MODEL);
   const result = await withTimeout(
     generateText({
@@ -88,5 +98,14 @@ export async function generatePlainText(args: {
       prompt: args.prompt,
     }),
   );
+  if (args.userId) recordCall(args.userId);
   return result.text;
+}
+
+/// 호출 전 rate-limit 검사 — 차단 시 RateLimitedError throw (Gemini 미호출 보호).
+function enforceRateLimit(userId: string): void {
+  const check = checkRateLimit(userId);
+  if (!check.allowed) {
+    throw new RateLimitedError(check.reason!, check.retryAfterSec ?? 60);
+  }
 }

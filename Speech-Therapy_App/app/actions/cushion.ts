@@ -14,7 +14,7 @@
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";
-import { generatePlainText, LLMTimeoutError } from "@/lib/ai/gemini";
+import { generatePlainText, LLMTimeoutError, RateLimitedError } from "@/lib/ai/gemini";
 import { SYSTEM_PROMPT_CUSHION, buildCushionPrompt } from "@/lib/ai/prompts";
 import { hasBannedTerm } from "@/lib/forbidden-words";
 import { sanitizeUserFacingText } from "@/lib/text-safety";
@@ -41,6 +41,7 @@ export async function generateCushion(rawInput: unknown): Promise<GenerateCushio
       peerPercentile: true,
       targetPhoneme: true,
       childAgeMonths: true,
+      userId: true,
     },
   });
 
@@ -56,6 +57,8 @@ export async function generateCushion(rawInput: unknown): Promise<GenerateCushio
     peerPercentile: row.peerPercentile,
     targetPhoneme: row.targetPhoneme,
     childAgeMonths: row.childAgeMonths,
+    // Sprint 3 §2 E — rate limiter 추적 키.
+    userId: row.userId,
   };
 
   let cushion = await safeCushion(args);
@@ -82,13 +85,25 @@ async function safeCushion(args: {
   peerPercentile: number;
   targetPhoneme: string;
   childAgeMonths: number;
+  userId: string;
 }): Promise<string> {
   try {
     return await generatePlainText({
       system: SYSTEM_PROMPT_CUSHION,
-      prompt: buildCushionPrompt(args),
+      prompt: buildCushionPrompt({
+        peerPercentile: args.peerPercentile,
+        targetPhoneme: args.targetPhoneme,
+        childAgeMonths: args.childAgeMonths,
+      }),
+      userId: args.userId,
     });
   } catch (err) {
+    if (err instanceof RateLimitedError) {
+      // Sprint 3 §2 E — RPM 또는 일 한도 초과 시 graceful fallback.
+      // 사용자 흐름 막지 않음 (cushion 은 보조 정보).
+      console.warn(`Gemini rate limited: ${err.reason} retry in ${err.retryAfterSec}s`);
+      return SAFE_CUSHION_FALLBACK;
+    }
     if (err instanceof LLMTimeoutError) {
       // 타임아웃은 fallback 으로 처리 (사용자 흐름 끊지 않음).
       return SAFE_CUSHION_FALLBACK;
