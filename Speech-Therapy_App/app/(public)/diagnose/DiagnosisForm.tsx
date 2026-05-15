@@ -15,6 +15,12 @@ import { useAudioAnalyzer } from "@/lib/hooks/useAudioAnalyzer";
 import type { AcousticFeatures } from "@/lib/audio/analyzer";
 import { analyzeDiagnosis } from "@/app/actions/diagnosis";
 
+// Sprint 3 §2 A 핫픽스 (2026-05-15) — Web Audio API getUserMedia 가 SpeechRecognition 의
+// 내부 mic capture 와 충돌해 STT 가 무음만 받아 hang (no-speech timeout 도 발화 안 됨).
+// env 플래그로 차단. 활성화 조건은 Sprint 3 §2 A-2 (stream 공유 또는 capture 시점 분리) 이후.
+// false 일 때 acoustic-score 는 Sprint 2 §2 텍스트 프록시로 graceful fallback.
+const ENABLE_AUDIO_ANALYZER = process.env.NEXT_PUBLIC_ENABLE_AUDIO_ANALYZER === "true";
+
 const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
 const SAMPLE_WORDS: Record<(typeof PHONEMES)[number], ReadonlyArray<string>> = {
   ㄱ: ["거북", "가위", "고양이"],
@@ -321,7 +327,8 @@ export function DiagnosisForm() {
                   start();
                   // Sprint 3 §2 A — 동일 user gesture 안에서 audio capture 시작 (iOS Safari 정책).
                   // isSupported=false 또는 권한 거부 시 hook 이 status="error" 로 graceful 처리.
-                  if (isAudioSupported) {
+                  // 핫픽스: ENABLE_AUDIO_ANALYZER 플래그로 차단 (STT mic 충돌 회피).
+                  if (ENABLE_AUDIO_ANALYZER && isAudioSupported) {
                     void startAudio();
                   }
                 }}
