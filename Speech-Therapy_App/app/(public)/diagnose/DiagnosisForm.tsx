@@ -45,8 +45,17 @@ export function DiagnosisForm() {
   const [progressLabel, setProgressLabel] = useState<string>(PROGRESS_STAGES[0].label);
   const progressTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const anonymousUserId = useAnonymousUserId();
-  const { status, transcript, errorCode, isSupported, isMounted, retryCount, start, reset } =
-    useSpeechRecognition();
+  const {
+    status,
+    transcript,
+    confidence: sttConfidence,
+    errorCode,
+    isSupported,
+    isMounted,
+    retryCount,
+    start,
+    reset,
+  } = useSpeechRecognition();
 
   // FR-C-006 — 60s 침묵 감지 → 부모 개입 격려 카피.
   // intervention 은 hook 의 state 직접 사용 (transcript 변경 시 reportSpeech → reset 으로 null 복귀).
@@ -148,6 +157,7 @@ export function DiagnosisForm() {
           targetPhoneme,
           anonymousUserId: anonymousUserId ?? undefined,
           acousticFeatures: acousticFeaturesRef.current ?? undefined,
+          sttConfidence: sttConfidence ?? undefined,
         }),
       );
       const params = new URLSearchParams({

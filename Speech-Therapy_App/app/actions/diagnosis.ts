@@ -101,7 +101,11 @@ export async function analyzeDiagnosis(
   // - linguistic: 음절 단위 어휘 완성도 (의도 단어를 끝까지 발화했는가).
   // - acoustic: input.acousticFeatures (Web Audio API 신호) 우선, 없으면 텍스트 프록시 폴백.
   const articulationScore = computePhoneticSimilarity(input.intendedWord, input.transcript);
-  const linguisticScore = computeLinguisticScore(input.intendedWord, input.transcript);
+  const linguisticScore = computeLinguisticScore(
+    input.intendedWord,
+    input.transcript,
+    input.sttConfidence ?? null,
+  );
   const acousticScore = computeAcousticScore(
     input.intendedWord,
     input.transcript,

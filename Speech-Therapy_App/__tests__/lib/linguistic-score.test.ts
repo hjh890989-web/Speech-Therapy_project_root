@@ -34,3 +34,47 @@ describe("computeLinguisticScore", () => {
     expect(computeLinguisticScore("사과", "...")).toBe(0);
   });
 });
+
+describe("Sprint 3 §2 C — STT confidence 결합", () => {
+  it("confidence=undefined (기존 데이터) → 음절 일치만 (100%) — 기존 동작 유지", () => {
+    expect(computeLinguisticScore("사과", "사과")).toBe(100);
+    expect(computeLinguisticScore("사과", "사", undefined)).toBe(50);
+  });
+
+  it("confidence=null → 음절 일치만 — jsdom / 미지원 환경 동등 처리", () => {
+    expect(computeLinguisticScore("사과", "사과", null)).toBe(100);
+    expect(computeLinguisticScore("사과", "사", null)).toBe(50);
+  });
+
+  it("confidence=1.0 + 음절 100% → 100", () => {
+    expect(computeLinguisticScore("사과", "사과", 1.0)).toBe(100);
+  });
+
+  it("confidence=0.5 + 음절 100% → 75 (50% syllable + 50% confidence)", () => {
+    expect(computeLinguisticScore("사과", "사과", 0.5)).toBe(75);
+  });
+
+  it("confidence=1.0 + 음절 50% → 75", () => {
+    expect(computeLinguisticScore("사과", "사", 1.0)).toBe(75);
+  });
+
+  it("confidence=0.0 + 음절 100% → 50 (음절만 반영)", () => {
+    expect(computeLinguisticScore("사과", "사과", 0.0)).toBe(50);
+  });
+
+  it("confidence > 1.0 (잘못된 입력) → clamp 후 1.0 으로 처리", () => {
+    expect(computeLinguisticScore("사과", "사과", 5.0)).toBe(100);
+  });
+
+  it("confidence < 0 (잘못된 입력) → clamp 후 0 으로 처리", () => {
+    expect(computeLinguisticScore("사과", "사과", -0.5)).toBe(50);
+  });
+
+  it("confidence=NaN → 무시 + 음절 일치만 (defensive)", () => {
+    expect(computeLinguisticScore("사과", "사과", Number.NaN)).toBe(100);
+  });
+
+  it("빈 발화는 confidence 무관 → 0", () => {
+    expect(computeLinguisticScore("사과", "", 1.0)).toBe(0);
+  });
+});

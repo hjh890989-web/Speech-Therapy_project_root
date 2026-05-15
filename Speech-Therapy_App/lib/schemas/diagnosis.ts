@@ -29,6 +29,9 @@ export const DiagnosisInputSchema = z.object({
     })
     .nullable()
     .optional(),
+  /// Sprint 3 §2 C — Web Speech API SpeechRecognitionResult.confidence (0~1).
+  /// 미지원 / null 시 linguistic-score 가 음절 일치도 100% 기준으로 폴백.
+  sttConfidence: z.number().min(0).max(1).nullable().optional(),
   /// 자녀 월령 (만 2~7세).
   childAgeMonths: z.number().int().min(24).max(84),
   /// 시드 5종 한국어 음소.

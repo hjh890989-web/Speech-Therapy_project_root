@@ -1,20 +1,41 @@
-// Sprint 3 §1 — 언어 (linguistic) 점수.
+// Sprint 3 §1~§2 — 언어 (linguistic) 점수.
 //
-// 측정 신호: 의도한 단어를 음절 단위로 끝까지 발화했는가.
-// - 의도 "사과" (2음절) vs 발화 "사" (1음절) → 50%
-// - 의도 "사과" (2음절) vs 발화 "수갑" (2음절) → 100% (음절 수 = 어휘 단위 완성)
-// - 의도 "사과" (2음절) vs 빈 발화 → 0
+// Sprint 3 §1 base: 음절 단위 어휘 완성도 (의도 vs 발화 음절 수).
+// Sprint 3 §2 C 확장: Web Speech API SpeechRecognitionResult.confidence (STT 인식 자신도)
+// 를 50% 가중치로 결합 → 인식 품질 자체를 신호로 반영.
 //
-// articulation 과 차별화: articulation 은 자모 단위 정확도, 본 점수는 어휘 완성 단위.
+// 차별화:
+// - articulation: 자모 단위 정확도 (음소 정확도)
+// - linguistic: 음절 단위 어휘 완성 + STT 인식 명확성
+// - acoustic: 음향 신호 (duration/pitch/energy) 또는 텍스트 프록시
 
 import { countHangulSyllables } from "@/lib/phonetic-similarity";
 
-export function computeLinguisticScore(intendedWord: string, transcribedWord: string): number {
+export function computeLinguisticScore(
+  intendedWord: string,
+  transcribedWord: string,
+  sttConfidence?: number | null,
+): number {
   const intendedSyllables = countHangulSyllables(intendedWord);
   const transcribedSyllables = countHangulSyllables(transcribedWord);
 
   if (intendedSyllables === 0 || transcribedSyllables === 0) return 0;
 
-  const ratio = Math.min(intendedSyllables, transcribedSyllables) / Math.max(intendedSyllables, transcribedSyllables);
-  return Math.max(0, Math.min(100, Math.round(100 * ratio)));
+  const syllableRatio =
+    Math.min(intendedSyllables, transcribedSyllables) /
+    Math.max(intendedSyllables, transcribedSyllables);
+
+  // Sprint 3 §2 C — sttConfidence 없으면 (jsdom / 기존 데이터) 기존 동작 (음절 일치만).
+  if (sttConfidence === undefined || sttConfidence === null) {
+    return Math.max(0, Math.min(100, Math.round(100 * syllableRatio)));
+  }
+
+  // sttConfidence 가 비정상 (NaN 등) 시 syllable 만 사용 — defensive.
+  if (!Number.isFinite(sttConfidence)) {
+    return Math.max(0, Math.min(100, Math.round(100 * syllableRatio)));
+  }
+
+  const clampedConfidence = Math.max(0, Math.min(1, sttConfidence));
+  const score = 100 * (0.5 * syllableRatio + 0.5 * clampedConfidence);
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
