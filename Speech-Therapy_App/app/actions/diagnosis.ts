@@ -143,6 +143,8 @@ export async function analyzeDiagnosis(
             aiCushionText: null,
             targetPhoneme: input.targetPhoneme,
             childAgeMonths: input.childAgeMonths,
+            // Sprint 3 §2 B — Web Audio API features 영구 저장 (미지원/미측정 시 undefined → DB NULL).
+            acousticFeatures: input.acousticFeatures ?? undefined,
           },
         },
       },

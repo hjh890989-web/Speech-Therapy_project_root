@@ -160,6 +160,9 @@ model EvaluationResult {
   aiCushionText      String?
   targetPhoneme      String
   childAgeMonths     Int
+  /// Sprint 3 §2 B — Web Audio API 추출 음향 특징 (pitchMean / pitchStd / durationSec / energy).
+  /// 미지원 환경 (jsdom, 권한 거부) 또는 미측정 시 null. 스키마는 lib/audio/analyzer.ts AcousticFeatures.
+  acousticFeatures   Json?
   createdAt          DateTime @default(now())
 
   /// DB-009 역방향: Confidence < 70 시 1:1 매핑된 HITL 큐.
