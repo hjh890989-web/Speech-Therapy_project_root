@@ -133,33 +133,47 @@ foreach ($file in $taskFiles) {
     $bodyWithFooter | Out-File -FilePath $tempBody.FullName -Encoding UTF8 -NoNewline
 
     try {
-        # issue 생성 (label list 는 콤마 분리)
-        $labelArg = $labels -join ","
-        $url = gh issue create `
-            --repo $REPO `
-            --title $title `
-            --body-file $tempBody.FullName `
-            --label $labelArg `
-            --milestone $milestoneNum 2>&1
+        # 패치 (2026-05-16): gh issue create 의 --milestone title 매칭 버그 회피.
+        # REST API 직접 호출 — milestone number 로 안전하게 지정.
+        $labelArr = $labels | ForEach-Object { "labels[]=$_" }
+        $labelArgs = @()
+        foreach ($l in $labelArr) { $labelArgs += @("-f", $l) }
 
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "FAIL: $title" -ForegroundColor Red
-            Write-Host $url -ForegroundColor Red
-            $failed++
-            if ($url -match "rate limit") {
-                Write-Host "⚠️ Rate limit 도달 — 1시간 대기 후 재실행하세요." -ForegroundColor Red
-                Remove-Item $tempBody.FullName -ErrorAction SilentlyContinue
-                exit 1
-            }
-        } else {
-            Write-Host "OK [$milestoneKey]: $title" -ForegroundColor Green
+        $apiArgs = @(
+            "api", "repos/$REPO/issues", "-X", "POST",
+            "-f", "title=$title",
+            "-f", "body=$(Get-Content $tempBody.FullName -Raw)",
+            "-F", "milestone=$milestoneNum"
+        ) + $labelArgs
+
+        $response = & gh @apiArgs 2>&1
+        $respJson = $response | ConvertFrom-Json -ErrorAction SilentlyContinue
+        $issueNum = $respJson.number
+        $url = $respJson.html_url
+
+        if ($issueNum) {
+            Write-Host "OK [#$issueNum, $milestoneKey]: $title" -ForegroundColor Green
             $created++
 
             # Project #8 에 추가
             gh project item-add $PROJECT_NUM --owner $PROJECT_OWNER --url $url | Out-Null
 
-            # rate limit 회피 — 매 issue 마다 잠시 대기
+            # Sprint 1 (milestone 1) Done 자동 close
+            if ($milestoneNum -eq 1) {
+                gh issue close $issueNum --repo $REPO --comment "Sprint 1 완료 — 2026-05-08~14 진행 완료" | Out-Null
+            }
+
+            # rate limit 회피
             Start-Sleep -Milliseconds 500
+        } else {
+            Write-Host "FAIL: $title" -ForegroundColor Red
+            Write-Host ($response | Out-String) -ForegroundColor Red
+            $failed++
+            if ($response -match "rate limit") {
+                Write-Host "⚠️ Rate limit 도달 — 1시간 대기 후 재실행하세요." -ForegroundColor Red
+                Remove-Item $tempBody.FullName -ErrorAction SilentlyContinue
+                exit 1
+            }
         }
     } catch {
         Write-Host "ERROR: $title — $_" -ForegroundColor Red
