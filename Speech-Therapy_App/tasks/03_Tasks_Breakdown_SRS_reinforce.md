@@ -302,4 +302,556 @@ flowchart TB
 
 ---
 
-**— End of Task Breakdown 강화판 (SRS V06 무손상 + 8대 디스코프 적용) —**
+## 9. 전체 Task 의존성 맵 (88 tasks)
+
+> §3 의 통합 태스크 표의 **선행** 컬럼을 그래프로 가시화한 것. 색상 = Priority (P0/P1/P2), 점선 테두리 = 단순 대체(🔵) 또는 보류(❌).
+> 88 nodes × ~80 edges 이라 화면이 작으면 가로 스크롤 / 줌 필요.
+
+### 9.1 색상 / 테두리 범례
+
+| 색 | 의미 |
+|---|---|
+| 🟢 초록 | P0 Active (Sprint 1~4 명세대로 구현) |
+| 🟡 노랑 | P1 Defer (리텐션 검증 후 구현) |
+| 🔴 빨강 | P2 Defer (B2B 진입 후 구현) |
+| 🔵 파랑 (실선) | P1 + 단순 대체 (🔵 Replace) |
+| 💗 분홍 (점선) | P2 + 단순 대체 |
+| ⬜ 회색 (점선) | 보류 (❌ Hold) |
+
+### 9.2 전체 의존성 그래프
+
+```mermaid
+flowchart TB
+    %% ============= Database Layer =============
+    subgraph DB ["📦 Database (DB-001~011)"]
+        DB001[DB-001]:::p0
+        DB002[DB-002]:::p0
+        DB003[DB-003]:::p2
+        DB004[DB-004]:::p0
+        DB005[DB-005]:::p0
+        DB006[DB-006]:::p0
+        DB007[DB-007]:::p1
+        DB008[DB-008]:::p0
+        DB009[DB-009]:::p1
+        DB010[DB-010]:::p2
+        DB011[DB-011]:::p1
+    end
+
+    %% ============= API Layer =============
+    subgraph API ["🔌 API/Contract (API-001~012)"]
+        API001[API-001]:::p0
+        API002[API-002]:::p1
+        API003[API-003]:::p1
+        API004[API-004]:::p0
+        API005[API-005]:::p1r
+        API006[API-006]:::p1r
+        API007[API-007]:::p2r
+        API008[API-008]:::p2
+        API009[API-009]:::p2h
+        API010[API-010]:::p1
+        API011[API-011]:::p0
+        API012[API-012]:::p2r
+    end
+
+    %% ============= Mock Layer =============
+    subgraph MOCK ["🧪 Mock (MOCK-001~003)"]
+        MOCK001[MOCK-001]:::p0
+        MOCK002[MOCK-002]:::p1
+        MOCK003[MOCK-003]:::p1
+    end
+
+    %% ============= Query Layer (CQRS Read) =============
+    subgraph FRQ ["🖥️ Query / Read (FR-Q-001~014)"]
+        FRQ001[FR-Q-001]:::p0
+        FRQ002[FR-Q-002]:::p0
+        FRQ003[FR-Q-003]:::p1
+        FRQ004[FR-Q-004]:::p1
+        FRQ005[FR-Q-005]:::p1
+        FRQ006[FR-Q-006]:::p1
+        FRQ007[FR-Q-007]:::p1r
+        FRQ008[FR-Q-008]:::p1r
+        FRQ009[FR-Q-009]:::p2
+        FRQ010[FR-Q-010]:::p2
+        FRQ011[FR-Q-011]:::p2
+        FRQ012[FR-Q-012]:::p1
+        FRQ013[FR-Q-013]:::p1
+        FRQ014[FR-Q-014]:::p1
+    end
+
+    %% ============= Command Layer (CQRS Write) =============
+    subgraph FRC ["✍️ Command / Write (FR-C-001~018)"]
+        FRC001[FR-C-001]:::p0
+        FRC002[FR-C-002]:::p1r
+        FRC003[FR-C-003]:::p0
+        FRC004[FR-C-004]:::p0
+        FRC005[FR-C-005]:::p1
+        FRC006[FR-C-006]:::p1
+        FRC007[FR-C-007]:::p1r
+        FRC008[FR-C-008]:::p1
+        FRC009[FR-C-009]:::p0
+        FRC010[FR-C-010]:::p1
+        FRC011[FR-C-011]:::p1
+        FRC012[FR-C-012]:::p1r
+        FRC013[FR-C-013]:::p1r
+        FRC014[FR-C-014]:::p1r
+        FRC015[FR-C-015]:::p2h
+        FRC016[FR-C-016]:::p2
+        FRC017[FR-C-017]:::p2r
+        FRC018[FR-C-018]:::p2r
+    end
+
+    %% ============= Test Layer =============
+    subgraph TEST ["🧪 Test (TEST-001~014)"]
+        TEST001[TEST-001]:::p0
+        TEST002[TEST-002]:::p1
+        TEST003[TEST-003]:::p1
+        TEST004[TEST-004]:::p0
+        TEST005[TEST-005]:::p1
+        TEST006[TEST-006]:::p1
+        TEST007[TEST-007]:::p1
+        TEST008[TEST-008]:::p1h
+        TEST009[TEST-009]:::p0
+        TEST010[TEST-010]:::p1
+        TEST011[TEST-011]:::p1r
+        TEST012[TEST-012]:::p2
+        TEST013[TEST-013]:::p2h
+        TEST014[TEST-014]:::p1r
+    end
+
+    %% ============= Infra / NFR Layer =============
+    subgraph INFRA ["⚙️ Infra / Perf / Sec / Mon / Ops"]
+        INFRA001[INFRA-001]:::p0
+        INFRA002[INFRA-002]:::p1
+        INFRA003[INFRA-003]:::p1
+        INFRA004[INFRA-004]:::p2h
+        INFRA005[INFRA-005]:::p1
+        PERF001[PERF-001]:::p1
+        PERF002[PERF-002]:::p1
+        SEC001[SEC-001]:::p1
+        SEC002[SEC-002]:::p1
+        SEC003[SEC-003]:::p2
+        SEC004[SEC-004]:::p0
+        MON001[MON-001]:::p1
+        MON002[MON-002]:::p1
+        MON003[MON-003]:::p1r
+        MON004[MON-004]:::p1
+        OPS001[OPS-001]:::p1
+    end
+
+    %% ============= Dependencies (선행 → 후행) =============
+    %% --- DB internal ---
+    DB001 --> DB002
+    DB001 --> DB003
+    DB002 --> DB004
+    DB004 --> DB005
+    DB001 --> DB006
+    DB005 --> DB007
+    DB002 --> DB008
+    DB005 --> DB009
+    DB003 --> DB010
+    DB002 --> DB011
+    DB009 --> DB011
+
+    %% --- DB → API ---
+    DB005 --> API001
+    DB006 --> API002
+    DB007 --> API003
+    DB008 --> API004
+    DB009 --> API005
+    DB009 --> API006
+    DB003 --> API007
+    DB010 --> API008
+    DB001 --> API009
+    DB002 --> API010
+    DB011 --> API010
+    DB001 --> API011
+    API007 --> API012
+    API008 --> API012
+
+    %% --- API → Mock ---
+    API001 --> MOCK001
+    API002 --> MOCK002
+    API004 --> MOCK002
+    API005 --> MOCK003
+    API006 --> MOCK003
+    API007 --> MOCK003
+    API008 --> MOCK003
+
+    %% --- → Query ---
+    DB001 --> FRQ001
+    API001 --> FRQ001
+    DB005 --> FRQ002
+    MOCK001 --> FRQ002
+    API002 --> FRQ003
+    MOCK002 --> FRQ003
+    DB008 --> FRQ004
+    DB007 --> FRQ005
+    API003 --> FRQ005
+    FRQ005 --> FRQ006
+    DB007 --> FRQ007
+    API006 --> FRQ008
+    DB009 --> FRQ008
+    DB003 --> FRQ009
+    API010 --> FRQ009
+    DB003 --> FRQ010
+    FRQ009 --> FRQ011
+    FRQ005 --> FRQ012
+    API011 --> FRQ012
+    DB004 --> FRQ013
+    API009 --> FRQ014
+
+    %% --- → Command ---
+    API001 --> FRC001
+    API011 --> FRC001
+    DB005 --> FRC001
+    FRC001 --> FRC002
+    API005 --> FRC002
+    API009 --> FRC003
+    DB004 --> FRC004
+    INFRA002 --> FRC004
+    API010 --> FRC005
+    FRQ003 --> FRC006
+    DB008 --> FRC007
+    INFRA003 --> FRC007
+    API002 --> FRC008
+    DB006 --> FRC008
+    API004 --> FRC009
+    DB008 --> FRC009
+    DB007 --> FRC010
+    INFRA002 --> FRC010
+    API011 --> FRC011
+    INFRA005 --> FRC011
+    API012 --> FRC012
+    API006 --> FRC013
+    DB009 --> FRC013
+    DB009 --> FRC014
+    INFRA002 --> FRC014
+    API009 --> FRC015
+    DB004 --> FRC015
+    DB003 --> FRC016
+    INFRA001 --> FRC016
+    API007 --> FRC017
+    API011 --> FRC017
+    API012 --> FRC017
+    API008 --> FRC018
+    API012 --> FRC018
+
+    %% --- → Test ---
+    FRC001 --> TEST001
+    FRC002 --> TEST002
+    FRC003 --> TEST003
+    FRQ001 --> TEST004
+    FRQ002 --> TEST004
+    FRC005 --> TEST005
+    FRQ003 --> TEST006
+    FRC008 --> TEST006
+    FRC008 --> TEST007
+    FRC007 --> TEST008
+    FRC009 --> TEST009
+    FRC010 --> TEST010
+    FRQ005 --> TEST010
+    FRC012 --> TEST011
+    FRC016 --> TEST012
+    FRC015 --> TEST013
+    FRC004 --> TEST013
+    FRC013 --> TEST014
+    FRC014 --> TEST014
+
+    %% --- → Infra / NFR ---
+    DB001 --> INFRA001
+    INFRA001 --> INFRA002
+    INFRA001 --> INFRA003
+    API009 --> INFRA004
+    INFRA001 --> INFRA005
+    FRC001 --> PERF001
+    FRC010 --> PERF001
+    INFRA003 --> PERF002
+    FRC004 --> SEC001
+    DB011 --> SEC002
+    API010 --> SEC002
+    FRC018 --> SEC003
+    API011 --> SEC004
+    INFRA005 --> SEC004
+    INFRA005 --> MON001
+    INFRA005 --> MON002
+    API012 --> MON002
+    DB009 --> MON003
+    INFRA005 --> MON003
+    INFRA001 --> MON004
+    FRQ008 --> OPS001
+    FRC013 --> OPS001
+
+    %% ============= Style classes =============
+    classDef p0 fill:#d1fae5,color:#065f46,stroke:#10b981,stroke-width:2px
+    classDef p1 fill:#fef3c7,color:#92400e,stroke:#f59e0b,stroke-width:2px
+    classDef p1r fill:#dbeafe,color:#1e40af,stroke:#3b82f6,stroke-width:2px,stroke-dasharray:5 3
+    classDef p1h fill:#e5e7eb,color:#374151,stroke:#6b7280,stroke-width:2px,stroke-dasharray:5 3
+    classDef p2 fill:#fee2e2,color:#991b1b,stroke:#ef4444,stroke-width:2px
+    classDef p2r fill:#fce7f3,color:#9d174d,stroke:#ec4899,stroke-width:2px,stroke-dasharray:5 3
+    classDef p2h fill:#e5e7eb,color:#374151,stroke:#6b7280,stroke-width:2px,stroke-dasharray:5 3
+```
+
+### 9.3 분석 — 의존성 hotspot
+
+#### 9.3.1 최다 후속 의존 (in-degree 기준 상위 5)
+
+| Task | 후속 의존 수 | 의미 |
+|---|---|---|
+| **DB-001** | 6 (DB-002/003/006, API-009/011, INFRA-001) | 모든 흐름의 출발점 → Sprint 1 1순위 |
+| **DB-002** | 5 (DB-004/008/011, API-010, …) | 인증 / RBAC 기반 |
+| **API-011** | 5 (FR-C-001/011/017, FRQ-012, SEC-004) | Gemini SDK → AI 전체 흐름 의존 |
+| **DB-009** | 5 (DB-011, API-005/006, FR-C-013/014, MON-003) | HITL 큐 — D4 단순 대체로도 INSERT 만은 유지 |
+| **API-012** | 4 (FR-C-012/017/018, MON-002) | 외부 API (카카오/키즈노트) — D8 단순 대체 |
+
+→ **DB-001 / API-011** 은 Sprint 1 시작 시 가장 먼저 안정화 필수. 둘 다 P0 Active.
+
+#### 9.3.2 최다 선행 의존 (out-degree 기준 상위 5)
+
+| Task | 선행 의존 수 | 의미 |
+|---|---|---|
+| **FR-C-017** | 3 (API-007/011/012) | AI 쿠션어 + 키즈노트 — P2 (B2B + D8) |
+| **API-010** | 2 (DB-002, DB-011) | Supabase Auth — P1 진입 게이트 |
+| **FR-C-001** | 3 (API-001/011, DB-005) | Sprint 1 코어 — 3축 스코어링 |
+| **FRQ-012** | 2 (FRQ-005, API-011) | 다음 주 예상 점수 — EXP-2 검증 대상 |
+| **TEST-014** | 2 (FR-C-013/014) | HITL 통합 — D4 적용으로 Slack 검증으로 축소 |
+
+#### 9.3.3 P0 critical path (Sprint 1 1주차)
+
+```
+DB-001 → DB-002/005/006/008 → API-001 → FR-C-001 → FR-Q-001/002 → FR-C-009 → INFRA-001
+                                      ↑
+                                   API-011 (Gemini) + SEC-004 (Rate Limiter)
+```
+
+§1 / §5 의 다이어그램과 일치 — Web Speech API 단순 대체 (D7) 덕에 API-009 / INFRA-004 비의존.
+
+#### 9.3.4 단순 대체 (🔵) 적용 후 의존 단순화
+
+| 원래 의존 → 변경 후 | 효과 |
+|---|---|
+| FR-C-002 → API-005 (Realtime) **→** Slack 웹훅 | 1주차에 API-005 (P1) 완성 불필요 — Slack URL 하나로 시작 |
+| FR-Q-008 → API-006 (REST PATCH) **→** Supabase Studio 직접 | API-006 (P1) 의존 사실상 끊김 |
+| FR-C-012/017/018 → API-012 (카카오/키즈노트) **→** 클립보드 | API-012 (P2) 미구축으로도 사용자 경험 제공 가능 |
+| FR-C-007 → INFRA-003 (PWA SW) **→** 에러 토스트 | 오프라인 소급 보상의 SW 의존 제거 |
+
+→ **D4·D7·D8 단순 대체로 P1 진입 시점의 필수 의존 수 ≈ 30% 감소**.
+
+#### 9.3.5 보류 (❌) 노드의 격리
+
+- **API-009** (Edge Runtime 오디오 스트림) → 후속 INFRA-004 / FR-Q-014 / FR-C-003/015 가 영향
+- **D7 적용**: 클라이언트 직접 STT (Web Speech) 로 우회 → FR-C-003 는 Web Speech `onerror` 재시도로 단순화, FR-Q-014 는 단순 카메라 오버레이로 축소, FR-C-015 는 Zero-touch (D3) 와 함께 P2 보류
+- 결과: API-009 가 보류되어도 P0/P1 의 단일 critical path 영향 0
+
+### 9.4 추적성 (Traceability)
+
+본 의존성 맵은 다음과 위배 없음:
+
+- ✅ §3 통합 태스크 표의 "선행" 컬럼 100% 반영
+- ✅ §1 Sprint 1 다이어그램과 일치 (8 tasks 선형 흐름)
+- ✅ §5 Critical Path 다이어그램과 일치 (P0 → 검증 → P1 게이트)
+- ✅ SRS V06 의 Traceability Matrix (Story↔REQ↔TC) 영향 없음 (Task 레이어만)
+
+---
+
+## 10. 확장판 — SRS 88 + Sprint 진행 중 분할된 sub-task
+
+> §9 는 SRS V06 의 88 task 만 다룬다. 본 §10 은 그동안 Sprint 1/2/3 진행 중 실제로 코드로 구현된 **분할된 sub-task** 를 추가해 현실 진행 상태를 반영한 확장 의존성 맵.
+> 대화기록 `Prompt/대화기록_2026-05-15.md` 의 §1~§20 + 본 sub-session 의 §3~§20 참조.
+
+### 10.1 Sprint sub-task 목록 (14개)
+
+| sub-task ID | 이름 | 상위 SRS task | 상태 | 비고 |
+|---|---|---|---|---|
+| **SP1A** | Sprint 1 §A — cushion 분리 (analyzeDiagnosis 에서 별도) | FR-C-001 | ✅ 완료 | 결과 페이지 도착 시간 ~10s 단축 |
+| **SP1B** | Sprint 1 §B — user upsert 병렬 | API-001 | ✅ 완료 | 익명 사용자 처리 |
+| **SP1C** | Sprint 1 §C — Slack fire-and-forget | FR-C-002 | ✅ 완료 | HITL 알림 D4 단순화 |
+| **SP2_1** | Sprint 2 §1 — 익명 cookie + 인증 마이그레이션 (= API-010 §1) | API-010 | ✅ 완료 | Magic Link Auth |
+| **SP2_2** | Sprint 2 §2 — phonetic similarity (Gemini → 자모 비교) | FR-C-001 | ✅ 완료 | Sprint 1 Gemini 평가 제거 |
+| **SP2_3** | Sprint 2 §3 — `anonymous_user_id` cookie 권위 | DB-002 / API-010 | ✅ 완료 | proxy.ts 발급 + iOS ITP 우회 |
+| **SP2_4** | Sprint 2 §4 — 별 누적 fix + localStorage 권위 | FR-C-009 | ✅ 완료 | iOS Safari ITP 7일 cookie 한도 회피 |
+| **SP3_1** | Sprint 3 §1 — 3축 점수 분리 (linguistic / acoustic 실 계산) | FR-C-001 | ✅ 완료 | articulation 100% → 3축 |
+| **SP3_2A** | Sprint 3 §2 A — Web Audio API 직접 측정 | FR-Q-001 / FR-C-001 | ⚠️ 차단 | `5aa39bd` 핫픽스로 env 플래그 default off (STT mic 충돌) |
+| **SP3_2B** | Sprint 3 §2 B — `acousticFeatures` JSONB 컬럼 | DB-005 | ✅ 완료 | Supabase Studio 수동 SQL 적용 |
+| **SP3_2C** | Sprint 3 §2 C — linguistic + STT confidence 50% 결합 | FR-C-001 | ✅ 완료 | linguistic-score 다양화 |
+| **SP3_2D** | Sprint 3 §2 D — 또래 백분위 보정 | FR-Q-002 | 🟡 보류 | 실 사용자 N=??? 데이터 누적 후 |
+| **SP3_2E** | Sprint 3 §2 E — Gemini rate limiter (in-memory) | SEC-004 | ✅ 완료 | Phase 2 Upstash Redis 교체 후보 |
+| **SP3_3** | Sprint 3 §3 — Google OAuth (= API-010 §2) | API-010 | 🟡 진행 중 | OAuth 401 invalid_client 차단 (Client ID 잘림 추정) |
+
+⚠️ 별도 핫픽스 (Sprint 외): `fed9769` PKCE verifier cookies 강제 — `lib/supabase/client.ts` 명시적 `cookies` 어댑터 추가. SP2_1 의 후속 안정화.
+
+### 10.2 확장 의존성 다이어그램 (SRS 관련 노드 14 + Sprint sub-task 14)
+
+> 가독성을 위해 SRS 88 노드 전체 대신 Sprint sub-task 와 직접 연결되는 SRS 노드 14개만 포함. SRS 전체 흐름은 §9.2 참조.
+
+```mermaid
+flowchart TB
+    %% === SRS 88 task 중 sub-task 와 직접 연결되는 노드 (14) ===
+    subgraph SRS ["📋 SRS V06 88 task (관련 노드 14)"]
+        DB001[DB-001]:::p0
+        DB002[DB-002]:::p0
+        DB005[DB-005]:::p0
+        DB008[DB-008]:::p0
+        API001[API-001]:::p0
+        API010[API-010]:::p1
+        API011[API-011]:::p0
+        FRQ001[FR-Q-001]:::p0
+        FRQ002[FR-Q-002]:::p0
+        FRC001[FR-C-001]:::p0
+        FRC002[FR-C-002]:::p1
+        FRC009[FR-C-009]:::p0
+        SEC004[SEC-004]:::p0
+        INFRA001[INFRA-001]:::p0
+    end
+
+    %% === Sprint 1 sub-task ===
+    subgraph SP1 ["🏃 Sprint 1 (P0 코어 도입 + 최적화)"]
+        SP1A[SP1A<br/>cushion 분리]:::done
+        SP1B[SP1B<br/>user upsert 병렬]:::done
+        SP1C[SP1C<br/>Slack fire-and-forget]:::done
+    end
+
+    %% === Sprint 2 sub-task ===
+    subgraph SP2 ["🏃 Sprint 2 (FR-C-001 진화 + 인증 + 별 누적)"]
+        SP2_1[SP2 §1<br/>익명 cookie + 마이그레이션<br/>= API-010 §1]:::done
+        SP2_2[SP2 §2<br/>phonetic similarity<br/>FR-C-001 진화]:::done
+        SP2_3[SP2 §3<br/>anonymous_user_id<br/>cookie 권위]:::done
+        SP2_4[SP2 §4<br/>별 누적 fix<br/>localStorage 권위]:::done
+    end
+
+    %% === Sprint 3 sub-task ===
+    subgraph SP3 ["🏃 Sprint 3 (3축 점수 + Web Audio + AI 가드레일 + OAuth)"]
+        SP3_1[SP3 §1<br/>3축 점수 분리]:::done
+        SP3_2A[SP3 §2 A<br/>Web Audio 측정<br/>핫픽스 차단]:::blocked
+        SP3_2B[SP3 §2 B<br/>acousticFeatures<br/>DB 컬럼]:::done
+        SP3_2C[SP3 §2 C<br/>STT confidence<br/>결합]:::done
+        SP3_2D[SP3 §2 D<br/>또래 백분위 보정<br/>데이터 부족]:::hold
+        SP3_2E[SP3 §2 E<br/>Gemini rate limiter<br/>in-memory]:::done
+        SP3_3[SP3 §3<br/>Google OAuth<br/>= API-010 §2]:::wip
+    end
+
+    %% === 핫픽스 (Sprint 외) ===
+    HOTFIX_PKCE[Hotfix fed9769<br/>PKCE cookies 강제<br/>client.ts]:::done
+
+    %% === SRS → Sprint sub-task 의존성 ===
+    FRC001 --> SP1A
+    API001 --> SP1B
+    DB002 --> SP1B
+    FRC002 --> SP1C
+
+    DB002 --> SP2_3
+    DB001 --> SP2_3
+    SP2_3 --> SP2_1
+    API010 --> SP2_1
+    DB008 --> SP2_1
+    FRC001 --> SP2_2
+    FRC009 --> SP2_4
+    SP2_3 --> SP2_4
+
+    SP2_2 --> SP3_1
+    FRC001 --> SP3_1
+    SP3_1 --> SP3_2A
+    FRQ001 --> SP3_2A
+    SP3_2A --> SP3_2B
+    DB005 --> SP3_2B
+    SP3_1 --> SP3_2C
+    FRQ002 --> SP3_2D
+    SEC004 --> SP3_2E
+    API011 --> SP3_2E
+    SP2_1 --> SP3_3
+    API010 --> SP3_3
+
+    %% Hotfix 의존성
+    SP2_1 --> HOTFIX_PKCE
+    SP3_3 -.-> HOTFIX_PKCE
+
+    %% Style
+    classDef p0 fill:#d1fae5,color:#065f46,stroke:#10b981,stroke-width:2px
+    classDef p1 fill:#fef3c7,color:#92400e,stroke:#f59e0b,stroke-width:2px
+    classDef done fill:#bbf7d0,color:#14532d,stroke:#16a34a,stroke-width:3px
+    classDef wip fill:#fed7aa,color:#7c2d12,stroke:#f97316,stroke-width:3px
+    classDef blocked fill:#fecaca,color:#7f1d1d,stroke:#dc2626,stroke-width:3px
+    classDef hold fill:#e5e7eb,color:#374151,stroke:#6b7280,stroke-width:2px,stroke-dasharray:5 3
+```
+
+### 10.3 상태 범례 (확장판)
+
+| 색 | 의미 |
+|---|---|
+| 🟢 초록 실선 (SRS) | SRS 88 task — Priority 별 (§9 와 동일) |
+| 🟢 진한 초록 굵은 테두리 | Sprint sub-task **완료** ✅ |
+| 🟠 주황 굵은 테두리 | Sprint sub-task **진행 중** 🟡 (OAuth 401 등) |
+| 🔴 빨강 굵은 테두리 | Sprint sub-task **차단** ⚠️ (핫픽스로 비활성화 — SP3_2A Web Audio) |
+| ⬜ 회색 점선 | Sprint sub-task **보류** (데이터 부족 등 — SP3_2D 백분위) |
+
+### 10.4 진화 흐름 분석
+
+#### 10.4.1 FR-C-001 (3축 스코어링) 의 진화
+
+```
+SRS 정의 (Gemini 텍스트 평가 + Web Speech STT)
+    ↓ SP1A (cushion 분리)
+    ↓ SP2_2 (phonetic similarity — Gemini 제거, 결정적 자모 비교)
+    ↓ SP3_1 (3축 점수 분리 — articulation / linguistic / acoustic)
+    ↓ SP3_2A (Web Audio 측정 — ⚠️ STT mic 충돌로 핫픽스 차단)
+    ↓ SP3_2B (acousticFeatures DB 컬럼)
+    ↓ SP3_2C (linguistic + STT confidence 결합)
+현재: 3축 모두 실 신호 기반, acoustic 은 텍스트 프록시 폴백 (SP3_2A 차단)
+```
+
+#### 10.4.2 API-010 (Supabase Auth) 의 진화
+
+```
+SRS 정의 (Supabase Auth + Middleware RBAC)
+    ↓ SP2_3 (anonymous_user_id cookie 권위 — proxy.ts 발급)
+    ↓ SP2_1 = API-010 §1 (Magic Link Auth + 익명→인증 마이그레이션)
+    ↓ Hotfix fed9769 (PKCE cookies 강제 — client.ts 명시적 어댑터)
+    ↓ SP3_3 = API-010 §2 (Google OAuth — 이메일 rate limit 우회)
+현재: Magic Link 동작 (PKCE 핫픽스 후), Google OAuth 401 차단 진행 중
+```
+
+#### 10.4.3 별 누적 (FR-C-009) 의 진화
+
+```
+SRS 정의 (reward INSERT)
+    ↓ SP2_3 (cookie 권위 정착)
+    ↓ SP2_4 (localStorage 권위 패턴 — iOS Safari ITP 7일 한도 우회)
+현재: localStorage > cookie 권위, ITP 환경에서도 누적 보존
+```
+
+#### 10.4.4 Critical sub-task chain (현재 차단 / 진행 중)
+
+```
+SP3_2A (Web Audio) ─→ ⚠️ 차단 (env 플래그 off) ─→ 재설계 옵션 A/B/C 결정 대기
+SP3_3 (Google OAuth) ─→ 🟡 401 invalid_client ─→ Client ID 재입력 검증 대기
+SP3_2D (또래 백분위) ─→ 🟡 보류 ─→ 실 사용자 N=??? 데이터 누적 후
+```
+
+### 10.5 확장 통계
+
+| 분류 | 개수 |
+|---|---|
+| SRS V06 88 task (§9) | 88 |
+| Sprint 1 sub-task | 3 (SP1A/B/C) |
+| Sprint 2 sub-task | 4 (SP2_1~4) |
+| Sprint 3 sub-task | 7 (SP3_1, SP3_2A~E, SP3_3) |
+| 핫픽스 | 1 (fed9769 PKCE cookies) |
+| **확장판 총 노드** | **103** |
+
+| 상태 | Sub-task 개수 |
+|---|---|
+| ✅ 완료 (done) | 11 |
+| 🟠 진행 중 (wip) | 1 (SP3_3) |
+| ⚠️ 차단 (blocked) | 1 (SP3_2A) |
+| ⬜ 보류 (hold) | 1 (SP3_2D) |
+
+### 10.6 다음 세션 진입점 (Sub-task 기준)
+
+| 우선순위 | 작업 | 참조 |
+|---|---|---|
+| P0 | SP3_3 OAuth 401 진단 — Supabase Google Provider 의 Client ID 재입력 검증 | 대화기록 §19.1 |
+| P0 | SP3_2A 재설계 — 옵션 A (2번 발화) / B (Cloud STT) / C (영구 폐기) 결정 | 대화기록 §15.3 |
+| P1 | SP3_2D 백분위 보정 데이터 누적 시작 (실 사용자 진단 50건+) | — |
+
+---
+
+**— End of Task Breakdown 강화판 (SRS V06 무손상 + 8대 디스코프 적용 + Sprint sub-task 확장판) —**
