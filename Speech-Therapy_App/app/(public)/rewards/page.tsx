@@ -62,7 +62,7 @@ export default async function RewardsPage() {
         data-testid="disclaimer"
         className="mb-6 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
       >
-        보상은 부모님과 함께 즐기는 놀이의 일부입니다. 의료적 판단이 아닙니다.
+        보상은 부모님과 함께 즐기는 놀이의 일부입니다. 의료적 평가가 아닙니다.
       </p>
 
       <header className="mb-8 space-y-2">

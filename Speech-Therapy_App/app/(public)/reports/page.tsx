@@ -34,7 +34,7 @@ export default function ReportsPage() {
         data-testid="disclaimer"
         className="mb-6 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
       >
-        본 결과는 의료적 판단이 아닌 발달 참고 자료입니다.
+        본 결과는 의료적 평가가 아닌 발달 참고 자료입니다.
       </p>
 
       <header className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -95,7 +95,7 @@ export default function ReportsPage() {
         data-testid="disclaimer"
         className="rounded-md border border-gray-200 px-4 py-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-400"
       >
-        본 결과는 의료적 판단이 아니며, 발달이 우려되는 경우 전문가 상담을 권장합니다.
+        본 결과는 의료적 평가가 아니며, 발달이 우려되는 경우 전문가 상담을 권장합니다.
       </p>
 
       <div className="mt-8 flex flex-wrap gap-4 text-sm">
@@ -103,7 +103,7 @@ export default function ReportsPage() {
           오늘의 미션으로 이어가기
         </Link>
         <Link href="/diagnose" className="text-gray-600 underline hover:text-gray-900 dark:text-gray-400">
-          새 진단 시도
+          새 발음 확인하기
         </Link>
       </div>
     </main>

@@ -18,7 +18,7 @@ interface PageProps {
 
 export const metadata = {
   title: "발음 발달 결과 — Speech-Therapy",
-  description: "또래 비교 결과를 부모님께 안내합니다. 본 결과는 의료적 판단이 아닌 발달 참고 자료입니다.",
+  description: "또래 비교 결과를 부모님께 안내합니다. 본 결과는 의료적 평가가 아닌 발달 참고 자료입니다.",
 };
 
 interface FetchedResult {
@@ -98,7 +98,7 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
         data-testid="disclaimer"
         className="mb-6 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
       >
-        본 결과는 의료적 판단이 아닌 발달 참고 자료입니다.
+        본 결과는 의료적 평가가 아닌 발달 참고 자료입니다.
       </p>
 
       {/* FR-C-009 — 실 사용자만 별 적립. mock 데이터엔 미발급. */}
@@ -161,7 +161,7 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
           data-testid="disclaimer"
           className="mt-3 text-xs text-gray-500 dark:text-gray-400"
         >
-          참고: 같은 월령대 데이터와 비교한 결과입니다. 의료적 판단이 아닙니다.
+          참고: 같은 월령대 데이터와 비교한 결과입니다. 의료적 평가가 아닙니다.
         </p>
       </section>
 
@@ -189,7 +189,7 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
         href="/diagnose"
         className="mb-8 inline-block text-sm text-gray-600 underline hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
       >
-        다시 진단하기
+        다시 발음 확인하기
       </Link>
 
       {/* Disclaimer #3 — 하단 */}
@@ -197,7 +197,7 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
         data-testid="disclaimer"
         className="mt-2 rounded-md border border-gray-200 px-4 py-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-400"
       >
-        본 결과는 의료적 판단이 아니며, 발달이 우려되는 경우 전문가 상담을 권장합니다.
+        본 결과는 의료적 평가가 아니며, 발달이 우려되는 경우 전문가 상담을 권장합니다.
       </p>
     </main>
   );

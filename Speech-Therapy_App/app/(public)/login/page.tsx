@@ -22,7 +22,7 @@ export default function LoginPage() {
         data-testid="disclaimer"
         className="mb-6 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
       >
-        가입 시 무로그인 진단으로 모은 별과 결과가 새 계정에 그대로 옮겨집니다.
+        가입 시 무로그인 발음 확인으로 모은 별과 결과가 새 계정에 그대로 옮겨집니다.
       </p>
 
       <LoginForm />

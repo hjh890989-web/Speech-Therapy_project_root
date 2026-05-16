@@ -3,6 +3,12 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegister } from "./sw-register";
 
+// 부팅 시 1회 환경변수 검증 — 누락 시 부팅 단계에서 throw (사용자 첫 요청 전 차단).
+// 본 import 의 side-effect (zod parse) 가 검증 트리거. ESLint 의 "unused" 회피 위해
+// 명시적 reference 만들어 둠 (tree-shake 방지).
+import { env as _env } from "@/lib/env";
+void _env;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

@@ -16,6 +16,7 @@
 
 import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
 import { compositeScore, computePeerPercentile } from "@/lib/peer-percentile";
@@ -189,5 +190,9 @@ export async function analyzeDiagnosis(
     requiresHITL,
     disclaimerRequired: true,
   };
+
+  // 별 누적 영향 — /rewards RSC 캐시 무효화.
+  revalidatePath("/rewards");
+
   return DiagnosisOutputSchema.parse(output);
 }

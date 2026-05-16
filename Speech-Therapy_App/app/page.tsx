@@ -11,7 +11,7 @@ export default function Home() {
         data-testid="disclaimer"
         className="mb-6 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
       >
-        본 서비스는 의료적 판단이 아닌, 부모님께 발달 확인 정보를 안내하는 보조 도구입니다.
+        본 서비스는 의료적 평가가 아닌, 부모님께 발달 확인 정보를 안내하는 보조 도구입니다.
       </p>
 
       <header className="mb-10 space-y-3">
@@ -64,7 +64,7 @@ export default function Home() {
       </section>
 
       <footer className="mt-10 text-xs text-gray-500 dark:text-gray-400">
-        본 결과는 의료적 판단이 아니며, 발달이 우려되는 경우 전문가 상담을 권장합니다.
+        본 결과는 의료적 평가가 아니며, 발달이 우려되는 경우 전문가 상담을 권장합니다.
       </footer>
     </main>
   );

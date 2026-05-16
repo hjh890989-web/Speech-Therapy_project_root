@@ -127,7 +127,7 @@ export default async function MissionsPage() {
         data-testid="disclaimer"
         className="mb-6 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
       >
-        본 미션은 부모님께 발달 확인 정보를 안내하는 보조 도구입니다. 의료적 판단이 아닙니다.
+        본 미션은 부모님께 발달 확인 정보를 안내하는 보조 도구입니다. 의료적 평가가 아닙니다.
       </p>
 
       <header className="mb-8 space-y-2">

@@ -1,9 +1,10 @@
 "use client";
 
-// FR-Q-001 — 발화 진단 입력 폼 (Client Component).
+// FR-Q-001 — 발화 입력 폼 (Client Component).
 // Web Speech API + analyzeDiagnosis Server Action 호출.
 // 입력 항목 ≤ 3개: 자녀 월령 / 타겟 음소 / 동의 체크.
-// CON-04 — 모든 카피는 "치료/진단/장애" 금칙어 0건 (발달 확인 / 발음 등 비의료 표현).
+// CON-04 — UI 카피의 "치료/진단/장애" 금칙어 0건 (발음 확인 / 발달 등 비의료 표현).
+// (내부 식별자 `analyzeDiagnosis`, `app/actions/diagnosis.ts` 등은 미노출이라 예외)
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -294,7 +295,7 @@ export function DiagnosisForm() {
           className="mt-1"
         />
         <span>
-          본 서비스는 의료적 판단을 제공하지 않으며, 부모님께 정보 제공을 위한 보조 도구임을
+          본 서비스는 의료적 평가를 제공하지 않으며, 부모님께 정보 제공을 위한 보조 도구임을
           이해했습니다.
         </span>
       </label>

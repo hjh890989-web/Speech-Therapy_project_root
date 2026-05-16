@@ -1,13 +1,13 @@
-// FR-Q-001 — 무로그인 5분 진단 SSR 페이지 (Server Component).
+// FR-Q-001 — 무로그인 5분 발음 확인 SSR 페이지 (Server Component).
 // REQ-FUNC-008~010, REQ-NF-003. Disclaimer 페이지 상단+하단 노출.
-// CON-04 금칙어 0건: "발음 확인 / 발달 단계 / 부모 안내" 등 비의료 표현 사용.
+// CON-04 UI 카피 금칙어 0건: "발음 확인 / 발달 단계 / 부모 안내" 등 비의료 표현 사용.
 
 import { DiagnosisForm } from "./DiagnosisForm";
 
 export const metadata = {
   title: "5분 발음 확인 — Speech-Therapy",
   description:
-    "회원가입 없이 5분 안에 아이의 발음 발달 상태를 부모님께 안내해 드려요. 의료적 판단이 아닌 발달 확인용 보조 도구입니다.",
+    "회원가입 없이 5분 안에 아이의 발음 발달 상태를 부모님께 안내해 드려요. 의료적 평가가 아닌 발달 확인용 보조 도구입니다.",
 };
 
 export default function DiagnosePage() {
@@ -18,7 +18,7 @@ export default function DiagnosePage() {
         data-testid="disclaimer"
         className="mb-6 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
       >
-        본 서비스는 의료적 판단을 제공하지 않으며, 부모님께 발달 확인 정보를 안내하기 위한
+        본 서비스는 의료적 평가를 제공하지 않으며, 부모님께 발달 확인 정보를 안내하기 위한
         보조 도구입니다.
       </p>
 
@@ -36,7 +36,7 @@ export default function DiagnosePage() {
         data-testid="disclaimer"
         className="mt-10 rounded-md border border-gray-200 px-4 py-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-400"
       >
-        본 결과는 의료적 판단이 아니며, 발달이 우려되는 경우 전문가 상담을 권장합니다.
+        본 결과는 의료적 평가가 아니며, 발달이 우려되는 경우 전문가 상담을 권장합니다.
       </p>
     </main>
   );

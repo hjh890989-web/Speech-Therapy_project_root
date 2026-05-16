@@ -12,6 +12,7 @@
 //  5. 텍스트 반환
 
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
 import { generatePlainText, LLMTimeoutError, RateLimitedError } from "@/lib/ai/gemini";
@@ -73,6 +74,8 @@ export async function generateCushion(rawInput: unknown): Promise<GenerateCushio
       where: { sessionId },
       data: { aiCushionText },
     });
+    // aiCushionText 갱신 → 결과 페이지 RSC 캐시 무효화.
+    revalidatePath(`/diagnose/result/${sessionId}`);
   } catch (err) {
     // UPDATE 실패는 사용자 응답을 막지 않음 — 다음 방문 시 재생성.
     console.error("evaluation_result UPDATE aiCushionText failed:", err);
