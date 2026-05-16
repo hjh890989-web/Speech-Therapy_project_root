@@ -1,0 +1,21 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Development Guidelines
+
+## Version Control
+- System: Git
+- Repository Management: GitHub APIs
+
+## Development Priorities
+1. Utilize listed tech stack components ([002-tech-stack.mdc](002-tech-stack.mdc))
+2. Prefer frameworks with robust documentation and community support
+3. Implement proven design patterns and best practices
+
+## Architecture Principles
+- Modular design for easy maintenance
+- Scalable infrastructure
+- Secure data handling
+- Performance optimization

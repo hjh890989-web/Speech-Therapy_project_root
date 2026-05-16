@@ -1,0 +1,29 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Technical Stack
+
+## Frontend
+- Framework: React
+- Styling: Tailwind CSS
+
+## Backend
+- Core: Spring Boot
+- Template Engine: Thymeleaf
+- Caching: Redis
+- Message Queue: Apache Kafka
+
+## Authentication
+- OAuth2 Providers:
+  - Google
+  - KakaoTalk
+
+## External Services
+- AI/ML Integration:
+  - Hugging Face API
+  - OpenAI API
+
+## See also:
+- [003-development-guidelines.mdc](003-development-guidelines.mdc) for usage guidelines
