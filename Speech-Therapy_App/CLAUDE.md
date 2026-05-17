@@ -10,9 +10,17 @@
 
 작업 진입 시 다음 순서로 스킬을 고려:
 
-1. **`.claude/skills/`** (canonical 사본) — 도구 공통 보편 스킬 (`001-srs-task-decomposition`, `002-git-pr-workflow`, `003-error-fix-protocol`)
-2. **`.cursor/skills/300+`** — 백엔드 도메인 스킬 (Server Actions, Prisma, Supabase, Zod, AI SDK, …) — Claude 도 같은 내용 참조
-3. **`.claude/agents/`** — subagent 위임 후보 (react-frontend, java-spring 등 8종, 단 도메인 부적합 에이전트는 위임 자제)
+1. **`.claude/skills/001~003`** (canonical 자체 스킬) — `srs-task-decomposition` / `git-pr-workflow` / `error-fix-protocol`
+2. **`.claude/skills/100~120`** (Matt Pocock 외부 통합, MIT) — `grill-me` / `handoff` / `write-a-skill` / `diagnose` / `triage` / `to-issues` / `tdd` / `zoom-out` / `git-guardrails`
+3. **`.cursor/skills/300~311`** — 백엔드 도메인 스킬 (Server Actions, Prisma, Supabase, Zod, AI SDK, …) — Claude 도 같은 내용 참조
+4. **`.claude/agents/`** — subagent 위임 후보 (react-frontend, java-spring 등 8종, 단 도메인 부적합 에이전트는 위임 자제)
+
+자주 사용:
+- 방향 점검: `grill-me`
+- sub-session 종료: `handoff`
+- 새 이슈 분류: `triage`
+- 에러 발생: `diagnose` + 003-error-fix-protocol 비교
+- 요구사항 분해: `to-issues` + 001-srs-task-decomposition 비교
 
 ## 2. Subagent 사용 가이드라인
 

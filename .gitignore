@@ -25,6 +25,10 @@ Thumbs.db
 client_secret_*.json
 /client_secret_*.json
 
+# 외부 스킬 라이브러리 (Matt Pocock skills) 원본 — Tier 1+2 9개를 .agents/.cursor/.claude/skills/100~120 으로 통합 (commit 됨).
+# 원본은 참고용 로컬 보존만, repo 에 미포함.
+Speech-Therapy_App/skills/
+
 # 정리 작업 임시 백업 (안전 확인 후 사용자가 직접 삭제)
 .git_backup/
 

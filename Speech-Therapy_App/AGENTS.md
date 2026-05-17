@@ -92,6 +92,13 @@
 - Google Cloud Console / Supabase Dashboard 등 외부 사이트의 UI 가이드는 **공식 문서 (WebSearch/WebFetch) 또는 사용자 스크린샷 기준**으로만 안내
 - 학습 데이터의 옛 UI 기준으로 추측 금지 (2026-05-15 sub-session 학습)
 
+### 5.4 외부 스킬 라이브러리 (Matt Pocock skills)
+
+- 본 프로젝트의 `.agents/skills/` / `.cursor/skills/` / `.claude/skills/` 의 **100~120 번대** 스킬은 [github.com/mattpocock/skills](https://github.com/mattpocock/skills) (MIT) 에서 통합. 출처 헤더 + `LICENSE-mattpocock-skills.md` 보존
+- 본 프로젝트 자체 스킬 번호: 001~003 (canonical) + 300~311 (.cursor/skills 백엔드)
+- 외부 라이브러리 원본 (`Speech-Therapy_App/skills/`) 은 `.gitignore` 처리 — 참고용 보존, 통합 후 commit 제외
+- 자주 쓰는 스킬: **`grill-me`** (방향 점검), **`handoff`** (sub-session 인계), **`triage`** (이슈 분류), **`diagnose`** (에러 진단), **`to-issues`** (요구사항→issue)
+
 ---
 
 <!-- BEGIN:nextjs-agent-rules -->
