@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(git -C 'c:/VS code_Workspace/Speech-Therapy_project_root' commit -m ' *)",
-      "Bash(git -C \"c:/VS code_Workspace/Speech-Therapy_project_root\" commit -m \"Sprint 2 잔여: FR-C-006 + FR-C-007 통합 — 침묵 격려 + 오프라인\" -m \"FR-C-006: DiagnosisForm 에 useSilenceDetection \\(60s 침묵 시 격려 카피\\)\" -m \"FR-C-007: useNetworkAware \\(오프라인 배너 + runWithRetry 1회 재시도\\)\" -m \"FR-C-008: hook/Server Action 유지, missions UI 통합은 seed 후 enable\" -m \"검증: lint / vitest 163 / build 통과.\" -m \"Co-Authored-By: Claude Opus 4.7 \\(1M context\\) <noreply@anthropic.com>\")"
+      "Bash(git -C \"c:/VS code_Workspace/Speech-Therapy_project_root\" commit -m \"Sprint 2 잔여: FR-C-006 + FR-C-007 통합 — 침묵 격려 + 오프라인\" -m \"FR-C-006: DiagnosisForm 에 useSilenceDetection \\(60s 침묵 시 격려 카피\\)\" -m \"FR-C-007: useNetworkAware \\(오프라인 배너 + runWithRetry 1회 재시도\\)\" -m \"FR-C-008: hook/Server Action 유지, missions UI 통합은 seed 후 enable\" -m \"검증: lint / vitest 163 / build 통과.\" -m \"Co-Authored-By: Claude Opus 4.7 \\(1M context\\) <noreply@anthropic.com>\")",
+      "Bash(git push origin main)"
     ]
   }
 }
