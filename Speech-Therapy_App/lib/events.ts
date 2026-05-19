@@ -13,7 +13,7 @@ export type AnalyticsEvent =
   | {
       name: "diagnose_started";
       properties: {
-        targetPhoneme: "ㅅ" | "ㄹ" | "ㅈ" | "ㅊ" | "ㄱ" | "ㅂ";
+        targetPhoneme: "ㄱ" | "ㄴ" | "ㅅ" | "ㅈ" | "ㄹ";
         childAgeMonths: number;
       };
     }
@@ -37,7 +37,13 @@ export type AnalyticsEvent =
   | {
       name: "diagnose_failed";
       properties: {
-        reason: "stt_unsupported" | "permission_denied" | "validation" | "server_error";
+        reason:
+          | "stt_unsupported"
+          | "permission_denied"
+          | "no_speech"
+          | "network"
+          | "validation"
+          | "server_error";
       };
     }
   // === 결과 페이지 (FR-Q-002) ===

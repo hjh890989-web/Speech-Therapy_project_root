@@ -15,6 +15,7 @@ import { useNetworkAware } from "@/lib/hooks/useNetworkAware";
 import { useAudioAnalyzer } from "@/lib/hooks/useAudioAnalyzer";
 import type { AcousticFeatures } from "@/lib/audio/analyzer";
 import { analyzeDiagnosis } from "@/app/actions/diagnosis";
+import { trackEvent } from "@/lib/analytics";
 
 // Sprint 3 §2 A 핫픽스 (2026-05-15) → §2 A-2 재설계 (2026-05-19, 옵션 A):
 // STT 와 Web Audio 의 mic 동시 점유 충돌 회피를 위해 발화를 2 단계로 분리.
@@ -96,6 +97,16 @@ export function DiagnosisForm() {
   const acousticFeaturesRef = useRef<AcousticFeatures | null>(null);
   const audioTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // INFRA-005-FU (#104) — trackEvent 발송용 타이밍 / 멱등 ref.
+  // sttStartTimeRef: "발화 시작" 클릭 시각 → transcript 도착 시 duration 산출.
+  // audioStartTimeRef: startAudioPhase 시각 → finishAudioPhase 시 duration 산출.
+  // ttrackedRef: 멱등 발송 (transcript 변경마다 fire 방지, errorCode 동일 값 재발송 방지).
+  const sttStartTimeRef = useRef<number | null>(null);
+  const audioStartTimeRef = useRef<number | null>(null);
+  const sttRecordedFiredRef = useRef(false);
+  const sttUnsupportedFiredRef = useRef(false);
+  const lastFailedErrorCodeRef = useRef<string | null>(null);
+
   // 2단계 audio 측정 phase.
   // - idle: 초기 / STT 진행 전
   // - ready: STT 완료, "한 번 더 들려주세요" 버튼 표시 단계
@@ -103,10 +114,43 @@ export function DiagnosisForm() {
   // - done: features 캡처 완료, submit 가능
   const [audioPhase, setAudioPhase] = useState<AudioPhase>("idle");
 
-  // transcript 변경 시 silence 카운터 reset.
+  // transcript 변경 시 silence 카운터 reset + STT 단계 audio_recorded 발송 (1회).
   useEffect(() => {
-    if (transcript) reportSpeech();
+    if (!transcript) return;
+    reportSpeech();
+    if (!sttRecordedFiredRef.current && sttStartTimeRef.current !== null) {
+      trackEvent("diagnose_audio_recorded", {
+        phase: "stt",
+        durationMs: Date.now() - sttStartTimeRef.current,
+      });
+      sttRecordedFiredRef.current = true;
+    }
   }, [transcript, reportSpeech]);
+
+  // !isSupported → stt_unsupported 1회 발송.
+  useEffect(() => {
+    if (isMounted && !isSupported && !sttUnsupportedFiredRef.current) {
+      trackEvent("diagnose_failed", { reason: "stt_unsupported" });
+      sttUnsupportedFiredRef.current = true;
+    }
+  }, [isMounted, isSupported]);
+
+  // STT errorCode 전환 시 diagnose_failed 발송 (동일 값 재발송 방지).
+  useEffect(() => {
+    if (!errorCode) {
+      lastFailedErrorCodeRef.current = null;
+      return;
+    }
+    if (lastFailedErrorCodeRef.current === errorCode) return;
+    if (
+      errorCode === "permission_denied" ||
+      errorCode === "no_speech" ||
+      errorCode === "network"
+    ) {
+      trackEvent("diagnose_failed", { reason: errorCode });
+      lastFailedErrorCodeRef.current = errorCode;
+    }
+  }, [errorCode]);
 
   // §2 A-2: audio "ready" 상태는 derived — STT 결과 도착 + env 플래그 ON + browser 지원 시 자동 활성화.
   // audioPhase state 의 idle 일 때만 derived "ready" 가 보임. recording/done 은 state 가 우선.
@@ -129,6 +173,9 @@ export function DiagnosisForm() {
 
   const startAudioPhase = () => {
     setAudioPhase("recording");
+    // 본 함수는 button onClick 에서만 호출 (event handler) — render purity 영향 없음.
+    // eslint-disable-next-line react-hooks/purity
+    audioStartTimeRef.current = Date.now();
     void startAudio();
     // AUDIO_MAX_DURATION_MS 후 자동 종료 (사용자가 stop 안 눌러도 안전 종료).
     audioTimeoutRef.current = setTimeout(() => {
@@ -144,6 +191,13 @@ export function DiagnosisForm() {
     // stopAudio() 는 analyzerRef null 시 empty features 반환 (idempotent). audioStatus 체크 시
     // setTimeout 콜백의 stale closure 로 인해 호출이 누락되는 버그 회피.
     acousticFeaturesRef.current = stopAudio();
+    if (audioStartTimeRef.current !== null) {
+      trackEvent("diagnose_audio_recorded", {
+        phase: "audio",
+        durationMs: Date.now() - audioStartTimeRef.current,
+      });
+      audioStartTimeRef.current = null;
+    }
     setAudioPhase("done");
   };
 
@@ -179,18 +233,22 @@ export function DiagnosisForm() {
   const handleSubmit = async () => {
     if (!agreed) {
       setSubmitError("아래 안내 확인 후 동의 체크를 부탁드려요.");
+      trackEvent("diagnose_failed", { reason: "validation" });
       return;
     }
     if (!intendedWord) {
       setSubmitError("먼저 자녀가 발음할 단어를 선택해 주세요.");
+      trackEvent("diagnose_failed", { reason: "validation" });
       return;
     }
     if (!transcript) {
       setSubmitError("발화 결과가 비어 있어요. 다시 한 번 들려주세요.");
+      trackEvent("diagnose_failed", { reason: "validation" });
       return;
     }
     if (!isOnline) {
       setSubmitError("인터넷 연결을 확인하고 다시 시도해 주세요.");
+      trackEvent("diagnose_failed", { reason: "network" });
       return;
     }
     setIsSubmitting(true);
@@ -234,6 +292,7 @@ export function DiagnosisForm() {
       } else {
         setSubmitError("일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.");
       }
+      trackEvent("diagnose_failed", { reason: "server_error" });
     } finally {
       clearProgressTimers();
       setIsSubmitting(false);
@@ -376,6 +435,12 @@ export function DiagnosisForm() {
                   resetSilence();
                   acousticFeaturesRef.current = null;
                   setAudioPhase("idle");
+                  sttRecordedFiredRef.current = false;
+                  sttStartTimeRef.current = Date.now();
+                  trackEvent("diagnose_started", {
+                    targetPhoneme,
+                    childAgeMonths,
+                  });
                   // §2 A-2 옵션 A — 1단계 (STT 단독 mic 점유).
                   // audio analyzer 는 STT 완료 후 사용자 추가 발화 시 별도 활성화.
                   start();
