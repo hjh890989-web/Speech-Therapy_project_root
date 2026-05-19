@@ -8,6 +8,7 @@
 
 import { useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/analytics";
 
 type Status = "idle" | "magic_sending" | "magic_sent" | "oauth_redirecting" | "error";
 
@@ -45,6 +46,7 @@ export function LoginForm() {
   const handleGoogleSignIn = async () => {
     setStatus("oauth_redirecting");
     setErrorMessage(null);
+    trackEvent("auth_signin_started", { provider: "google" });
     try {
       const supabase = getSupabaseBrowserClient();
       const origin = typeof window !== "undefined" ? window.location.origin : "";

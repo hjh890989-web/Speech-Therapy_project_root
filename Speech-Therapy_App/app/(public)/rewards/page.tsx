@@ -7,6 +7,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { AuthSigninBeacon } from "./AuthSigninBeacon";
 
 export const metadata = {
   title: "보상 도감 — Speech-Therapy",
@@ -51,13 +52,21 @@ async function resolveUserId(): Promise<string | undefined> {
   return cookieStore.get(ANONYMOUS_USER_COOKIE)?.value;
 }
 
-export default async function RewardsPage() {
+export default async function RewardsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const userId = await resolveUserId();
   const progress = await fetchRewardProgress(userId);
   const hasRewards = progress !== null && progress.cumulativeStars + progress.treeGrowthLevel + progress.aiDrawingCount > 0;
+  const sp = await searchParams;
+  const signin = typeof sp.signin === "string" ? sp.signin : undefined;
+  const first = typeof sp.first === "string" ? sp.first : undefined;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+      <AuthSigninBeacon signin={signin} first={first} />
       <p
         data-testid="disclaimer"
         className="mb-6 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"

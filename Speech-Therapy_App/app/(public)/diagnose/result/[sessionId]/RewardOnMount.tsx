@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { grantReward } from "@/app/actions/reward";
+import { trackEvent } from "@/lib/analytics";
 
 interface Props {
   userId: string;
@@ -25,11 +26,16 @@ export function RewardOnMount({ userId, sessionId }: Props) {
     fired.current = true;
     (async () => {
       try {
-        await grantReward({
+        const out = await grantReward({
           userId,
           rewardType: "star",
           amount: 1,
           idempotencyKey: `${sessionId}-star-1`,
+        });
+        trackEvent("reward_granted", {
+          rewardType: "star",
+          amount: 1,
+          wasSkipped: out.wasSkipped,
         });
         setState("granted");
       } catch (err) {

@@ -32,6 +32,19 @@ export async function GET(request: Request) {
   const authUserId = data.user.id;
   const authEmail = data.user.email ?? null;
 
+  // INFRA-005-FU (#104) — auth_signin_completed 의 isFirstSignin 판정용.
+  // upsert 전 존재 여부 확인 — 새 row 면 true.
+  let isFirstSignin = false;
+  try {
+    const existing = await prisma.user.findUnique({
+      where: { id: authUserId },
+      select: { id: true },
+    });
+    isFirstSignin = !existing;
+  } catch (err) {
+    console.error("auth/callback: User 존재 확인 실패 (isFirstSignin 미정)", err);
+  }
+
   // Prisma User upsert (Supabase Auth user.id 와 동일 UUID 사용).
   try {
     await prisma.user.upsert({
@@ -54,7 +67,11 @@ export async function GET(request: Request) {
     await migrateAnonymousData(anonymousUserId, authUserId);
   }
 
-  return NextResponse.redirect(`${origin}${returnTo}`);
+  // 리다이렉트 URL 에 signin 플래그 부착 — 목적지 페이지의 client beacon 이 trackEvent 발송.
+  const redirectUrl = new URL(`${origin}${returnTo}`);
+  redirectUrl.searchParams.set("signin", "ok");
+  redirectUrl.searchParams.set("first", isFirstSignin ? "1" : "0");
+  return NextResponse.redirect(redirectUrl);
 }
 
 async function migrateAnonymousData(anonymousUserId: string, authUserId: string) {
