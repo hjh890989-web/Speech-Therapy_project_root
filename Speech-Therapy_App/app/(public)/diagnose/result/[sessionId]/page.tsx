@@ -10,6 +10,7 @@ import { mockSuccessHigh, mockSuccessLow } from "@/lib/mocks/diagnosis";
 import type { DiagnosisOutput } from "@/lib/schemas/diagnosis";
 import { RewardOnMount } from "./RewardOnMount";
 import { CushionAsync } from "./CushionAsync";
+import { ResultViewedBeacon, TrackedCTALink } from "./ResultAnalytics";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -104,6 +105,12 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
       {/* FR-C-009 — 실 사용자만 별 적립. mock 데이터엔 미발급. */}
       {fetched.userId && <RewardOnMount userId={fetched.userId} sessionId={sessionId} />}
 
+      {/* INFRA-005-FU #104 — 페이지 mount 1회 result_viewed 발송. */}
+      <ResultViewedBeacon
+        peerPercentile={result.peerPercentile}
+        hasHITL={result.requiresHITL}
+      />
+
       <header className="mb-6 space-y-2">
         <h1 className="text-2xl font-bold sm:text-3xl">{phoneme} 발음 확인 결과</h1>
         {age && (
@@ -177,12 +184,13 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
           오늘의 발음에 맞춘 데일리 미션으로 차근차근 즐겁게 이어갈 수 있어요.
         </p>
-        <Link
+        <TrackedCTALink
           href="/missions"
+          cta="weekly_mission"
           className="mt-4 inline-block rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
         >
           주간 미션 시작하기
-        </Link>
+        </TrackedCTALink>
       </section>
 
       <Link

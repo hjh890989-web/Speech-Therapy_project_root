@@ -255,6 +255,7 @@ export function DiagnosisForm() {
     setSubmitError(null);
     setProgressLabel(PROGRESS_STAGES[0].label);
     startProgressTimers();
+    const submitStartedAt = Date.now();
     try {
       // FR-C-001 (Sprint 2 §2) — phonetic similarity 기반 점수 산출.
       // FR-C-007 — runWithRetry: 네트워크 일시 단절 시 1회 자동 재시도.
@@ -275,6 +276,13 @@ export function DiagnosisForm() {
           sttConfidence: sttConfidence ?? undefined,
         }),
       );
+      trackEvent("diagnose_completed", {
+        articulationScore: Math.round(result.articulationScore),
+        linguisticScore: Math.round(result.linguisticScore),
+        acousticScore: Math.round(result.acousticScore),
+        requiresHITL: result.requiresHITL,
+        elapsedMs: Date.now() - submitStartedAt,
+      });
       const params = new URLSearchParams({
         phoneme: targetPhoneme,
         age: String(childAgeMonths),
