@@ -13,12 +13,17 @@
 //   - iOS Safari 에서 webkitAudioContext fallback 필요
 //   - getUserMedia 호출은 user gesture 안에서만 가능 (브라우저 보안)
 
+// Sprint 3 §2 A-2 정밀도 개선 (2026-05-19, sub-session B 의 pitch_std=0 잔존 이슈 해결):
+//   - SAMPLE_INTERVAL_MS 100 → 50ms (샘플 수 2배 — 3.5초 발화 시 35 → 70 샘플)
+//   - NOISE_FLOOR_DB -60 → -70dB (약한 신호도 캡처, 어린이 음성 / 작은 발음에 유리)
+//   - SILENCE_RMS_THRESHOLD 0.005 → 0.003 (짧은 발화의 자음 / 무성음 구간 포함)
+// FFT_SIZE 는 2048 유지 (CPU 부담 대비 분해능 가성비 적정).
 const FFT_SIZE = 2048;
-const SAMPLE_INTERVAL_MS = 100; // 초당 10회
+const SAMPLE_INTERVAL_MS = 50; // 초당 20회
 const MIN_PITCH_HZ = 80;
 const MAX_PITCH_HZ = 800;
-const NOISE_FLOOR_DB = -60;
-const SILENCE_RMS_THRESHOLD = 0.005;
+const NOISE_FLOOR_DB = -70;
+const SILENCE_RMS_THRESHOLD = 0.003;
 
 export interface AcousticFeatures {
   pitchMean: number | null;
