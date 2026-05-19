@@ -37,11 +37,23 @@ test.describe("FR-Q-001 진단 페이지", () => {
   test("REQ-FUNC-013: 페이지 카피에 금칙어 0건 (CON-04)", async ({ page }) => {
     await page.goto("/diagnose");
     const body = await page.locator("body").innerText();
-    // PRIMARY 금칙어 중 명백히 의료적인 단어 (lib/forbidden-words 의 PRIMARY).
-    const bannedWords = ["진단", "환자", "처방"];
+    // AGENTS.md §2.1 의 CON-04 핵심 금칙어 + PRIMARY 의료 단어.
+    // 본 sub-session 의 갭 분석 (07 보고서) 반영 — "진단" UI 카피 제거 검증.
+    const bannedWords = ["치료", "진단", "장애", "환자", "처방", "의료적 판단"];
     for (const word of bannedWords) {
-      expect(body).not.toContain(word);
+      expect(body, `금칙어 "${word}" 발견됨`).not.toContain(word);
     }
+  });
+
+  test("REQ-FUNC-009: 페이지 로드 ≤ 5분 (실 측정은 즉시 도달 — 5분은 발화 포함 SLA)", async ({ page }) => {
+    const FIVE_MINUTES_MS = 300_000;
+    const start = Date.now();
+    await page.goto("/diagnose");
+    // 핵심 인터랙티브 요소 표시 — 사용자가 입력 시작 가능한 시점.
+    await expect(page.getByRole("heading", { name: /5분 발음 확인/ })).toBeVisible();
+    await expect(page.locator('select#targetPhoneme')).toBeVisible();
+    const elapsed = Date.now() - start;
+    expect(elapsed, `페이지 로드 ${elapsed}ms — 5분 SLA 위반`).toBeLessThan(FIVE_MINUTES_MS);
   });
 });
 
@@ -74,12 +86,14 @@ test.describe("FR-Q-002 결과 페이지 — MOCK_SESSION_ID 직접 진입", () 
     await expect(page.getByRole("link", { name: /주간 미션 시작하기/ })).toBeVisible();
   });
 
-  test("REQ-FUNC-013: 결과 카피 금칙어 0건", async ({ page }) => {
+  test("REQ-FUNC-013: 결과 카피 금칙어 0건 (CON-04 확장 — sub-session 갭 해소 검증)", async ({ page }) => {
     await page.goto(`/diagnose/result/${MOCK_SESSION_ID}?phoneme=ㅅ&age=36&transcript=사과`);
     const body = await page.locator("body").innerText();
-    const bannedWords = ["진단", "환자", "처방"];
+    // 07 보고서 (2026-05-16) 의 갭 해소 결과 검증.
+    // "진단" 버튼 → "발음 확인" 으로 / "의료적 판단" → "의료적 평가" 로 교체됨.
+    const bannedWords = ["치료", "진단", "장애", "환자", "처방", "의료적 판단"];
     for (const word of bannedWords) {
-      expect(body).not.toContain(word);
+      expect(body, `금칙어 "${word}" 발견됨`).not.toContain(word);
     }
   });
 
