@@ -852,6 +852,42 @@ SP3_2D (또래 백분위) ─→ 🟡 보류 ─→ 실 사용자 N=??? 데이�
 | P0 | SP3_2A 재설계 — 옵션 A (2번 발화) / B (Cloud STT) / C (영구 폐기) 결정 | 대화기록 §15.3 |
 | P1 | SP3_2D 백분위 보정 데이터 누적 시작 (실 사용자 진단 50건+) | — |
 
+### 10.7 Sub-task Priority 분류 근거 (로드맵 정합성)
+
+> 2026-05-18 로드맵 감사의 **결함 3** 해소: Sub-task 의 Priority (P0/P1) 분류 근거를 명시한다. GitHub Project #8 의 Roadmap View 에서 Sub-task 가 어느 트랙에 속하는지 추적 가능하도록 한다.
+
+**원칙**: Sub-task 의 Priority 는 **부모 SRS task 의 Priority 를 상속**하되, **현실 진행 상태 (보류 / 차단 / WIP)** 에 따라 강등 가능. Sprint 경계는 절대 위반하지 않는다.
+
+#### 10.7.1 P0 Sub-task (12개) — Sprint 1/2/3 P0 코어
+
+| Sub-task | 부모 SRS | 부모 Priority | 분류 근거 |
+|---|---|---|---|
+| SP1A cushion 분리 | FR-C-001 | P0 | Sprint 1 코어 진단 도착시간 ~10s 단축 |
+| SP1B user upsert 병렬 | API-001 | P0 | Sprint 1 익명 사용자 부트스트랩 |
+| SP1C Slack fire-and-forget | FR-C-002 | P1 (자체) → **P0 승격** | Sprint 1 HITL 알림 D4 핫픽스, Sprint 1 코어 흐름 도착 가속 필수 |
+| SP2_1 익명 cookie + 인증 (= API-010 §1) | API-010 | P1 (자체) → **P0 승격** | Sprint 2 핵심 — Magic Link 흐름, 별 누적 기반 의존성 |
+| SP2_2 phonetic similarity | FR-C-001 | P0 | Sprint 2 Gemini 평가 제거 + 결정적 자모 비교 |
+| SP2_3 anonymous_user_id cookie 권위 | DB-002 / API-010 | P0 / P1 → **P0** | Sprint 2 별 누적 + iOS ITP 우회 기반 |
+| SP2_4 별 누적 + localStorage 권위 | FR-C-009 | P0 | Sprint 2 iOS Safari 별 누적 보존 |
+| SP3_1 3축 점수 분리 | FR-C-001 | P0 | Sprint 3 articulation 100% → 3축 분리 코어 |
+| SP3_2A Web Audio 측정 | FR-Q-001 / FR-C-001 | P0 | Sprint 3 acoustic 실 신호 측정 (⚠️ 차단 상태이나 코어 진화 경로 P0 유지) |
+| SP3_2B acousticFeatures JSONB | DB-005 | P0 | Sprint 3 DB 컬럼 |
+| SP3_2C linguistic + STT confidence | FR-C-001 | P0 | Sprint 3 linguistic 점수 다양화 |
+| SP3_2E Gemini rate limiter | SEC-004 | P0 | Sprint 3 무료 RPM 보호 |
+
+#### 10.7.2 P1 Sub-task (2개) — Sprint 3 후속 + 보류
+
+| Sub-task | 부모 SRS | 부모 Priority | 분류 근거 |
+|---|---|---|---|
+| SP3_2D 또래 백분위 보정 | FR-Q-002 | P0 (자체) → **P1 강등** | 실 사용자 N≥50 데이터 누적 후 작업 가능 — 데이터 부족으로 P1 보류 (2026-08-01+) |
+| SP3_3 Google OAuth (= API-010 §2) | API-010 | P1 | 부모 task 와 같은 P1 상속, 이메일 rate limit 우회용 (Sprint 3 §3 진행 중) |
+
+#### 10.7.3 GitHub Project #8 정합성 보장
+
+- **Roadmap View 일정**: 12 P0 sub-task 는 부모 SRS task 와 같은 Sprint 내 (5/8-5/22) 일정. 2 P1 sub-task 는 Gantt §5 의 P1 트랙 일정 (8/1+).
+- **Sprint 경계 위반 0**: 모든 sub-task 는 부모 SRS task 와 동일 Sprint 또는 더 늦은 Phase 에서만 실행됨.
+- **승격/강등 근거 명시**: 위 표의 분류 근거를 통해 P1 → P0 승격 (SP1C, SP2_1, SP2_3) 또는 P0 → P1 강등 (SP3_2D) 의 이유 추적 가능.
+
 ---
 
 **— End of Task Breakdown 강화판 (SRS V06 무손상 + 8대 디스코프 적용 + Sprint sub-task 확장판) —**
