@@ -16,11 +16,17 @@ import { useAudioAnalyzer } from "@/lib/hooks/useAudioAnalyzer";
 import type { AcousticFeatures } from "@/lib/audio/analyzer";
 import { analyzeDiagnosis } from "@/app/actions/diagnosis";
 
-// Sprint 3 §2 A 핫픽스 (2026-05-15) — Web Audio API getUserMedia 가 SpeechRecognition 의
-// 내부 mic capture 와 충돌해 STT 가 무음만 받아 hang (no-speech timeout 도 발화 안 됨).
-// env 플래그로 차단. 활성화 조건은 Sprint 3 §2 A-2 (stream 공유 또는 capture 시점 분리) 이후.
-// false 일 때 acoustic-score 는 Sprint 2 §2 텍스트 프록시로 graceful fallback.
+// Sprint 3 §2 A 핫픽스 (2026-05-15) → §2 A-2 재설계 (2026-05-19, 옵션 A):
+// STT 와 Web Audio 의 mic 동시 점유 충돌 회피를 위해 발화를 2 단계로 분리.
+//   1단계: STT 단독 mic 점유 → transcript / sttConfidence 수집
+//   2단계: STT 종료 후 audio analyzer 단독 mic 점유 → AcousticFeatures 수집 (선택, 사용자 추가 발화 1회)
+// env 플래그로 활성화 제어. false 일 때는 1단계만 진행하며 acoustic-score 는 텍스트 프록시 fallback.
 const ENABLE_AUDIO_ANALYZER = process.env.NEXT_PUBLIC_ENABLE_AUDIO_ANALYZER === "true";
+
+// 2단계 audio 측정 phase.
+type AudioPhase = "idle" | "ready" | "recording" | "done";
+// 2단계 자동 종료 시간 (ms). 너무 길면 아이 집중 깨짐, 너무 짧으면 발화 누락.
+const AUDIO_MAX_DURATION_MS = 4_000;
 
 const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
 const SAMPLE_WORDS: Record<(typeof PHONEMES)[number], ReadonlyArray<string>> = {
@@ -88,23 +94,67 @@ export function DiagnosisForm() {
     reset: resetAudio,
   } = useAudioAnalyzer();
   const acousticFeaturesRef = useRef<AcousticFeatures | null>(null);
-  const sttPrevStatusRef = useRef<typeof status>("idle");
+  const audioTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 2단계 audio 측정 phase.
+  // - idle: 초기 / STT 진행 전
+  // - ready: STT 완료, "한 번 더 들려주세요" 버튼 표시 단계
+  // - recording: audio analyzer 단독 작동 중
+  // - done: features 캡처 완료, submit 가능
+  const [audioPhase, setAudioPhase] = useState<AudioPhase>("idle");
 
   // transcript 변경 시 silence 카운터 reset.
   useEffect(() => {
     if (transcript) reportSpeech();
   }, [transcript, reportSpeech]);
 
-  // Sprint 3 §2 A — STT 가 active → 비active 로 전이 시 audio 도 정지 + features 캡처.
+  // §2 A-2: audio "ready" 상태는 derived — STT 결과 도착 + env 플래그 ON + browser 지원 시 자동 활성화.
+  // audioPhase state 의 idle 일 때만 derived "ready" 가 보임. recording/done 은 state 가 우선.
+  const audioPhaseEffective: AudioPhase =
+    audioPhase !== "idle"
+      ? audioPhase
+      : ENABLE_AUDIO_ANALYZER && isAudioSupported && transcript
+        ? "ready"
+        : "idle";
+
+  // unmount 또는 phase 전환 시 audio timeout cleanup.
   useEffect(() => {
-    const wasActive =
-      sttPrevStatusRef.current === "listening" || sttPrevStatusRef.current === "retrying";
-    const isActive = status === "listening" || status === "retrying";
-    if (wasActive && !isActive && audioStatus === "recording") {
-      acousticFeaturesRef.current = stopAudio();
+    return () => {
+      if (audioTimeoutRef.current) {
+        clearTimeout(audioTimeoutRef.current);
+        audioTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  const startAudioPhase = () => {
+    setAudioPhase("recording");
+    void startAudio();
+    // AUDIO_MAX_DURATION_MS 후 자동 종료 (사용자가 stop 안 눌러도 안전 종료).
+    audioTimeoutRef.current = setTimeout(() => {
+      finishAudioPhase();
+    }, AUDIO_MAX_DURATION_MS);
+  };
+
+  const finishAudioPhase = () => {
+    if (audioTimeoutRef.current) {
+      clearTimeout(audioTimeoutRef.current);
+      audioTimeoutRef.current = null;
     }
-    sttPrevStatusRef.current = status;
-  }, [status, audioStatus, stopAudio]);
+    // stopAudio() 는 analyzerRef null 시 empty features 반환 (idempotent). audioStatus 체크 시
+    // setTimeout 콜백의 stale closure 로 인해 호출이 누락되는 버그 회피.
+    acousticFeaturesRef.current = stopAudio();
+    setAudioPhase("done");
+  };
+
+  const skipAudioPhase = () => {
+    if (audioTimeoutRef.current) {
+      clearTimeout(audioTimeoutRef.current);
+      audioTimeoutRef.current = null;
+    }
+    acousticFeaturesRef.current = null;
+    setAudioPhase("done");
+  };
 
   // unmount 시 잔여 progress 타이머 정리 (메모리 누수 방지).
   useEffect(() => {
@@ -325,13 +375,10 @@ export function DiagnosisForm() {
                   reset();
                   resetSilence();
                   acousticFeaturesRef.current = null;
+                  setAudioPhase("idle");
+                  // §2 A-2 옵션 A — 1단계 (STT 단독 mic 점유).
+                  // audio analyzer 는 STT 완료 후 사용자 추가 발화 시 별도 활성화.
                   start();
-                  // Sprint 3 §2 A — 동일 user gesture 안에서 audio capture 시작 (iOS Safari 정책).
-                  // isSupported=false 또는 권한 거부 시 hook 이 status="error" 로 graceful 처리.
-                  // 핫픽스: ENABLE_AUDIO_ANALYZER 플래그로 차단 (STT mic 충돌 회피).
-                  if (ENABLE_AUDIO_ANALYZER && isAudioSupported) {
-                    void startAudio();
-                  }
                 }}
                 disabled={
                   !intendedWord || status === "listening" || status === "retrying" || !isOnline
@@ -362,6 +409,55 @@ export function DiagnosisForm() {
             {silenceWarning && (
               <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
                 어렵죠? 부모님과 함께 한 번 더 해볼까요?
+              </p>
+            )}
+
+            {/* §2 A-2 옵션 A — 2단계 audio 측정 (STT 완료 후 추가 발화 1회) */}
+            {ENABLE_AUDIO_ANALYZER && isAudioSupported && audioPhaseEffective === "ready" && transcript && (
+              <div className="space-y-2 rounded-md border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-950/30">
+                <p className="text-sm text-emerald-900 dark:text-emerald-100">
+                  잘했어요! 음향 분석을 위해 <strong>한 번 더</strong> 발음해 줄래요?
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={startAudioPhase}
+                    className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                  >
+                    🎤 한 번 더 들려주기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={skipAudioPhase}
+                    className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                  >
+                    건너뛰기
+                  </button>
+                </div>
+                <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                  음향 분석을 건너뛰어도 결과 확인은 가능합니다 (텍스트 분석으로 진행).
+                </p>
+              </div>
+            )}
+
+            {ENABLE_AUDIO_ANALYZER && isAudioSupported && audioPhaseEffective === "recording" && (
+              <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  🎙️ 음향 측정 중... 자녀의 발음을 들려주세요. (자동 종료 ~{AUDIO_MAX_DURATION_MS / 1000}초)
+                </p>
+                <button
+                  type="button"
+                  onClick={finishAudioPhase}
+                  className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  ⏹️ 측정 완료
+                </button>
+              </div>
+            )}
+
+            {ENABLE_AUDIO_ANALYZER && audioPhaseEffective === "done" && (
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                ✓ 음향 분석 준비 완료. 아래 &ldquo;결과 확인&rdquo; 버튼을 눌러 주세요.
               </p>
             )}
           </>
