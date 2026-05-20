@@ -77,6 +77,63 @@ export async function aggregateWeeklyScores(
   };
 }
 
+// ----- FR-Q-006 데이터 충분성 평가 -----
+//
+// REQ-FUNC-029: 데이터 부족 시 긍정 메시지 분기.
+// 단순화 모드 — 임계값 옵션화로 추후 조정 용이.
+
+export type DataSufficiency = "full" | "partial" | "insufficient";
+export type EmptyVariant = "new_user" | "week_empty" | "long_absent";
+
+export interface SufficiencyInput {
+  /// 본 주 evaluation_results 건수.
+  weekSessionCount: number;
+  /// 가장 최근 evaluation_result 까지 경과일 (null = 평생 0건).
+  lastSessionDaysAgo: number | null;
+  /// 평생 총 evaluation_results 건수 (직전 주 데이터 존재 판단용).
+  lifetimeSessionCount: number;
+}
+
+export interface SufficiencyResult {
+  sufficiency: DataSufficiency;
+  /// sufficiency='insufficient' 시 EmptyState 분기 키.
+  emptyVariant?: EmptyVariant;
+}
+
+export interface AssessSufficiencyOptions {
+  /// 충분 임계 (이 이상이면 full). 기본 5.
+  fullThreshold?: number;
+  /// 부분 임계 (이 이상이면 partial). 기본 2.
+  partialThreshold?: number;
+  /// 장기 미접속 임계 일수. 기본 21 (3주).
+  longAbsenceDays?: number;
+}
+
+/**
+ * 주간 리포트 데이터 충분성 + EmptyState 분기 키 결정.
+ * insufficient 분기 우선순위:
+ *   1. lifetimeSessionCount === 0 → new_user
+ *   2. lastSessionDaysAgo ≥ longAbsenceDays → long_absent
+ *   3. 그 외 → week_empty (직전 주 등 이전 데이터 있음)
+ */
+export function assessDataSufficiency(
+  input: SufficiencyInput,
+  options: AssessSufficiencyOptions = {},
+): SufficiencyResult {
+  const { fullThreshold = 5, partialThreshold = 2, longAbsenceDays = 21 } = options;
+  const { weekSessionCount, lastSessionDaysAgo, lifetimeSessionCount } = input;
+
+  if (weekSessionCount >= fullThreshold) return { sufficiency: "full" };
+  if (weekSessionCount >= partialThreshold) return { sufficiency: "partial" };
+
+  // insufficient — 3-분기 EmptyState 결정.
+  if (lifetimeSessionCount === 0) return { sufficiency: "insufficient", emptyVariant: "new_user" };
+  if (lastSessionDaysAgo !== null && lastSessionDaysAgo >= longAbsenceDays) {
+    return { sufficiency: "insufficient", emptyVariant: "long_absent" };
+  }
+  return { sufficiency: "insufficient", emptyVariant: "week_empty" };
+}
+
 // ----- 내부: ISO 주차의 UTC 시작/끝 시각 -----
 function weekBounds(year: number, week: number) {
   // ISO 8601: 1월 4일이 1주차에 포함.

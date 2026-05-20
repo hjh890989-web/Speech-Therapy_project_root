@@ -1,32 +1,167 @@
-// FR-Q-005~007 — 주간 발달 추이 리포트 (Sprint 1 DEMO 모드).
+// FR-Q-005 + FR-Q-006 — 주간 발달 추이 리포트 (실 데이터 + EmptyState 분기).
 //
-// Sprint 1 한계:
-// - 무로그인 사용자 → user.id cookie 추적 미구현 → mock 데이터 표시
-// - 실 데이터 연결은 API-010 (Auth) 또는 cookie 기반 anonymousId 추적 후 별도 PR
+// 단순화 모드 (Sprint 1 이후) — Cron / DB-007 weekly_reports 없이 진입 시점 SQL 집계.
 //
-// 본 페이지가 보여주는 것:
-// - 주간 추이 LineChart (Recharts, Client Component)
-// - week-over-week 변동 + 예측 점수
-// - "PDF 로 저장" (window.print() 활용)
-// - 데이터 부족 시 EmptyState 분기 (FR-Q-006 — 본 데모에선 미사용)
-// - Disclaimer 2중
+// 흐름:
+//   1. resolveUserId() — 인증 / 익명 cookie 동일 패턴 (/missions, /rewards)
+//   2. aggregateWeeklyScores(userId, year, week) — 본 주 evaluation_results 집계
+//   3. lifetime + last session 조회 (assessDataSufficiency 입력)
+//   4. assessDataSufficiency() → full / partial / insufficient
+//   5. insufficient → ReportEmptyState 분기 (3 variants), 그 외 → 기존 차트 + 카드 UI
+//   6. 익명 미사용자 = lifetime 0 → new_user EmptyState (mock 폴백 폐기)
 
 import Link from "next/link";
-import { mockWeeklyReportPayload } from "@/lib/mocks/weekly-report";
+import { cookies } from "next/headers";
+import { prisma } from "@/lib/db";
+import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  aggregateWeeklyScores,
+  assessDataSufficiency,
+  getCurrentWeekNumber,
+} from "@/lib/weekly-report";
 import { WeeklyReportChart } from "./WeeklyReportChart";
 import { PrintButton } from "./PrintButton";
+import { ReportEmptyState } from "./ReportEmptyState";
 
 export const metadata = {
   title: "주간 발달 리포트 — Speech-Therapy",
   description: "지난 한 주의 발음 발달 추이를 또래 비교와 함께 안내합니다.",
 };
 
-export default function ReportsPage() {
-  const report = mockWeeklyReportPayload;
+// cookie 가 client mount 이후 설정되므로 매 요청 fresh.
+export const dynamic = "force-dynamic";
 
-  // week-over-week 변동 (단순화 데모: 5점 상승 가정).
-  const wowDelta = 5;
+async function resolveUserId(): Promise<string | undefined> {
+  try {
+    const supabase = await getSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    if (data.user?.id) return data.user.id;
+  } catch {
+    // env 미설정 시 익명 폴백.
+  }
+  const cookieStore = await cookies();
+  return cookieStore.get(ANONYMOUS_USER_COOKIE)?.value;
+}
 
+interface LifetimeStats {
+  lifetimeSessionCount: number;
+  lastSessionDaysAgo: number | null;
+}
+
+async function fetchLifetimeStats(userId: string): Promise<LifetimeStats> {
+  try {
+    const [count, latest] = await Promise.all([
+      prisma.evaluationResult.count({ where: { userId } }),
+      prisma.evaluationResult.findFirst({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      }),
+    ]);
+    const lastSessionDaysAgo = latest
+      ? Math.floor((Date.now() - latest.createdAt.getTime()) / 86_400_000)
+      : null;
+    return { lifetimeSessionCount: count, lastSessionDaysAgo };
+  } catch (err) {
+    console.error("reports: lifetime stats fetch failed", err);
+    return { lifetimeSessionCount: 0, lastSessionDaysAgo: null };
+  }
+}
+
+export default async function ReportsPage() {
+  const userId = await resolveUserId();
+  const { year, week: weekNumber } = getCurrentWeekNumber();
+
+  // 익명 + 평생 0건 사용자 → 즉시 new_user EmptyState.
+  if (!userId) {
+    return (
+      <PageShell year={year} weekNumber={weekNumber} sessionCount={0}>
+        <ReportEmptyState variant="new_user" weekSessionCount={0} />
+      </PageShell>
+    );
+  }
+
+  const [weekAgg, lifetime] = await Promise.all([
+    aggregateWeeklyScores(userId, year, weekNumber),
+    fetchLifetimeStats(userId),
+  ]);
+  const weekSessionCount = weekAgg?.sessionCount ?? 0;
+
+  const { sufficiency, emptyVariant } = assessDataSufficiency({
+    weekSessionCount,
+    lastSessionDaysAgo: lifetime.lastSessionDaysAgo,
+    lifetimeSessionCount: lifetime.lifetimeSessionCount,
+  });
+
+  // FR-Q-006 — insufficient 분기.
+  if (sufficiency === "insufficient" || weekAgg === null) {
+    const variant = emptyVariant ?? "new_user";
+    return (
+      <PageShell year={year} weekNumber={weekNumber} sessionCount={weekSessionCount}>
+        <ReportEmptyState variant={variant} weekSessionCount={weekSessionCount} />
+      </PageShell>
+    );
+  }
+
+  // 정상 차트 분기 (partial / full).
+  // WoW delta 는 직전 주 집계 비교가 필요 — 본 sub-session 에서는 0 으로 표시 (별도 follow-up).
+  const wowDelta = 0;
+  const predictedNextScore: number | null = null;
+  const predictionConfidence: number | null = null;
+
+  return (
+    <PageShell year={year} weekNumber={weekNumber} sessionCount={weekAgg.sessionCount}>
+      <section className="mb-6 grid grid-cols-2 gap-3">
+        <article className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+          <p className="text-xs text-gray-600 dark:text-gray-400">직전 주 대비</p>
+          <p
+            className={`text-2xl font-bold ${
+              wowDelta > 0
+                ? "text-emerald-700 dark:text-emerald-300"
+                : "text-gray-600 dark:text-gray-400"
+            }`}
+          >
+            {wowDelta > 0 ? `+${wowDelta}` : wowDelta}점{wowDelta > 0 ? " ↑" : ""}
+          </p>
+        </article>
+        <article className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+          <p className="text-xs text-gray-600 dark:text-gray-400">다음 주 예상</p>
+          <p className="text-2xl font-bold tabular-nums">
+            {predictedNextScore != null ? `${Math.round(predictedNextScore)}점` : "—"}
+          </p>
+          {predictionConfidence != null && (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              신뢰도 {Math.round(predictionConfidence * 100)}%
+            </p>
+          )}
+        </article>
+      </section>
+
+      <section className="mb-6 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+        <WeeklyReportChart scoreTrend={weekAgg.scoreTrend} />
+      </section>
+
+      <section className="mb-6 grid grid-cols-3 gap-3" aria-label="3축 평균">
+        <Card label="조음 평균" value={Math.round(weekAgg.articulationAvg)} />
+        <Card label="언어 평균" value={Math.round(weekAgg.linguisticAvg)} />
+        <Card label="음향 평균" value={Math.round(weekAgg.acousticAvg)} />
+      </section>
+    </PageShell>
+  );
+}
+
+function PageShell({
+  year,
+  weekNumber,
+  sessionCount,
+  children,
+}: {
+  year: number;
+  weekNumber: number;
+  sessionCount: number;
+  children: React.ReactNode;
+}) {
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
       {/* Disclaimer #1 — 상단 */}
@@ -40,69 +175,36 @@ export default function ReportsPage() {
       <header className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold sm:text-3xl">
-            {report.year}년 {report.weekNumber}주차 발달 추이
+            {year}년 {weekNumber}주차 발달 추이
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            지난 한 주 {report.sessionCount}회의 발화 결과를 안내해 드려요.
+            지난 한 주 {sessionCount}회의 발화 결과를 안내해 드려요.
           </p>
         </div>
         <PrintButton />
       </header>
 
-      {/* week-over-week 변동 + 예측 점수 */}
-      <section className="mb-6 grid grid-cols-2 gap-3">
-        <article className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-          <p className="text-xs text-gray-600 dark:text-gray-400">직전 주 대비</p>
-          <p
-            className={`text-2xl font-bold ${
-              wowDelta >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-gray-600"
-            }`}
-          >
-            {wowDelta >= 0 ? `+${wowDelta}` : wowDelta}점 {wowDelta >= 0 ? "↑" : ""}
-          </p>
-        </article>
-        <article className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-          <p className="text-xs text-gray-600 dark:text-gray-400">다음 주 예상</p>
-          <p className="text-2xl font-bold tabular-nums">
-            {report.predictedNextScore != null ? Math.round(report.predictedNextScore) : "—"}점
-          </p>
-          {report.predictionConfidence != null && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              신뢰도 {Math.round(report.predictionConfidence * 100)}%
-            </p>
-          )}
-        </article>
-      </section>
-
-      {/* 주간 추이 차트 */}
-      <section className="mb-6 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-        <WeeklyReportChart scoreTrend={report.scoreTrend} />
-      </section>
-
-      {/* 3축 평균 */}
-      <section className="mb-6 grid grid-cols-3 gap-3" aria-label="3축 평균">
-        <Card label="조음 평균" value={Math.round(report.articulationAvg)} />
-        <Card label="언어 평균" value={Math.round(report.linguisticAvg)} />
-        <Card label="음향 평균" value={Math.round(report.acousticAvg)} />
-      </section>
-
-      <p className="mb-6 text-xs text-gray-500 dark:text-gray-400">
-        ※ Sprint 1 데모 데이터입니다. 회원 가입 후 실제 발화 결과가 본 페이지에 반영될 예정이에요.
-      </p>
+      {children}
 
       {/* Disclaimer #2 — 하단 */}
       <p
         data-testid="disclaimer"
-        className="rounded-md border border-gray-200 px-4 py-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-400"
+        className="mt-6 rounded-md border border-gray-200 px-4 py-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-400"
       >
         본 결과는 의료적 평가가 아니며, 발달이 우려되는 경우 전문가 상담을 권장합니다.
       </p>
 
       <div className="mt-8 flex flex-wrap gap-4 text-sm">
-        <Link href="/missions" className="text-emerald-700 underline hover:text-emerald-900 dark:text-emerald-300">
+        <Link
+          href="/missions"
+          className="text-emerald-700 underline hover:text-emerald-900 dark:text-emerald-300"
+        >
           오늘의 미션으로 이어가기
         </Link>
-        <Link href="/diagnose" className="text-gray-600 underline hover:text-gray-900 dark:text-gray-400">
+        <Link
+          href="/diagnose"
+          className="text-gray-600 underline hover:text-gray-900 dark:text-gray-400"
+        >
           새 발음 확인하기
         </Link>
       </div>

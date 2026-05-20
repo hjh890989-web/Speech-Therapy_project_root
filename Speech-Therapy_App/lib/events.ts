@@ -109,6 +109,23 @@ export type AnalyticsEvent =
         intervention: "mirror" | "tooltip";
         silenceMs: number;
       };
+    }
+  // === 주간 리포트 (FR-Q-005 + FR-Q-006) ===
+  | {
+      // FR-Q-006 — 데이터 부족 EmptyState 노출 (3 variants).
+      name: "empty_state_viewed";
+      properties: {
+        variant: "new_user" | "week_empty" | "long_absent";
+        weekSessionCount: number;
+      };
+    }
+  | {
+      // FR-Q-006 Scenario 4 — EmptyState CTA 클릭.
+      name: "empty_state_cta_clicked";
+      properties: {
+        variant: "new_user" | "week_empty" | "long_absent";
+        cta: "start_mission" | "start_diagnose";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
