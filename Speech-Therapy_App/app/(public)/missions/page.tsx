@@ -15,6 +15,7 @@ import { prisma } from "@/lib/db";
 import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { dailyMissionFixtures, type MissionFixture } from "@/lib/mocks/missions";
+import { MissionRunner } from "./MissionRunner";
 import { mockContinue } from "@/lib/mocks/curriculum";
 import { analyzeStreaks, decideRecommendation } from "@/lib/curriculum";
 import {
@@ -151,12 +152,11 @@ export default async function MissionsPage() {
           <span>난이도: <strong>{recommended.difficultyLevel}/5</strong></span>
           <span>월령: <strong>{recommended.ageRangeMin}~{recommended.ageRangeMax}개월</strong></span>
         </div>
-        <Link
-          href={`/diagnose?phoneme=${encodeURIComponent(recommended.targetPhoneme)}`}
-          className="inline-block min-h-[44px] rounded-md bg-emerald-600 px-5 py-3 text-sm font-medium text-white hover:bg-emerald-700"
-        >
-          미션 시작하기
-        </Link>
+        <MissionRunner
+          missionId={recommended.id}
+          targetPhoneme={recommended.targetPhoneme}
+          difficultyLevel={recommended.difficultyLevel}
+        />
       </section>
 
       {/* 전체 카드 그리드 */}

@@ -82,6 +82,24 @@ export type AnalyticsEvent =
         provider: "google";
         isFirstSignin: boolean;
       };
+    }
+  // === 미션 (FR-Q-003) ===
+  | {
+      name: "mission_started";
+      properties: {
+        missionId: string;
+        targetPhoneme: "ㄱ" | "ㄴ" | "ㅅ" | "ㅈ" | "ㄹ";
+        difficultyLevel: number;
+        plannedDurationSec: number;
+      };
+    }
+  | {
+      name: "mission_completed";
+      properties: {
+        missionId: string;
+        elapsedSec: number;
+        completedReason: "timer_ended" | "manual_done" | "skipped";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
