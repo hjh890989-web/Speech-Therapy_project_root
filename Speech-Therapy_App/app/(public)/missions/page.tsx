@@ -21,8 +21,10 @@ import { analyzeStreaks, decideRecommendation } from "@/lib/curriculum";
 import {
   pickRecommendedMission,
   findMostFrequentPhoneme,
+  shouldRecommendRest,
   SUCCESS_THRESHOLD,
   type MissionRecommendation,
+  type RecentActivity,
 } from "@/lib/mission-recommender";
 import type { SessionResult } from "@/lib/schemas/curriculum";
 
@@ -47,16 +49,23 @@ function isSupportedPhoneme(p: string | null): p is SupportedPhoneme {
   return p !== null && (SUPPORTED_PHONEMES as ReadonlyArray<string>).includes(p);
 }
 
-async function computeRecommendation(userId: string | undefined): Promise<MissionRecommendation> {
+// FR-Q-003 Scenario 5 — 휴식 권유 시 EmptyState 렌더용 분기 타입.
+type RecommendationState =
+  | { kind: "available"; recommendation: MissionRecommendation }
+  | { kind: "rest_needed"; alternativePhoneme?: string };
+
+async function computeRecommendation(userId: string | undefined): Promise<RecommendationState> {
   // 폴백: 익명 미사용자 → mockContinue 기반 (Sprint 1 단순화 흐름 유지).
-  const fallback = pickRecommendedMission(
-    { difficulty: 2, phoneme: "ㅅ", reason: "continue" },
-    dailyMissionFixtures,
-  ) ?? {
-    mission: dailyMissionFixtures[0],
-    reason: "continue" as const,
-    copy: "오늘의 추천",
-  };
+  const fallbackRecommendation: MissionRecommendation =
+    pickRecommendedMission(
+      { difficulty: 2, phoneme: "ㅅ", reason: "continue" },
+      dailyMissionFixtures,
+    ) ?? {
+      mission: dailyMissionFixtures[0],
+      reason: "continue" as const,
+      copy: "오늘의 추천",
+    };
+  const fallback: RecommendationState = { kind: "available", recommendation: fallbackRecommendation };
 
   if (!userId) return fallback;
 
@@ -70,6 +79,17 @@ async function computeRecommendation(userId: string | undefined): Promise<Missio
 
     const evaluated = recentSessions.filter((s) => s.evaluationResult !== null);
     if (evaluated.length === 0) return fallback;
+
+    // Scenario 5 — 4시간 윈도우 5+ 성공이면 휴식 권유.
+    const activity: RecentActivity[] = evaluated.map((s) => ({
+      success: s.evaluationResult!.articulationScore >= SUCCESS_THRESHOLD,
+      timestamp: s.startTime.toISOString(),
+      targetPhoneme: s.evaluationResult!.targetPhoneme,
+    }));
+    const restCheck = shouldRecommendRest(activity);
+    if (restCheck.rest) {
+      return { kind: "rest_needed", alternativePhoneme: restCheck.alternativePhoneme };
+    }
 
     // 진단 세션은 missionId 가 null — analyzeStreaks 는 missionId 안 보므로 dummy 채움.
     const sessions: SessionResult[] = evaluated.map((s) => ({
@@ -87,9 +107,9 @@ async function computeRecommendation(userId: string | undefined): Promise<Missio
     const streak = analyzeStreaks(sessions, 2, preferredPhoneme);
     const decision = decideRecommendation(streak, 2, preferredPhoneme);
 
-    return (
-      pickRecommendedMission(decision, dailyMissionFixtures) ?? fallback
-    );
+    const recommendation = pickRecommendedMission(decision, dailyMissionFixtures);
+    if (recommendation) return { kind: "available", recommendation };
+    return fallback;
   } catch (err) {
     console.error("missions: 추천 계산 실패", err);
     return fallback;
@@ -113,16 +133,15 @@ async function resolveUserId(): Promise<string | undefined> {
 export default async function MissionsPage() {
   // FR-C-008: 인증/익명 사용자 cookie → SessionLog 분석 → 적응형 추천.
   const userId = await resolveUserId();
-  const recommendation = await computeRecommendation(userId);
-  const recommended = recommendation.mission;
+  const state = await computeRecommendation(userId);
 
   // Sprint 1 호환: mockContinue 매칭 결과가 없을 때를 위한 안전망.
   const mockRecommended =
     dailyMissionFixtures.find((m) => m.id === mockContinue.recommendedMissionId) ??
     dailyMissionFixtures[0];
 
-  return (
-    <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+  const headerSection = (
+    <>
       {/* Disclaimer 1중 — CON-04 */}
       <p
         data-testid="disclaimer"
@@ -130,18 +149,35 @@ export default async function MissionsPage() {
       >
         본 미션은 부모님께 발달 확인 정보를 안내하는 보조 도구입니다. 의료적 평가가 아닙니다.
       </p>
-
       <header className="mb-8 space-y-2">
         <h1 className="text-2xl font-bold sm:text-3xl">오늘의 미션</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           짧고 즐거운 발음 미션이에요. 하루 1~3분만 함께해 보세요.
         </p>
       </header>
+    </>
+  );
+
+  // FR-Q-003 Scenario 5 — 휴식 권유 (NO_MISSIONS_AVAILABLE) 분기.
+  if (state.kind === "rest_needed") {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+        {headerSection}
+        <RestEmptyState alternativePhoneme={state.alternativePhoneme} />
+      </main>
+    );
+  }
+
+  const recommended = state.recommendation.mission;
+
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
+      {headerSection}
 
       {/* 추천 미션 1개 강조 — FR-C-008 적응형 카피 */}
       <section className="mb-10 rounded-lg border-2 border-emerald-500 bg-emerald-50 p-5 dark:bg-emerald-950/30">
         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-          {recommendation.copy}
+          {state.recommendation.copy}
         </p>
         <h2 className="mb-2 text-xl font-bold">{recommended.title}</h2>
         <p className="mb-4 text-sm text-gray-700 dark:text-gray-300">
@@ -200,5 +236,47 @@ export default async function MissionsPage() {
         오늘까지 모은 보상 보기
       </Link>
     </main>
+  );
+}
+
+// FR-Q-003 Scenario 5 — 휴식 권유 EmptyState. CON-04 의료/실패 어휘 미사용.
+function RestEmptyState({ alternativePhoneme }: { alternativePhoneme?: string }) {
+  const altFixture = alternativePhoneme
+    ? dailyMissionFixtures.find(
+        (m) => m.targetPhoneme === alternativePhoneme && m.difficultyLevel === 1,
+      ) ?? null
+    : null;
+
+  return (
+    <section
+      data-testid="missions-rest-empty"
+      className="rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50/50 p-8 text-center dark:border-emerald-800 dark:bg-emerald-950/20"
+    >
+      <p className="mb-2 text-4xl" aria-hidden="true">🌿</p>
+      <h2 className="mb-2 text-lg font-semibold">오늘은 충분히 잘 했어요</h2>
+      <p className="mb-6 text-sm text-gray-700 dark:text-gray-300">
+        잠시 쉬면서 아이와 함께 다른 놀이를 해도 좋아요.
+      </p>
+      {altFixture && (
+        <div className="mx-auto max-w-sm rounded-md border border-emerald-200 bg-white p-4 text-left dark:border-emerald-800 dark:bg-gray-900">
+          <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">
+            새로운 발음을 가볍게 만나볼까요?
+          </p>
+          <h3 className="mb-2 text-sm font-semibold">{altFixture.title}</h3>
+          <Link
+            href={`/diagnose?phoneme=${encodeURIComponent(altFixture.targetPhoneme)}`}
+            className="inline-block min-h-[44px] rounded-md bg-emerald-600 px-4 py-2 text-xs font-medium text-white hover:bg-emerald-700"
+          >
+            {altFixture.targetPhoneme} 소리 만나기
+          </Link>
+        </div>
+      )}
+      <Link
+        href="/rewards"
+        className="mt-6 inline-block text-sm text-gray-600 underline hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+      >
+        오늘까지 모은 보상 보기
+      </Link>
+    </section>
   );
 }

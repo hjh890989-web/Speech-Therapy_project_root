@@ -100,6 +100,15 @@ export type AnalyticsEvent =
         elapsedSec: number;
         completedReason: "timer_ended" | "manual_done" | "skipped";
       };
+    }
+  | {
+      // FR-Q-003 Scenario 4 / REQ-FUNC-019 — useSilenceDetection intervention 발화.
+      name: "mission_silence_intervention";
+      properties: {
+        missionId: string;
+        intervention: "mirror" | "tooltip";
+        silenceMs: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

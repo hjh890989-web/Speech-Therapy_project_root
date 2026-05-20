@@ -97,4 +97,28 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
     );
     expect(screen.getByTestId("mission-runner-completed")).toBeInTheDocument();
   });
+
+  it("running 60s 무인터랙션 → silence intervention banner + mission_silence_intervention 발송", async () => {
+    // durationSec 충분히 길게 (180s) 잡아 silence 60s 가 timer 종료 전에 발생하도록.
+    render(<MissionRunner {...baseProps} durationSec={180} />);
+    fireEvent.click(screen.getByRole("button", { name: /미션 시작/ }));
+    trackMock.mockClear();
+
+    await act(async () => {
+      // 60s 무인터랙션 → useSilenceDetection threshold (60_000ms) 초과.
+      vi.advanceTimersByTime(60_500);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("silence-intervention")).toBeInTheDocument();
+    expect(trackMock).toHaveBeenCalledWith(
+      "mission_silence_intervention",
+      expect.objectContaining({
+        missionId: "mock-ㅅ-2",
+        silenceMs: 60_000,
+      }),
+    );
+    const call = trackMock.mock.calls.find((c) => c[0] === "mission_silence_intervention");
+    expect(["mirror", "tooltip"]).toContain(call![1].intervention);
+  });
 });

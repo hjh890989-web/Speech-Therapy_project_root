@@ -81,3 +81,59 @@ export function findMostFrequentPhoneme(phonemes: string[]): string | null {
   }
   return top?.phoneme ?? null;
 }
+
+// === FR-Q-003 Scenario 5 — NO_MISSIONS_AVAILABLE 휴식 권유 ===
+
+export interface RecentActivity {
+  success: boolean;
+  /// ISO 8601 datetime. SessionLog.startTime 등에서 변환.
+  timestamp: string;
+  targetPhoneme: string;
+}
+
+export interface RestRecommendation {
+  rest: boolean;
+  /// 휴식 권유 시 시도하지 않은 음소 1개 (variety encouragement). 모든 음소 시도면 undefined.
+  alternativePhoneme?: string;
+}
+
+export interface ShouldRecommendRestOptions {
+  /// 현재 시각 (테스트 주입용). 기본 Date.now().
+  nowMs?: number;
+  /// 활동 윈도우 (ms). 기본 4시간.
+  windowMs?: number;
+  /// 휴식 권유 임계 (윈도우 내 성공 세션 수). 기본 5.
+  minSuccessful?: number;
+  /// 후보 음소 풀. 기본 ㅅ/ㅈ/ㄱ/ㄴ/ㄹ.
+  allPhonemes?: ReadonlyArray<string>;
+}
+
+const DEFAULT_PHONEMES = ["ㅅ", "ㅈ", "ㄱ", "ㄴ", "ㄹ"] as const;
+
+/**
+ * 휴식 권유 여부 판정. 윈도우 내 minSuccessful 회 이상 성공 시 rest=true.
+ * REQ-FUNC-016 (Drop-off < 10%) 보완 — 단시간 과다 시도 방지.
+ */
+export function shouldRecommendRest(
+  activity: ReadonlyArray<RecentActivity>,
+  options: ShouldRecommendRestOptions = {},
+): RestRecommendation {
+  const {
+    nowMs = Date.now(),
+    windowMs = 4 * 60 * 60_000,
+    minSuccessful = 5,
+    allPhonemes = DEFAULT_PHONEMES,
+  } = options;
+
+  const cutoff = nowMs - windowMs;
+  const recentSuccess = activity.filter((a) => {
+    const t = new Date(a.timestamp).getTime();
+    return Number.isFinite(t) && t >= cutoff && a.success;
+  });
+
+  if (recentSuccess.length < minSuccessful) return { rest: false };
+
+  const attemptedPhonemes = new Set(recentSuccess.map((a) => a.targetPhoneme));
+  const untried = allPhonemes.find((p) => !attemptedPhonemes.has(p));
+  return { rest: true, alternativePhoneme: untried };
+}

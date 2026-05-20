@@ -15,6 +15,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
+import { useSilenceDetection, type SilenceIntervention } from "@/lib/hooks/useSilenceDetection";
 
 type Phase = "ready" | "running" | "completed";
 type SupportedPhoneme = "ㄱ" | "ㄴ" | "ㅅ" | "ㅈ" | "ㄹ";
@@ -43,6 +44,25 @@ export function MissionRunner({
   const [remainingSec, setRemainingSec] = useState(durationSec);
   const startTimestampRef = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // FR-Q-003 Scenario 4 — useSilenceDetection (REQ-FUNC-019).
+  // mic 불사용 — 사용자 인터랙션 부재 60s+ = 도움 필요로 해석. FR-C-006 mic 통합 시 reportSpeech 연동.
+  const handleSilenceExceeded = useCallback(
+    (intervention: SilenceIntervention) => {
+      trackEvent("mission_silence_intervention", {
+        missionId,
+        intervention,
+        silenceMs: 60_000,
+      });
+    },
+    [missionId],
+  );
+  const silence = useSilenceDetection({
+    enabled: phase === "running",
+    thresholdMs: 60_000,
+    tickMs: 1000,
+    onSilenceExceeded: handleSilenceExceeded,
+  });
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -136,6 +156,12 @@ export function MissionRunner({
             style={{ width: `${progressPct}%` }}
           />
         </div>
+        {silence.intervention && (
+          <SilenceInterventionBanner
+            intervention={silence.intervention}
+            targetPhoneme={targetPhoneme}
+          />
+        )}
         <div className="flex gap-2">
           <button
             type="button"
@@ -169,5 +195,43 @@ export function MissionRunner({
         발음 연습 가기
       </Link>
     </div>
+  );
+}
+
+// FR-Q-003 Scenario 4 — 침묵 (= 60s 무인터랙션) 시 부모 개입 안내.
+// "mirror" → 거울 모드 (FR-Q-014 미구현, /diagnose 폴백). "tooltip" → 인라인 안내.
+function SilenceInterventionBanner({
+  intervention,
+  targetPhoneme,
+}: {
+  intervention: SilenceIntervention;
+  targetPhoneme: string;
+}) {
+  if (intervention === "mirror") {
+    return (
+      <div
+        role="status"
+        data-testid="silence-intervention"
+        className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100"
+      >
+        <p className="mb-2 font-medium">입 모양을 함께 보여줄까요?</p>
+        <Link
+          href={`/diagnose?phoneme=${encodeURIComponent(targetPhoneme)}`}
+          className="inline-block min-h-[36px] text-xs underline hover:no-underline"
+        >
+          발음 연습 화면 열기
+        </Link>
+      </div>
+    );
+  }
+  // tooltip
+  return (
+    <p
+      role="status"
+      data-testid="silence-intervention"
+      className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+    >
+      함께 천천히 입을 움직이며 발음해 보세요. 옆에서 한 번 시범을 보여주셔도 좋아요.
+    </p>
   );
 }
