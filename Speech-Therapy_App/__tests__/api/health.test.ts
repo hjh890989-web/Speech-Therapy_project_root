@@ -88,7 +88,7 @@ describe("/api/health — MON-004 / REQ-NF-007", () => {
     expect(body.services.storage.status).toBe("down");
   });
 
-  it("DB timeout → unhealthy + 800ms 초과 메시지 (race condition 검증)", async () => {
+  it("DB timeout → unhealthy + 2000ms 초과 메시지 (race condition 검증)", async () => {
     // 결코 resolve 되지 않는 promise → race timer 가 먼저 fire.
     queryRawMock.mockReturnValueOnce(new Promise(() => {}));
 
@@ -98,7 +98,8 @@ describe("/api/health — MON-004 / REQ-NF-007", () => {
 
     expect(body.services.db.status).toBe("down");
     expect(body.services.db.error).toMatch(/timeout/i);
-  }, 2000);
+    expect(body.services.db.error).toContain("2000ms"); // cold start 대응 timeout
+  }, 5000);
 
   it("error 메시지 100자 트런케이트 — 노출 최소화 (AGENTS.md §2.3)", async () => {
     const longErr = "A".repeat(500);

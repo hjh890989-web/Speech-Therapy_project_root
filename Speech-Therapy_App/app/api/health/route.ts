@@ -25,7 +25,9 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 const BOOT_TIME = Date.now();
-const DB_TIMEOUT_MS = 800;
+// DB_TIMEOUT_MS = 2000ms — Vercel Hobby + Supabase Free 조합의 cold start (pgBouncer 핸드셰이크 + serverless function 깨우기) 가 1~1.5s 소요됨.
+// 800ms 였을 때 cold start 시 false 503 알람 발생 (2026-05-21 prod 검증으로 확인). 2000ms 로 완화해 warm 평균 180ms 와 cold 둘 다 커버.
+const DB_TIMEOUT_MS = 2000;
 
 interface HealthService {
   status: "up" | "down";
