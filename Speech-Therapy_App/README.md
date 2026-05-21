@@ -165,6 +165,69 @@ Prisma 7 `prisma.config.ts` 가 dotenv 로 `.env` 를 로드.
 
 ---
 
+## Gemini Rate Limiter (SEC-004)
+
+비용 가드 + 무료 티어 보호. 구현: [`lib/ratelimit.ts`](lib/ratelimit.ts), 통합: [`lib/ai/gemini.ts`](lib/ai/gemini.ts).
+
+### 한도
+
+| 보호 | 임계 | 위반 시 |
+|---|---|---|
+| 글로벌 RPM | 14 (sliding window 60s, Gemini free 15 안전 마진 1) | `RateLimitedError(GLOBAL_RPM)` + `retryAfterSec` |
+| 사용자당 일 | 50회 (24h sliding) | `RateLimitedError(USER_DAILY)` + `retryAfterSec` |
+| 일 글로벌 비용 | $1.00 — 80% 임계 (~$0.80) | Slack 알림 1회 (`SLACK_WEBHOOK_URL`) + 호출 계속 |
+
+### 비용 추정 모델
+
+- gemini-2.5-flash-lite: $0.075/M input + $0.30/M output
+- 호출 평균 200 in + 150 out → `COST_PER_CALL_USD = $0.000060`
+- 일 임계 $1.00 ≈ 16,667 calls (RPM 14 max throughput 20,160/일 대비 안전)
+- REQ-NF-018 매핑: 유저 월 ≤ ₩5,250 ≈ $4 → 일 $0.13 (1유저) → 1,000 MAU 가정 시 일 $130 (월 $4K)
+
+### 환경 prefix
+
+- `VERCEL_ENV` 우선 (production/preview/development), 없으면 `NODE_ENV`, 최종 fallback `dev`
+- 단일 Vercel 인스턴스 in-memory 카운터 — Hobby single region 가정. Edge multi-instance 운영 시 §E-2 후속 (Upstash Redis 어댑터 교체) 필요
+
+### 환경 변수
+
+| 키 | 용도 | 부재 시 |
+|---|---|---|
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini 호출 (필수) | 호출 자체 실패 |
+| `SLACK_WEBHOOK_URL` | 80% 임계 알림 | 알림 silent skip (graceful) |
+| `VERCEL_ENV` | 환경 prefix (Vercel 자동) | NODE_ENV fallback |
+
+### 호출 측 통합
+
+`generateJson` / `generatePlainText` 호출 시 `userId` 전달 — 미전달 시 rate limiter 미적용 (legacy 호환).
+
+```ts
+import { generateJson } from "@/lib/ai/gemini";
+
+const result = await generateJson({
+  system: "...",
+  prompt: "...",
+  schema: MySchema,
+  userId: authenticatedUserId,  // ← rate limiter 강제
+});
+```
+
+### 모니터링
+
+```ts
+import { getRateLimitDailyStats } from "@/lib/ratelimit";
+const stats = getRateLimitDailyStats();
+// { envPrefix, callCount, estimatedCostUsd, costThresholdUsd, alertPercent, alertSent }
+```
+
+### 별도 task (§E-2 후속)
+
+- Upstash Redis 도입 (다중 인스턴스 정확 카운터) — AGENTS.md §3 "Redis 스택 외" 정책 변경 필요
+- 토큰 단위 정밀 비용 추적 (현재는 호출당 평균 추정)
+- Vercel Cron 으로 자정 UTC 정확 리셋 (현재는 sliding 24h)
+
+---
+
 ## 참고 문서
 
 - 본 앱의 PRD/SRS: `docs/54_PRD_V10_Final.md`, `docs/64_SRS_V05_Merged_Master_Final.md`
