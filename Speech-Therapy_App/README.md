@@ -141,6 +141,8 @@ Speech-Therapy_App/
 > **Vercel Hobby 한도**: cron 1개 + 일 단위 schedule. 현재는 `hitl-monitor` 만 매일 활성.
 > **Pro 전환 시**: `vercel.json` 의 `crons` 배열에 나머지 3개 항목 추가 + `hitl-monitor` schedule 을 `0 * * * *` (매시간) 으로 변경.
 
+**Status Page**: `/status` — 사용자 가시화용 서비스 운영 상태 페이지 (MON-004, REQ-NF-007).
+
 ### CRON_SECRET 인증
 Cron 핸들러는 `Authorization: Bearer ${CRON_SECRET}` 검증. Vercel Dashboard → Environment Variables 에서 등록.
 - 미설정 시 dev / preview 에선 통과, production 에선 401 반환 (외부 차단).
