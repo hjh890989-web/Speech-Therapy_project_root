@@ -9,6 +9,7 @@
 //   hydration mismatch 발생 안 함.
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 // ----- 브라우저 전역 타입 (TS dom lib 에 webkit prefixed 정의 없음) -----
 type WebSpeechRecognitionEvent = {
@@ -71,11 +72,15 @@ export interface UseSpeechRecognitionResult {
 }
 
 // FR-C-003: 일시 오류만 자동 재시도. permission_denied / audio_capture 는 영구 오류.
-const RETRYABLE_ERROR_CODES: ReadonlyArray<SpeechRecognitionErrorCode> = [
+type TransientErrorCode = "no_speech" | "network" | "aborted";
+const RETRYABLE_ERROR_CODES: ReadonlyArray<TransientErrorCode> = [
   "no_speech",
   "network",
   "aborted",
 ];
+function isRetryableTransient(code: SpeechRecognitionErrorCode): code is TransientErrorCode {
+  return (RETRYABLE_ERROR_CODES as ReadonlyArray<string>).includes(code);
+}
 const RETRY_DELAY_MS = 200;
 
 function getRecognitionConstructor(): WebSpeechRecognitionConstructor | null {
@@ -128,6 +133,8 @@ export function useSpeechRecognition(options: { lang?: string } = {}): UseSpeech
   const [errorCodeState, setErrorCodeState] = useState<SpeechRecognitionErrorCode | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const retryCountRef = useRef(0);
+  // FR-C-003 — 첫 호출 실패 시 transient 에러 분류. retry success 발송 시 그대로 노출.
+  const firstAttemptErrorRef = useRef<TransientErrorCode | null>(null);
   const recognitionRef = useRef<WebSpeechRecognitionInstance | null>(null);
 
   // Mount 후 isSupported=true 가 되면 instance 생성.
@@ -145,19 +152,24 @@ export function useSpeechRecognition(options: { lang?: string } = {}): UseSpeech
         setTranscript(result.transcript);
         setConfidence(result.confidence);
         setStatus("result");
-        // 텔레메트리 — 추후 INFRA-005 (Vercel Analytics) 연결.
-        const eventName = retryCountRef.current > 0 ? "stt_retry_success" : "stt_first_attempt_success";
-        try {
-          window.dispatchEvent(new CustomEvent("speech-therapy:analytics", { detail: { event: eventName } }));
-        } catch {
-          /* SSR 영향 없음 */
+        // INFRA-005 / FR-C-003 — 재시도 여부 분류 후 trackEvent 발송.
+        if (retryCountRef.current > 0) {
+          const first = firstAttemptErrorRef.current;
+          // 영구 오류였다면 재시도 자체가 없었으므로 fallback 'unknown' 대신 'aborted' 미사용 — null 가드.
+          if (first) {
+            trackEvent("stt_retry_success", { firstAttemptError: first });
+          }
+        } else {
+          trackEvent("stt_first_attempt_success", {});
         }
+        firstAttemptErrorRef.current = null;
       }
     };
     instance.onerror = (event) => {
       const code = mapErrorCode(event.error);
       // FR-C-003 자동 재시도: 일시 오류 + retryCount 0 일 때만.
-      if (RETRYABLE_ERROR_CODES.includes(code) && retryCountRef.current === 0) {
+      if (isRetryableTransient(code) && retryCountRef.current === 0) {
+        firstAttemptErrorRef.current = code;
         retryCountRef.current = 1;
         setRetryCount(1);
         setStatus("retrying");
@@ -168,6 +180,7 @@ export function useSpeechRecognition(options: { lang?: string } = {}): UseSpeech
           } catch {
             setErrorCodeState(code);
             setStatus("error");
+            trackEvent("stt_retry_failed", { finalError: code });
           }
         }, RETRY_DELAY_MS);
         return;
@@ -176,11 +189,9 @@ export function useSpeechRecognition(options: { lang?: string } = {}): UseSpeech
       setErrorCodeState(code);
       setStatus("error");
       if (retryCountRef.current > 0) {
-        try {
-          window.dispatchEvent(new CustomEvent("speech-therapy:analytics", { detail: { event: "stt_retry_failed" } }));
-        } catch {
-          /* SSR 영향 없음 */
-        }
+        const finalError: "no_speech" | "network" | "aborted" | "unknown" =
+          isRetryableTransient(code) ? code : "unknown";
+        trackEvent("stt_retry_failed", { finalError });
       }
     };
     instance.onend = () => {
@@ -207,8 +218,9 @@ export function useSpeechRecognition(options: { lang?: string } = {}): UseSpeech
     setConfidence(null);
     setErrorCodeState(null);
     setStatus("listening");
-    // FR-C-003: 사용자가 새 발화 시작하면 retry 카운터 리셋.
+    // FR-C-003: 사용자가 새 발화 시작하면 retry 카운터 + first error 리셋.
     retryCountRef.current = 0;
+    firstAttemptErrorRef.current = null;
     setRetryCount(0);
     try {
       recognitionRef.current.start();
@@ -232,6 +244,7 @@ export function useSpeechRecognition(options: { lang?: string } = {}): UseSpeech
     setErrorCodeState(null);
     setStatus("idle");
     retryCountRef.current = 0;
+    firstAttemptErrorRef.current = null;
     setRetryCount(0);
   }, []);
 

@@ -126,6 +126,27 @@ export type AnalyticsEvent =
         variant: "new_user" | "week_empty" | "long_absent";
         cta: "start_mission" | "start_diagnose";
       };
+    }
+  // === STT 재시도 (FR-C-003 / REQ-NF-014) ===
+  | {
+      // 첫 호출 성공 (재시도 안 함).
+      name: "stt_first_attempt_success";
+      properties: Record<string, never>;
+    }
+  | {
+      // 첫 호출 실패 후 200ms 자동 재시도 성공.
+      name: "stt_retry_success";
+      properties: {
+        // 첫 호출의 에러 분류 (텔레메트리 분석용).
+        firstAttemptError: "no_speech" | "network" | "aborted";
+      };
+    }
+  | {
+      // 재시도도 실패 — 사용자에게 수동 재시도 UI 노출.
+      name: "stt_retry_failed";
+      properties: {
+        finalError: "no_speech" | "network" | "aborted" | "unknown";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
