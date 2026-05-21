@@ -17,8 +17,14 @@
 //   - SAMPLE_INTERVAL_MS 100 → 50ms (샘플 수 2배 — 3.5초 발화 시 35 → 70 샘플)
 //   - NOISE_FLOOR_DB -60 → -70dB (약한 신호도 캡처, 어린이 음성 / 작은 발음에 유리)
 //   - SILENCE_RMS_THRESHOLD 0.005 → 0.003 (짧은 발화의 자음 / 무성음 구간 포함)
-// FFT_SIZE 는 2048 유지 (CPU 부담 대비 분해능 가성비 적정).
-const FFT_SIZE = 2048;
+//
+// Sprint 3 §2 A-3 옵션 A — FFT_SIZE 2048 → 4096 (2026-05-21, issue #103):
+//   - bin 분해능 44100/2048 = 21.5 Hz → 44100/4096 = 10.7 Hz (2배 정밀)
+//   - 단음 발화 시 모든 frame 이 같은 bin 에 몰려 pitch_std=0 되는 한계 완화
+//   - 트레이드오프: FFT 분석 비용 ~2x, time-domain 버퍼 메모리 ~2x
+//     (AnalyserNode.fftSize 상한 32768 → 여유 충분, sample interval 50ms 내 처리 가능)
+//   - Option B (autocorrelation / YIN) 및 Option C (실데이터 N≥20 검증) 는 별도 후속 작업.
+const FFT_SIZE = 4096;
 const SAMPLE_INTERVAL_MS = 50; // 초당 20회
 const MIN_PITCH_HZ = 80;
 const MAX_PITCH_HZ = 800;
