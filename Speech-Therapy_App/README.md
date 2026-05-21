@@ -274,6 +274,10 @@ const stats = getRateLimitDailyStats();
 
 - 본 앱의 PRD/SRS: `docs/54_PRD_V10_Final.md`, `docs/64_SRS_V05_Merged_Master_Final.md`
 - 92개 태스크 명세: `tasks/TASK_*.md`
+- 운영 런북 (CS 4h / HITL 48h SLA, D4): [`docs/ops-runbook.md`](docs/ops-runbook.md)
+- CS 응답 카피 템플릿 (CON-04 준수): [`docs/cs-templates.md`](docs/cs-templates.md)
+- 인시던트 post-mortem 템플릿: [`docs/postmortem-template.md`](docs/postmortem-template.md)
+- 보안 정책: [`docs/security-policy.md`](docs/security-policy.md)
 - 위키 (의사결정 근거): `../Speech-Therapy_Workbase/wiki/`
 - Sprint 1 의존성 그래프: `../Speech-Therapy_Workbase/wiki/product/concepts/Sprint-1-Dependency-Graph.md`
 
