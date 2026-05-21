@@ -151,6 +151,46 @@ Cron 핸들러는 `Authorization: Bearer ${CRON_SECRET}` 검증. Vercel Dashboar
 
 ---
 
+## 음성 미저장 정책 (FR-C-004 / D6)
+
+**Sprint 1 정책**: 음성 원본 파일은 **서버에 전송되지 않으며, 어디에도 저장되지 않습니다**.
+
+### 보장 메커니즘
+
+| 보장 | 위치 | 검증 |
+|---|---|---|
+| 클라이언트 측 STT | `lib/hooks/useSpeechRecognition.ts` (Web Speech API) | 브라우저 mic stream → `transcript` 문자열만 추출 |
+| Server Action 입력 차단 | `lib/schemas/diagnosis.ts` `DiagnosisInputSchema` | Zod schema 에 audio binary 필드 0개 — text/number only |
+| 진단 결과 DB | `prisma/schema.prisma` `EvaluationResult` | audio blob/path 컬럼 없음 — score + transcript hash 만 |
+| Storage 버킷 | Supabase Storage `audio` | Sprint 1 엔 0 objects, RLS 익명 업로드 차단 (외부 setup) |
+| Cron 폐기 | `/api/cron/audio-cleanup` | 7일 초과 객체 삭제 — Sprint 1 No-op (P2 대비 사전 구축) |
+
+### REQ / R 매핑
+
+- **REQ-FUNC-005**: ≤7일 폐기 (Sprint 1 미저장 → 자동 충족)
+- **REQ-NF-016**: Storage 보관 ≤ 7일
+- **CON-03**: 음성 7일 폐기
+- **R4 보호**: 영유아 음성 무단 수집 / 유출 리스크 → 서버 미저장으로 영향 0
+- **R8 보호**: Supabase Free 1GB Storage 비용 압박 → 미저장 정책으로 즉시 보호
+
+### P2 음성 저장 활성화 가이드
+
+향후 P2 단계 (Zero-touch 교실 태블릿 등) 에서 음성 저장이 필요해질 때:
+
+1. **DB 마이그레이션** — `prisma/schema.prisma` 에 `SessionLog.audioStorageUri` 컬럼 추가 (또는 기존 `audioVectorUri` 활용)
+2. **Storage 업로드 경로** — `Speech-Therapy_App/lib/storage/audio.ts` 신규, presigned URL 발급 + 사용자 inplace 업로드
+3. **Supabase Storage RLS 정책** (외부 Dashboard 작업):
+   - 익명 업로드 차단
+   - authenticated 사용자만 자기 path 에 업로드 (`auth.uid()::text = (storage.foldername(name))[1]`)
+   - admin 역할만 삭제 가능
+4. **Cron 활성화** — `vercel.json` 의 `crons` 배열에 `audio-cleanup` 추가 (Hobby 슬롯 정리 또는 Pro 전환 후)
+5. **검증 1회 수동** — `curl -H "Authorization: Bearer $CRON_SECRET" .../api/cron/audio-cleanup` → `deletedObjects` 정확 동작 확인
+6. **CRON_SECRET 등록 검증** — Vercel Production 환경 변수 설정 + 마스킹 로그
+
+→ 본 라우트 ([`app/api/cron/audio-cleanup/route.ts`](app/api/cron/audio-cleanup/route.ts)) 는 P2 활성 시 코드 변경 0 으로 즉시 동작.
+
+---
+
 ## DB 마이그레이션 흐름
 
 Prisma 7 `prisma.config.ts` 가 dotenv 로 `.env` 를 로드.
