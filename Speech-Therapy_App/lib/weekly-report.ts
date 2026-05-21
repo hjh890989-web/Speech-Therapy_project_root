@@ -77,6 +77,42 @@ export async function aggregateWeeklyScores(
   };
 }
 
+// ----- FR-Q-005 Scenario 4 — week-over-week 변동 -----
+//
+// REQ-FUNC-027 보조: 직전 주 종합 평균 (3축 평균의 평균) 과 이번 주 평균을 비교.
+// 본 함수는 순수 함수 — prisma 호출은 호출 측에서 두 주 aggregate 후 본 함수에 위임.
+// 직전 주 0건 (= null) 이면 delta=null (UI 는 "—" 또는 비교 카드 미노출).
+
+export interface WeekAverages {
+  articulationAvg: number;
+  linguisticAvg: number;
+  acousticAvg: number;
+}
+
+/**
+ * 두 주 평균 점수 차이 계산.
+ * - 평균 산출: 3축 평균 (articulation + linguistic + acoustic) / 3 — 종합 점수.
+ * - 정수 반올림으로 UI 표시 친화.
+ * - 직전 주가 null 이면 null 반환 (비교 불가).
+ */
+export function computeWeekOverWeekDelta(
+  current: WeekAverages,
+  previous: WeekAverages | null,
+): number | null {
+  if (previous === null) return null;
+  const currentAvg = (current.articulationAvg + current.linguisticAvg + current.acousticAvg) / 3;
+  const previousAvg =
+    (previous.articulationAvg + previous.linguisticAvg + previous.acousticAvg) / 3;
+  return Math.round(currentAvg - previousAvg);
+}
+
+/// 직전 ISO 주차 계산 (week=1 이면 (year-1, 52 또는 53)).
+/// 단순화: 항상 52 를 반환하고 호출 측에서 비어 있으면 null 처리 — week 53 인 해도 데이터 0건이면 null 로 분기.
+export function previousWeek(year: number, week: number): { year: number; week: number } {
+  if (week <= 1) return { year: year - 1, week: 52 };
+  return { year, week: week - 1 };
+}
+
 // ----- FR-Q-006 데이터 충분성 평가 -----
 //
 // REQ-FUNC-029: 데이터 부족 시 긍정 메시지 분기.

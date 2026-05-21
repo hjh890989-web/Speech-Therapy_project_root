@@ -18,10 +18,13 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
   aggregateWeeklyScores,
   assessDataSufficiency,
+  computeWeekOverWeekDelta,
   getCurrentWeekNumber,
+  previousWeek,
 } from "@/lib/weekly-report";
 import { WeeklyReportChart } from "./WeeklyReportChart";
 import { PrintButton } from "./PrintButton";
+import { PredictionCard } from "./PredictionCard";
 import { ReportEmptyState } from "./ReportEmptyState";
 
 export const metadata = {
@@ -82,9 +85,11 @@ export default async function ReportsPage() {
     );
   }
 
-  const [weekAgg, lifetime] = await Promise.all([
+  const { year: prevYear, week: prevWeekNum } = previousWeek(year, weekNumber);
+  const [weekAgg, lifetime, previousWeekAgg] = await Promise.all([
     aggregateWeeklyScores(userId, year, weekNumber),
     fetchLifetimeStats(userId),
+    aggregateWeeklyScores(userId, prevYear, prevWeekNum),
   ]);
   const weekSessionCount = weekAgg?.sessionCount ?? 0;
 
@@ -105,37 +110,52 @@ export default async function ReportsPage() {
   }
 
   // 정상 차트 분기 (partial / full).
-  // WoW delta 는 직전 주 집계 비교가 필요 — 본 sub-session 에서는 0 으로 표시 (별도 follow-up).
-  const wowDelta = 0;
-  const predictedNextScore: number | null = null;
+  // FR-Q-005 Scenario 4 — 직전 주 평균과 비교한 WoW delta (실 집계).
+  const wowDelta = computeWeekOverWeekDelta(weekAgg, previousWeekAgg);
+
+  // FR-Q-005 Scenario 2 — 다음 주 예상 점수 (FR-C-011 통합 전 mock).
+  // mock 전략: 이번 주 종합 평균 + 5점 (가벼운 상승 가정), 100점 clamp.
+  // confidence: null 로 표시 → UI 에서 "베타" 라벨 노출. FR-C-011 통합 시 실 예측 + confidence 로 교체.
+  const currentOverallAvg =
+    (weekAgg.articulationAvg + weekAgg.linguisticAvg + weekAgg.acousticAvg) / 3;
+  const predictedNextScore = Math.min(100, currentOverallAvg + 5);
   const predictionConfidence: number | null = null;
 
   return (
     <PageShell year={year} weekNumber={weekNumber} sessionCount={weekAgg.sessionCount}>
       <section className="mb-6 grid grid-cols-2 gap-3">
-        <article className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-          <p className="text-xs text-gray-600 dark:text-gray-400">직전 주 대비</p>
-          <p
-            className={`text-2xl font-bold ${
-              wowDelta > 0
-                ? "text-emerald-700 dark:text-emerald-300"
-                : "text-gray-600 dark:text-gray-400"
-            }`}
+        {wowDelta != null ? (
+          <article
+            data-testid="wow-delta-card"
+            className="rounded-lg border border-gray-200 p-4 dark:border-gray-700"
           >
-            {wowDelta > 0 ? `+${wowDelta}` : wowDelta}점{wowDelta > 0 ? " ↑" : ""}
-          </p>
-        </article>
-        <article className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-          <p className="text-xs text-gray-600 dark:text-gray-400">다음 주 예상</p>
-          <p className="text-2xl font-bold tabular-nums">
-            {predictedNextScore != null ? `${Math.round(predictedNextScore)}점` : "—"}
-          </p>
-          {predictionConfidence != null && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              신뢰도 {Math.round(predictionConfidence * 100)}%
+            <p className="text-xs text-gray-600 dark:text-gray-400">직전 주 대비</p>
+            <p
+              className={`text-2xl font-bold ${
+                wowDelta > 0
+                  ? "text-emerald-700 dark:text-emerald-300"
+                  : "text-gray-600 dark:text-gray-400"
+              }`}
+            >
+              {wowDelta > 0 ? `+${wowDelta}` : wowDelta}점{wowDelta > 0 ? " ↑" : ""}
             </p>
-          )}
-        </article>
+          </article>
+        ) : (
+          <article
+            data-testid="wow-delta-card-empty"
+            className="rounded-lg border border-dashed border-gray-200 p-4 dark:border-gray-700"
+          >
+            <p className="text-xs text-gray-600 dark:text-gray-400">직전 주 대비</p>
+            <p className="text-2xl font-bold text-gray-400 dark:text-gray-500">—</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">직전 주 기록 없음</p>
+          </article>
+        )}
+        <PredictionCard
+          predictedScore={predictedNextScore}
+          confidence={predictionConfidence}
+          weekNumber={weekNumber}
+          isMock={true}
+        />
       </section>
 
       <section className="mb-6 rounded-lg border border-gray-200 p-4 dark:border-gray-700">

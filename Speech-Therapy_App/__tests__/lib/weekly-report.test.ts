@@ -5,6 +5,8 @@ import {
   getCurrentWeekNumber,
   ScoreTrendSchema,
   assessDataSufficiency,
+  computeWeekOverWeekDelta,
+  previousWeek,
 } from "@/lib/weekly-report";
 
 describe("getCurrentWeekNumber (ISO 8601)", () => {
@@ -122,5 +124,74 @@ describe("assessDataSufficiency — FR-Q-006 분기 키", () => {
         { longAbsenceDays: 10 },
       ),
     ).toEqual({ sufficiency: "insufficient", emptyVariant: "long_absent" });
+  });
+});
+
+describe("computeWeekOverWeekDelta — FR-Q-005 Scenario 4", () => {
+  const current = { articulationAvg: 70, linguisticAvg: 70, acousticAvg: 70 };
+
+  it("이번 70 / 직전 70 → delta 0", () => {
+    expect(
+      computeWeekOverWeekDelta(current, {
+        articulationAvg: 70,
+        linguisticAvg: 70,
+        acousticAvg: 70,
+      }),
+    ).toBe(0);
+  });
+
+  it("이번 70 / 직전 65 → delta +5", () => {
+    expect(
+      computeWeekOverWeekDelta(current, {
+        articulationAvg: 65,
+        linguisticAvg: 65,
+        acousticAvg: 65,
+      }),
+    ).toBe(5);
+  });
+
+  it("이번 70 / 직전 75 → delta -5 (불안 자극 회피 — 호출 측에서 회색 색상 처리)", () => {
+    expect(
+      computeWeekOverWeekDelta(current, {
+        articulationAvg: 75,
+        linguisticAvg: 75,
+        acousticAvg: 75,
+      }),
+    ).toBe(-5);
+  });
+
+  it("직전 주 null (0건) → null — UI 비교 카드 미노출", () => {
+    expect(computeWeekOverWeekDelta(current, null)).toBeNull();
+  });
+
+  it("축별 평균 다른 케이스 — 3축 평균의 평균 비교", () => {
+    // 이번 (60+70+80)/3 = 70, 직전 (70+70+70)/3 = 70 → 0
+    expect(
+      computeWeekOverWeekDelta(
+        { articulationAvg: 60, linguisticAvg: 70, acousticAvg: 80 },
+        { articulationAvg: 70, linguisticAvg: 70, acousticAvg: 70 },
+      ),
+    ).toBe(0);
+  });
+
+  it("소수점 차이는 정수 반올림", () => {
+    // 이번 (71+72+73)/3 = 72, 직전 (70+70+70)/3 = 70 → 2
+    expect(
+      computeWeekOverWeekDelta(
+        { articulationAvg: 71, linguisticAvg: 72, acousticAvg: 73 },
+        { articulationAvg: 70, linguisticAvg: 70, acousticAvg: 70 },
+      ),
+    ).toBe(2);
+  });
+});
+
+describe("previousWeek — ISO 주차 단순 감소", () => {
+  it("주차 2 이상은 단순 -1", () => {
+    expect(previousWeek(2026, 20)).toEqual({ year: 2026, week: 19 });
+    expect(previousWeek(2026, 2)).toEqual({ year: 2026, week: 1 });
+  });
+
+  it("주차 1 → 직전 해 W52 로 단순 폴백", () => {
+    expect(previousWeek(2026, 1)).toEqual({ year: 2025, week: 52 });
   });
 });

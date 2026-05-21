@@ -127,6 +127,16 @@ export type AnalyticsEvent =
         cta: "start_mission" | "start_diagnose";
       };
     }
+  | {
+      // FR-Q-005 Scenario 2 / REQ-FUNC-028 — 다음 주 예상 점수 카드 클릭.
+      // FR-C-011 (Gemini 회귀) 통합 전에는 mock 예상치 (직전 주 평균 + 5점) 사용 — confidence: null.
+      name: "prediction_clicked";
+      properties: {
+        predictedScore: number;
+        confidence: number | null;
+        weekNumber: number;
+      };
+    }
   // === STT 재시도 (FR-C-003 / REQ-NF-014) ===
   | {
       // 첫 호출 성공 (재시도 안 함).
