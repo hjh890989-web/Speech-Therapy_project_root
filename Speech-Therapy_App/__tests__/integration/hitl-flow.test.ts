@@ -10,7 +10,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const userUpsertMock = vi.fn();
 const sessionLogCreateMock = vi.fn();
-const hitlUpsertMock = vi.fn();
+// TEST-014 — enqueueForReview 가 upsert → findUnique + create/update 패턴으로 전환.
+const hitlFindUniqueMock = vi.fn();
+const hitlCreateMock = vi.fn();
+const hitlUpdateMock = vi.fn();
+const hitlCountMock = vi.fn();
 const cookieGetMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
@@ -22,7 +26,10 @@ vi.mock("@/lib/db", () => ({
       create: (...args: unknown[]) => sessionLogCreateMock(...args),
     },
     hITLQueue: {
-      upsert: (...args: unknown[]) => hitlUpsertMock(...args),
+      findUnique: (...args: unknown[]) => hitlFindUniqueMock(...args),
+      create: (...args: unknown[]) => hitlCreateMock(...args),
+      update: (...args: unknown[]) => hitlUpdateMock(...args),
+      count: (...args: unknown[]) => hitlCountMock(...args),
     },
     evaluationResult: {
       findUnique: vi.fn(),
@@ -69,15 +76,22 @@ const VALID_INPUT_LOW_MATCH = {
 beforeEach(() => {
   userUpsertMock.mockReset();
   sessionLogCreateMock.mockReset();
-  hitlUpsertMock.mockReset();
+  hitlFindUniqueMock.mockReset();
+  hitlCreateMock.mockReset();
+  hitlUpdateMock.mockReset();
+  hitlCountMock.mockReset();
   cookieGetMock.mockReset();
   // 기본: cookie 미존재 시 undefined 반환 → analyzeDiagnosis 가 input.anonymousUserId 또는 randomUUID fallback.
   cookieGetMock.mockReturnValue(undefined);
 
   userUpsertMock.mockResolvedValue({ id: "mocked-user" });
   sessionLogCreateMock.mockResolvedValue({ id: "mocked-session" });
-  hitlUpsertMock.mockResolvedValue({
+  // TEST-014 신규 enqueueForReview: 신규 sessionId 경로 (findUnique→null) + abuse 0 + create.
+  hitlFindUniqueMock.mockResolvedValue(null);
+  hitlCountMock.mockResolvedValue(0);
+  hitlCreateMock.mockResolvedValue({
     id: "queue-1",
+    status: "pending",
     slaDueAt: new Date("2026-05-16T12:00:00Z"),
   });
 
@@ -137,26 +151,25 @@ describe("TEST-002 — Sprint 2 §2 phonetic similarity 기반 HITL 분기", () 
     const result = await analyzeDiagnosis(VALID_INPUT_HIGH_MATCH);
 
     expect(sessionLogCreateMock).toHaveBeenCalledTimes(1);
-    expect(hitlUpsertMock).not.toHaveBeenCalled();
+    expect(hitlCreateMock).not.toHaveBeenCalled();
     expect(globalThis.fetch).not.toHaveBeenCalled();
     expect(result.requiresHITL).toBe(false);
     expect(result.articulationScore).toBe(100);
   });
 
-  it("[시나리오 5] enqueueForReview 멱등성 — upsert where/create/update 셰이프", async () => {
+  it("[시나리오 5] enqueueForReview — TEST-014 신규 패턴 (findUnique → create) 셰이프", async () => {
     await analyzeDiagnosis(VALID_INPUT_LOW_MATCH);
 
-    expect(hitlUpsertMock).toHaveBeenCalledTimes(1);
-    const arg = hitlUpsertMock.mock.calls[0][0] as {
-      where: { sessionId: string };
-      create: { sessionId: string; confidenceScore: number; slaDueAt: Date };
-      update: { confidenceScore: number };
+    expect(hitlFindUniqueMock).toHaveBeenCalledTimes(1);
+    expect(hitlCountMock).toHaveBeenCalledTimes(1); // abuse 검사
+    expect(hitlCreateMock).toHaveBeenCalledTimes(1);
+    const arg = hitlCreateMock.mock.calls[0][0] as {
+      data: { sessionId: string; confidenceScore: number; slaDueAt: Date; status: string };
     };
-    expect(arg.where.sessionId).toBeTruthy();
-    // Sprint 2 §2: HITL 측 confidenceScore = articulationScore.
-    expect(arg.create.confidenceScore).toBeLessThan(50);
-    expect(arg.update.confidenceScore).toBeLessThan(50);
-    expect(arg.create.slaDueAt).toBeInstanceOf(Date);
+    expect(arg.data.sessionId).toBeTruthy();
+    expect(arg.data.confidenceScore).toBeLessThan(50);
+    expect(arg.data.slaDueAt).toBeInstanceOf(Date);
+    expect(arg.data.status).toBe("pending"); // abuse=0 → pending
   });
 
   it("[시나리오 6] Slack 실패 graceful — DB INSERT 성공 + 응답 정상", async () => {
@@ -166,7 +179,7 @@ describe("TEST-002 — Sprint 2 §2 phonetic similarity 기반 HITL 분기", () 
     await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
 
     expect(sessionLogCreateMock).toHaveBeenCalledTimes(1);
-    expect(hitlUpsertMock).toHaveBeenCalledTimes(1);
+    expect(hitlCreateMock).toHaveBeenCalledTimes(1);
     expect(result.requiresHITL).toBe(true);
     expect(result.sessionId).toBeTruthy();
   });

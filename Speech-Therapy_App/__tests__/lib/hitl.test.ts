@@ -1,54 +1,92 @@
 // TEST-002 근간 — lib/hitl.ts enqueueForReview 단위 테스트 (Prisma mock).
-// FR-C-002 (자동 이관) 구현 전 헬퍼 자체 검증.
+// FR-C-002 (자동 이관) + TEST-014 (어뷰징 방어 + expert review count) 헬퍼 검증.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Prisma 싱글톤 mock — 실제 DB 호출 차단.
-const upsertMock = vi.fn();
+// TEST-014: enqueueForReview 가 upsert → findUnique + create/update 패턴으로 전환됨.
+const findUniqueMock = vi.fn();
+const createMock = vi.fn();
+const updateMock = vi.fn();
 const updateManyMock = vi.fn();
 const findManyMock = vi.fn();
+const countMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
     hITLQueue: {
-      upsert: (...args: unknown[]) => upsertMock(...args),
+      findUnique: (...args: unknown[]) => findUniqueMock(...args),
+      create: (...args: unknown[]) => createMock(...args),
+      update: (...args: unknown[]) => updateMock(...args),
       updateMany: (...args: unknown[]) => updateManyMock(...args),
       findMany: (...args: unknown[]) => findManyMock(...args),
+      count: (...args: unknown[]) => countMock(...args),
     },
   },
 }));
 
 beforeEach(() => {
-  upsertMock.mockReset();
+  findUniqueMock.mockReset();
+  createMock.mockReset();
+  updateMock.mockReset();
   updateManyMock.mockReset();
   findManyMock.mockReset();
+  countMock.mockReset();
 });
 
-describe("enqueueForReview (FR-C-002 트리거 헬퍼)", () => {
-  it("upsert 호출 1회 + sessionId·userId·confidence + slaDueAt = +48h", async () => {
+describe("enqueueForReview (FR-C-002 + TEST-014 sc6 — 어뷰징 방어 통합)", () => {
+  it("신규 + abuse 임계 미달 → create pending + slaDueAt = +48h", async () => {
     const { enqueueForReview } = await import("@/lib/hitl");
-    upsertMock.mockResolvedValue({ id: "queue-1" });
+    findUniqueMock.mockResolvedValue(null); // 신규
+    countMock.mockResolvedValue(0); // abuse 0
+    createMock.mockResolvedValue({ id: "queue-1", status: "pending" });
 
     const before = Date.now();
     await enqueueForReview("session-1", "user-1", 65);
     const after = Date.now();
 
-    expect(upsertMock).toHaveBeenCalledTimes(1);
-    const arg = upsertMock.mock.calls[0][0] as {
-      where: { sessionId: string };
-      create: { sessionId: string; userId: string; confidenceScore: number; slaDueAt: Date };
-      update: { confidenceScore: number };
+    expect(createMock).toHaveBeenCalledTimes(1);
+    const arg = createMock.mock.calls[0][0] as {
+      data: { sessionId: string; userId: string; confidenceScore: number; slaDueAt: Date; status: string };
     };
-    expect(arg.where.sessionId).toBe("session-1");
-    expect(arg.create.userId).toBe("user-1");
-    expect(arg.create.confidenceScore).toBe(65);
-    expect(arg.update.confidenceScore).toBe(65);
+    expect(arg.data.sessionId).toBe("session-1");
+    expect(arg.data.userId).toBe("user-1");
+    expect(arg.data.confidenceScore).toBe(65);
+    expect(arg.data.status).toBe("pending");
 
-    // slaDueAt 가 호출 시점 + 48h 부근인지 (±5초 허용).
     const expectedMin = before + 48 * 60 * 60 * 1000 - 5_000;
     const expectedMax = after + 48 * 60 * 60 * 1000 + 5_000;
-    expect(arg.create.slaDueAt.getTime()).toBeGreaterThanOrEqual(expectedMin);
-    expect(arg.create.slaDueAt.getTime()).toBeLessThanOrEqual(expectedMax);
+    expect(arg.data.slaDueAt.getTime()).toBeGreaterThanOrEqual(expectedMin);
+    expect(arg.data.slaDueAt.getTime()).toBeLessThanOrEqual(expectedMax);
+  });
+
+  it("재호출 (existing row) → update 만, abuse 검사 생략", async () => {
+    const { enqueueForReview } = await import("@/lib/hitl");
+    findUniqueMock.mockResolvedValue({ id: "queue-1", status: "pending" });
+    updateMock.mockResolvedValue({ id: "queue-1" });
+
+    await enqueueForReview("session-1", "user-1", 70);
+
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    expect(updateMock.mock.calls[0][0]).toMatchObject({
+      where: { sessionId: "session-1" },
+      data: { confidenceScore: 70 },
+    });
+    expect(createMock).not.toHaveBeenCalled();
+    expect(countMock).not.toHaveBeenCalled();
+  });
+
+  it("TEST-014 sc6 — 월 3건 dismissed → 4번째 신규 auto dismissed", async () => {
+    const { enqueueForReview, ABUSE_MONTHLY_THRESHOLD } = await import("@/lib/hitl");
+    findUniqueMock.mockResolvedValue(null);
+    countMock.mockResolvedValue(ABUSE_MONTHLY_THRESHOLD); // 임계 도달
+    createMock.mockResolvedValue({ id: "q-abuse", status: "dismissed" });
+
+    await enqueueForReview("session-2", "user-abuse", 55);
+
+    const arg = createMock.mock.calls[0][0];
+    expect(arg.data.status).toBe("dismissed");
+    expect(arg.data.completedAt).toBeTruthy();
   });
 });
 
