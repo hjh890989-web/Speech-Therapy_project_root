@@ -22,6 +22,7 @@ import {
   getCurrentWeekNumber,
   previousWeek,
 } from "@/lib/weekly-report";
+import { predictNextScore } from "@/app/actions/prediction";
 import { WeeklyReportChart } from "./WeeklyReportChart";
 import { PrintButton } from "./PrintButton";
 import { PredictionCard } from "./PredictionCard";
@@ -113,13 +114,14 @@ export default async function ReportsPage() {
   // FR-Q-005 Scenario 4 — 직전 주 평균과 비교한 WoW delta (실 집계).
   const wowDelta = computeWeekOverWeekDelta(weekAgg, previousWeekAgg);
 
-  // FR-Q-005 Scenario 2 — 다음 주 예상 점수 (FR-C-011 통합 전 mock).
-  // mock 전략: 이번 주 종합 평균 + 5점 (가벼운 상승 가정), 100점 clamp.
-  // confidence: null 로 표시 → UI 에서 "베타" 라벨 노출. FR-C-011 통합 시 실 예측 + confidence 로 교체.
-  const currentOverallAvg =
-    (weekAgg.articulationAvg + weekAgg.linguisticAvg + weekAgg.acousticAvg) / 3;
-  const predictedNextScore = Math.min(100, currentOverallAvg + 5);
-  const predictionConfidence: number | null = null;
+  // FR-C-011 — Gemini 회귀 예측 (Server Action 호출, 4주 미만 시 null).
+  // RateLimited / Gemini 실패 시 graceful null. Client 측 PredictionCard 가 분기 렌더.
+  let initialPrediction = null;
+  try {
+    initialPrediction = await predictNextScore({ userId });
+  } catch (err) {
+    console.error("reports: predictNextScore failed", err);
+  }
 
   return (
     <PageShell year={year} weekNumber={weekNumber} sessionCount={weekAgg.sessionCount}>
@@ -151,10 +153,9 @@ export default async function ReportsPage() {
           </article>
         )}
         <PredictionCard
-          predictedScore={predictedNextScore}
-          confidence={predictionConfidence}
+          initialPrediction={initialPrediction}
           weekNumber={weekNumber}
-          isMock={true}
+          userId={userId}
         />
       </section>
 

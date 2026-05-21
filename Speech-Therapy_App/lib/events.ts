@@ -157,6 +157,24 @@ export type AnalyticsEvent =
       properties: {
         finalError: "no_speech" | "network" | "aborted" | "unknown";
       };
+    }
+  // === FR-C-011 Gemini 회귀 예측 (REQ-FUNC-045) ===
+  | {
+      // 예측 산출 완료 (Server Action 호출 후).
+      name: "prediction_calculated";
+      properties: {
+        predicted: number;
+        confidence: number;
+        cached: boolean;
+        staleFromRateLimit: boolean;
+      };
+    }
+  | {
+      // 시뮬레이션 옵션 변경 시 (missionFrequency 슬라이더).
+      name: "prediction_simulation_changed";
+      properties: {
+        missionFrequency: "low" | "normal" | "high";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
