@@ -175,6 +175,25 @@ export type AnalyticsEvent =
       properties: {
         missionFrequency: "low" | "normal" | "high";
       };
+    }
+  // === FR-Q-012 — /predictions 상세 페이지 (EXP-2 검증 핵심) ===
+  | {
+      // 페이지 mount 1회 (Strict Mode 가드).
+      name: "prediction_page_viewed";
+      properties: {
+        predicted: number;
+        confidence: number;
+        improvementDelta: number;
+      };
+    }
+  | {
+      // EXP-2 핵심 KPI — 예측 페이지에서 CTA 클릭 → /missions 이동.
+      // "예측 클릭 유저 익월 유지율 +20%p" 가설 측정용.
+      name: "prediction_cta_clicked";
+      properties: {
+        predicted: number;
+        improvementDelta: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
