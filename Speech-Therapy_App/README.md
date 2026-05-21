@@ -73,7 +73,7 @@ npm run dev             # → http://localhost:4000
 Speech-Therapy_App/
 ├── app/                          # Next.js App Router
 │   ├── (public)/                 # 무로그인 라우트 그룹
-│   │   └── diagnose/             # 5분 진단 (FR-Q-001)
+│   │   └── diagnose/             # 5분 발음 확인 (FR-Q-001)
 │   │       └── result/[sessionId]  # 또래 비교 리포트 (FR-Q-002)
 │   ├── actions/                  # Server Actions (API-001~004 stub)
 │   ├── api/                      # Route Handlers (API-005~008 stub)
@@ -163,7 +163,7 @@ Cron 핸들러는 `Authorization: Bearer ${CRON_SECRET}` 검증. Vercel Dashboar
 |---|---|---|
 | 클라이언트 측 STT | `lib/hooks/useSpeechRecognition.ts` (Web Speech API) | 브라우저 mic stream → `transcript` 문자열만 추출 |
 | Server Action 입력 차단 | `lib/schemas/diagnosis.ts` `DiagnosisInputSchema` | Zod schema 에 audio binary 필드 0개 — text/number only |
-| 진단 결과 DB | `prisma/schema.prisma` `EvaluationResult` | audio blob/path 컬럼 없음 — score + transcript hash 만 |
+| 평가 결과 DB | `prisma/schema.prisma` `EvaluationResult` | audio blob/path 컬럼 없음 — score + transcript hash 만 |
 | Storage 버킷 | Supabase Storage `audio` | Sprint 1 엔 0 objects, RLS 익명 업로드 차단 (외부 setup) |
 | Cron 폐기 | `/api/cron/audio-cleanup` | 7일 초과 객체 삭제 — Sprint 1 No-op (P2 대비 사전 구축) |
 
