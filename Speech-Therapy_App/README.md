@@ -220,6 +220,41 @@ Prisma 7 `prisma.config.ts` 가 dotenv 로 `.env` 를 로드.
 
 새 모델 추가 → `prisma/schema.prisma` 수정 → `npx prisma migrate dev --name <설명>` → git commit.
 
+### HITLQueue RLS 적용 (DB-009 §RLS / #21 잔여 — 2026-05-22)
+
+`20260522192300_add_hitl_queue_rls/migration.sql` 가 기존 HITLQueue 의 RLS 정책에 5종을 추가 (select_own / select_expert / insert_system / update_expert / delete_admin). 기존 2종 (`hitl_select_visible`, `hitl_update_assigned_expert`) 은 보존 — PG 가 같은 커맨드 다중 정책을 OR 합성.
+
+운영 적용 절차 (사용자 수동 — 자동 실행 금지):
+
+```powershell
+cd Speech-Therapy_App
+npx prisma migrate status     # 본 migration pending 확인 (drift 점검)
+npx prisma migrate deploy     # DIRECT_URL 사용, 자동 batch
+```
+
+Supabase Studio SQL Editor 검증:
+
+```sql
+SELECT polname, polcmd
+FROM pg_policy
+WHERE polrelid = 'public."HITLQueue"'::regclass
+ORDER BY polname;
+```
+
+기대 결과 — 총 7개 정책 (기존 2 + 신규 5):
+
+| 정책명 | 커맨드 | 조건 요약 |
+|---|---|---|
+| `hitl_queue_delete_admin` | DELETE | JWT role = admin |
+| `hitl_queue_insert_system` | INSERT | WITH CHECK (false) — service_role 만 우회 |
+| `hitl_queue_select_expert` | SELECT | JWT role ∈ (expert, admin, principal) |
+| `hitl_queue_select_own` | SELECT | auth.uid()::text = userId |
+| `hitl_queue_update_expert` | UPDATE | JWT role ∈ (expert, admin) |
+| `hitl_select_visible` | SELECT | 본인 userId / assignedExpertId / User.role=admin |
+| `hitl_update_assigned_expert` | UPDATE | auth.uid()::text = assignedExpertId |
+
+> **주의**: `lib/hitl.ts::enqueueForReview` 는 Prisma 의 `postgres` role 연결 (DATABASE_URL/DIRECT_URL) 로 RLS 우회. `WITH CHECK (false)` 는 Supabase JS 클라이언트 (anon/authenticated key) 의 직접 INSERT 시도만 차단 → 응용 코드 영향 0.
+
 ---
 
 ## CI (GitHub Actions)
