@@ -1,0 +1,93 @@
+{
+  "$schema": "https://raw.githubusercontent.com/GoogleChrome/lighthouse-ci/main/docs/configuration.md",
+  "_meta": {
+    "issue": "https://github.com/InterCool-Ha/Speech-Therapy_project_root/issues/70",
+    "task": "PERF-002",
+    "requirements": [
+      "REQ-NF-003 — PWA Cold Start ≤ 1.5s (FCP/LCP 모바일)",
+      "REQ-NF-005 — 보상 UI ≤ 500ms (LCP/TBT on /rewards)",
+      "REQ-FUNC-024 — 파티클 ≤ 500ms"
+    ],
+    "comment": "본 config 는 Lighthouse CI (@lhci/cli) 가 읽는다. 실제 실행/설치는 README 참고. URL 은 모두 BASE_URL 환경변수로 prefix.",
+    "form_factor_policy": "모바일 측정만 회귀 차단 기준 (REQ-NF-003 모바일 우선). desktop 은 별도 nightly 권장.",
+    "throttling_policy": "moderate 4G + 4x CPU slowdown — Vercel Hobby cold start 노이즈 흡수 위해 3회 측정 median 사용."
+  },
+  "ci": {
+    "collect": {
+      "url": [
+        "http://localhost:4000/",
+        "http://localhost:4000/diagnose",
+        "http://localhost:4000/missions",
+        "http://localhost:4000/rewards",
+        "http://localhost:4000/reports",
+        "http://localhost:4000/predictions",
+        "http://localhost:4000/status"
+      ],
+      "numberOfRuns": 3,
+      "settings": {
+        "preset": "desktop",
+        "formFactor": "mobile",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "cpuSlowdownMultiplier": 4,
+          "requestLatencyMs": 0,
+          "downloadThroughputKbps": 0,
+          "uploadThroughputKbps": 0
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+        "onlyCategories": ["performance", "accessibility", "best-practices", "seo", "pwa"],
+        "skipAudits": ["uses-http2"]
+      }
+    },
+    "assert": {
+      "assertMatrix": [
+        {
+          "matchingUrlPattern": ".*",
+          "assertions": {
+            "categories:performance": ["error", { "minScore": 0.8 }],
+            "categories:accessibility": ["warn", { "minScore": 0.9 }],
+            "categories:best-practices": ["error", { "minScore": 0.9 }],
+            "categories:seo": ["warn", { "minScore": 0.85 }],
+            "categories:pwa": ["error", { "minScore": 0.8 }],
+            "first-contentful-paint": ["error", { "maxNumericValue": 1500 }],
+            "largest-contentful-paint": ["error", { "maxNumericValue": 1500 }],
+            "total-blocking-time": ["error", { "maxNumericValue": 300 }],
+            "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
+            "speed-index": ["warn", { "maxNumericValue": 2000 }],
+            "interactive": ["warn", { "maxNumericValue": 2500 }],
+            "installable-manifest": ["error", { "minScore": 1 }],
+            "service-worker": ["error", { "minScore": 1 }]
+          }
+        },
+        {
+          "matchingUrlPattern": ".*/rewards$",
+          "_comment": "REQ-NF-005 — 보상 UI ≤ 500ms. Lighthouse 가 직접 '500ms 임계' 를 audit 하진 않으므로 LCP + TBT 를 프록시 지표로 사용.",
+          "assertions": {
+            "largest-contentful-paint": ["error", { "maxNumericValue": 500 }],
+            "total-blocking-time": ["error", { "maxNumericValue": 200 }],
+            "first-contentful-paint": ["error", { "maxNumericValue": 500 }]
+          }
+        },
+        {
+          "matchingUrlPattern": ".*/diagnose$",
+          "_comment": "REQ-NF-PERF — 진단 페이지 로드 ≤ 5s p95. cold start 기준 더 타이트하게 1.5s.",
+          "assertions": {
+            "largest-contentful-paint": ["error", { "maxNumericValue": 1500 }],
+            "interactive": ["error", { "maxNumericValue": 2500 }]
+          }
+        }
+      ]
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}
