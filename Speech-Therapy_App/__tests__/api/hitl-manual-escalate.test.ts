@@ -17,11 +17,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // Prisma mock.
 const hitlFindUniqueMock = vi.fn();
 const hitlUpdateManyMock = vi.fn();
+const txQueryRawMock = vi.fn();
+// DB-011: lib/db/with-actor.ts 가 prisma.$transaction 으로 escalate updateMany 를 감쌈.
 vi.mock("@/lib/db", () => ({
   prisma: {
     hITLQueue: {
       findUnique: (...args: unknown[]) => hitlFindUniqueMock(...args),
       updateMany: (...args: unknown[]) => hitlUpdateManyMock(...args),
+    },
+    $transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        $queryRaw: (...args: unknown[]) => txQueryRawMock(...args),
+        hITLQueue: {
+          updateMany: (...args: unknown[]) => hitlUpdateManyMock(...args),
+        },
+      };
+      return fn(tx);
     },
   },
 }));

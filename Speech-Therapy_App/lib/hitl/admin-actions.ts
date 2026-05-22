@@ -19,8 +19,8 @@
 //
 // lib/hitl.ts 본체 수정 금지 정책 (CON-08) 준수 — 본 admin-actions 는 별도 모듈.
 
-import { prisma } from "@/lib/db";
 import { recordAudit } from "@/lib/audit";
+import { withActor } from "@/lib/db/with-actor";
 import type { AnalyticsEvent } from "@/lib/events";
 
 /** route handler 가 사용자 입력 검증 후 전달하는 정규화된 입력. */
@@ -66,30 +66,34 @@ export async function submitExpertComment(
 ): Promise<SubmitExpertCommentResult> {
   const now = new Date();
 
+  // DB-011: withActor 로 audit.actor_id GUC 주입 → AuditLog TRIGGER 가 실 expertId 캡처.
+  // 미주입 시 TRIGGER 가 'system' 폴백 — graceful (단, 본 흐름은 항상 expertId 보유).
   // Prisma update — 실패 시 throw (Prisma P2025 = row not found).
-  const updated = await prisma.hITLQueue.update({
-    where: { id: input.queueId },
-    data: {
-      expertComment: input.comment,
-      // correctedScore optional — 미포함 시 undefined 로 두면 컬럼 미수정.
-      // 명시 null 전달 의도 (보정 점수 제거) 미지원 — Sprint 1 단순화.
-      ...(input.correctedScore !== undefined
-        ? { correctedScore: input.correctedScore }
-        : {}),
-      reviewedAt: now,
-      reviewedBy: input.expertId,
-      status: "completed",
-      completedAt: now,
-    },
-    select: {
-      id: true,
-      expertComment: true,
-      correctedScore: true,
-      reviewedAt: true,
-      reviewedBy: true,
-      status: true,
-    },
-  });
+  const updated = await withActor(input.expertId, (tx) =>
+    tx.hITLQueue.update({
+      where: { id: input.queueId },
+      data: {
+        expertComment: input.comment,
+        // correctedScore optional — 미포함 시 undefined 로 두면 컬럼 미수정.
+        // 명시 null 전달 의도 (보정 점수 제거) 미지원 — Sprint 1 단순화.
+        ...(input.correctedScore !== undefined
+          ? { correctedScore: input.correctedScore }
+          : {}),
+        reviewedAt: now,
+        reviewedBy: input.expertId,
+        status: "completed",
+        completedAt: now,
+      },
+      select: {
+        id: true,
+        expertComment: true,
+        correctedScore: true,
+        reviewedAt: true,
+        reviewedBy: true,
+        status: true,
+      },
+    }),
+  );
 
   // AuditLog INSERT — graceful (recordAudit 가 내부적으로 throw 안 함).
   // 그러나 _시도_ 자체에서 예외 (예: import 시점 환경 문제) 발생 가능성 방어.

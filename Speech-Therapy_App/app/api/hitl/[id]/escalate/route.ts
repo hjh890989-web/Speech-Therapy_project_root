@@ -32,6 +32,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { withActor } from "@/lib/db/with-actor";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { recordAudit } from "@/lib/audit";
 import {
@@ -187,15 +188,19 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
   const now = new Date();
   let updateCount = 0;
   try {
-    const res = await prisma.hITLQueue.updateMany({
-      where: { id: queueId, escalatedAt: null },
-      data: {
-        status: "escalated",
-        escalatedAt: now,
-        escalatedBy: actorId,
-        escalationReason: reason,
-      },
-    });
+    // DB-011: withActor 로 audit.actor_id GUC 주입 → audit_hitl_changes TRIGGER 가
+    // 실 actorId 캡처. 미적용 시 모든 escalate audit row 가 actor='system' 으로 적재됨.
+    const res = await withActor(actorId, (tx) =>
+      tx.hITLQueue.updateMany({
+        where: { id: queueId, escalatedAt: null },
+        data: {
+          status: "escalated",
+          escalatedAt: now,
+          escalatedBy: actorId,
+          escalationReason: reason,
+        },
+      }),
+    );
     updateCount = res.count;
   } catch (err) {
     return NextResponse.json(

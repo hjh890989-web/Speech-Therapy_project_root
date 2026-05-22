@@ -19,10 +19,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // Mocks — Prisma + Supabase server client + recordAudit
 // ============================================================================
 const hitlUpdateMock = vi.fn();
+const txQueryRawMock = vi.fn();
+// DB-011: lib/db/with-actor.ts 가 prisma.$transaction 으로 감싸므로 mock 에 $transaction 추가.
+// tx (TransactionClient) 안에서 $queryRaw (set_config) + hITLQueue.update 둘 다 호출됨.
 vi.mock("@/lib/db", () => ({
   prisma: {
     hITLQueue: {
       update: (...args: unknown[]) => hitlUpdateMock(...args),
+    },
+    $transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        $queryRaw: (...args: unknown[]) => txQueryRawMock(...args),
+        hITLQueue: {
+          update: (...args: unknown[]) => hitlUpdateMock(...args),
+        },
+      };
+      return fn(tx);
     },
   },
 }));
@@ -106,6 +118,8 @@ beforeEach(() => {
   recordAuditMock.mockReset();
   recordAuditMock.mockResolvedValue(undefined);
   hitlUpdateMock.mockResolvedValue(defaultUpdateRow());
+  txQueryRawMock.mockReset();
+  txQueryRawMock.mockResolvedValue([{ set_config: "" }]);
 });
 
 afterEach(() => {
