@@ -12,6 +12,22 @@
     {
       "path": "/api/cron/hitl-monitor",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/audio-cleanup",
+      "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/cron/weekly-reports",
+      "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/cron/consent-reminder",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/error-monitor",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

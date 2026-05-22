@@ -131,15 +131,24 @@ Speech-Therapy_App/
 
 ### Cron Jobs (INFRA-002)
 
-| Path | Schedule | 책임 | 활성 |
-|---|---|---|---|
-| `/api/cron/hitl-monitor` | `0 0 * * *` (매일 0시 UTC) | HITL 24h+ pending → escalated + Slack alert | ✅ Hobby |
-| `/api/cron/weekly-reports` | `0 3 * * 0` (일요일 3시 UTC) | 주간 리포트 집계 → upsert | 🟡 Pro 권장 |
-| `/api/cron/audio-cleanup` | `0 3 * * 0` | 음성 7일 폐기 (D6 — Sprint 1 No-op) | 🟡 Pro 권장 |
-| `/api/cron/consent-reminder` | `0 9 * * *` | D+3 동의서 미서명 리마인더 (P2 stub) | 🟡 Pro 권장 |
+`vercel.json` `crons` 배열에 5종 모두 **등록 완료**. Hobby plan 에서는 실제 활성은 1개로 제한되며 (Vercel 측에서 첫 항목만 채택), Pro plan 전환 시 별도 코드 변경 없이 **5종 모두 자동 활성**.
 
-> **Vercel Hobby 한도**: cron 1개 + 일 단위 schedule. 현재는 `hitl-monitor` 만 매일 활성.
-> **Pro 전환 시**: `vercel.json` 의 `crons` 배열에 나머지 3개 항목 추가 + `hitl-monitor` schedule 을 `0 * * * *` (매시간) 으로 변경.
+| # | Path | Schedule | 책임 | Hobby 활성 | Pro 활성 |
+|---|---|---|---|---|---|
+| 1 | `/api/cron/hitl-monitor` | `0 0 * * *` (매일 0시 UTC) | HITL 24h+ pending → escalated + Slack alert | ✅ | ✅ (필요 시 `0 * * * *` 매시간으로 변경) |
+| 2 | `/api/cron/audio-cleanup` | `0 3 * * 0` (일요일 3시 UTC) | 음성 7일 폐기 (D6 — Sprint 1 No-op) | ❌ (등록만) | ✅ |
+| 3 | `/api/cron/weekly-reports` | `0 3 * * 0` (일요일 3시 UTC) | 주간 리포트 집계 → upsert | ❌ (등록만) | ✅ |
+| 4 | `/api/cron/consent-reminder` | `0 9 * * *` (매일 9시 UTC) | D+3 동의서 미서명 리마인더 (P2 stub) | ❌ (등록만) | ✅ |
+| 5 | `/api/cron/error-monitor` | `*/5 * * * *` (5분 주기) | 에러 burst 감지 + Slack alert (MON-002) | ❌ (등록만, Hobby 시간 단위 미지원) | ✅ |
+
+> **Vercel Hobby 한도** ([공식 문서](https://vercel.com/docs/cron-jobs/usage-and-pricing)):
+> - cron **1개 슬롯** + **일 단위 schedule** 만 지원 (시간 단위 / 분 단위 미지원).
+> - 본 프로젝트는 첫 항목 (`hitl-monitor`, 매일 0시) 만 Hobby 환경에서 실행됨.
+>
+> **Vercel Pro 전환 시** ($20/월):
+> - `vercel.json` 코드 변경 **0** — 등록된 5종 cron 자동 활성.
+> - `*/5 * * * *` (error-monitor 5분 주기), `0 * * * *` (매시간) 등 fine-grained schedule 즉시 동작.
+> - 활성화 절차: ① Vercel Dashboard → Settings → Plan 에서 Pro 업그레이드, ② 다음 배포 시 자동 반영 (별도 코드 push 불필요), ③ Vercel Dashboard → Cron Jobs 탭에서 5개 항목 + Next Run 시각 확인.
 
 **Status Page**: `/status` — 사용자 가시화용 서비스 운영 상태 페이지 (MON-004, REQ-NF-007).
 
