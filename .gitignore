@@ -32,6 +32,10 @@ Speech-Therapy_App/skills/
 # 정리 작업 임시 백업 (안전 확인 후 사용자가 직접 삭제)
 .git_backup/
 
+# Claude Code Agent 병렬 worktree 디렉토리 (cherry-pick + cleanup 후 잔존 file 무시).
+# Git 측 bookkeeping 은 `git worktree remove` 로 정리되지만 file system 잔존 가능.
+.claude/worktrees/
+
 # === Next.js 앱 (Speech-Therapy_App) ===
 # 의존성
 Speech-Therapy_App/node_modules/
