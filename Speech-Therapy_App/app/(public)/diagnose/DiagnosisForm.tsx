@@ -15,6 +15,7 @@ import { useNetworkAware } from "@/lib/hooks/useNetworkAware";
 import { useAudioAnalyzer } from "@/lib/hooks/useAudioAnalyzer";
 import type { AcousticFeatures } from "@/lib/audio/analyzer";
 import { useSplMeter } from "@/lib/audio/useSplMeter";
+import { MicStreamProvider } from "@/lib/audio/MicStreamProvider";
 import { SplToast } from "@/components/SplToast";
 import { analyzeDiagnosis } from "@/app/actions/diagnosis";
 import { trackEvent } from "@/lib/analytics";
@@ -49,7 +50,20 @@ const PROGRESS_STAGES: ReadonlyArray<{ ms: number; label: string }> = [
   { ms: 9_000, label: "조금만 더 기다려 주세요..." },
 ];
 
+/**
+ * #106 후속 — useAudioAnalyzer + useSplMeter 가 단일 mic stream 공유.
+ * MicStreamProvider 가 reference-counted getUserMedia 호출 / cleanup 을 단일화.
+ * SpeechRecognition 은 Web Speech API 자체 mic 관리 → 본 Provider scope 밖.
+ */
 export function DiagnosisForm() {
+  return (
+    <MicStreamProvider>
+      <DiagnosisFormInner />
+    </MicStreamProvider>
+  );
+}
+
+function DiagnosisFormInner() {
   const router = useRouter();
   const [childAgeMonths, setChildAgeMonths] = useState(36);
   const [targetPhoneme, setTargetPhoneme] = useState<(typeof PHONEMES)[number]>("ㅅ");

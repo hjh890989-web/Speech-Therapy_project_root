@@ -24,6 +24,11 @@
 //   - 트레이드오프: FFT 분석 비용 ~2x, time-domain 버퍼 메모리 ~2x
 //     (AnalyserNode.fftSize 상한 32768 → 여유 충분, sample interval 50ms 내 처리 가능)
 //   - Option B (autocorrelation / YIN) 및 Option C (실데이터 N≥20 검증) 는 별도 후속 작업.
+//
+// #106 후속 refactor (2026-05-22):
+//   - createAudioAnalyzer({ externalStream }) — MicStreamProvider 가 제공한 공유 stream 사용 지원.
+//   - external stream 사용 시 analyzer 가 stream 을 소유하지 않으므로 teardown 시 tracks.stop 호출 안 함.
+//   - 기존 호출처 (DiagnosisForm) 는 externalStream 미전달 시 legacy 직접 getUserMedia 경로 유지.
 const FFT_SIZE = 4096;
 const SAMPLE_INTERVAL_MS = 50; // 초당 20회
 const MIN_PITCH_HZ = 80;
@@ -51,15 +56,33 @@ export function isAudioAnalysisSupported(): boolean {
   return Boolean(w.AudioContext ?? w.webkitAudioContext);
 }
 
+/** #106 — AudioContext 단독 지원 검사 (외부 stream 주입 경로용). */
+export function isAudioContextOnlySupported(): boolean {
+  if (typeof window === "undefined") return false;
+  const w = window as unknown as AudioContextWindow;
+  return Boolean(w.AudioContext ?? w.webkitAudioContext);
+}
+
 export interface AudioAnalyzer {
   start(): Promise<void>;
   stop(): AcousticFeatures;
   cancel(): void;
 }
 
-export function createAudioAnalyzer(): AudioAnalyzer {
+export interface CreateAudioAnalyzerOptions {
+  /**
+   * #106 — 외부에서 주입한 MediaStream (MicStreamProvider 공유 경로).
+   * 제공 시 analyzer 는 stream 을 소유하지 않음 → teardown 에서 tracks.stop 호출 안 함.
+   * 미제공 시 legacy 경로로 직접 getUserMedia 호출.
+   */
+  externalStream?: MediaStream | null;
+}
+
+export function createAudioAnalyzer(options: CreateAudioAnalyzerOptions = {}): AudioAnalyzer {
   let audioContext: AudioContext | null = null;
   let stream: MediaStream | null = null;
+  // owned: true → teardown 시 tracks.stop 호출. external stream 인 경우 false.
+  let streamOwned = false;
   let analyser: AnalyserNode | null = null;
   let sampleInterval: ReturnType<typeof setInterval> | null = null;
   let pitchSamples: number[] = [];
@@ -72,10 +95,11 @@ export function createAudioAnalyzer(): AudioAnalyzer {
       clearInterval(sampleInterval);
       sampleInterval = null;
     }
-    if (stream) {
+    if (stream && streamOwned) {
       stream.getTracks().forEach((t) => t.stop());
-      stream = null;
     }
+    stream = null;
+    streamOwned = false;
     if (audioContext) {
       audioContext.close().catch(() => {
         /* 이미 닫힌 컨텍스트 — 무시 */
@@ -92,7 +116,14 @@ export function createAudioAnalyzer(): AudioAnalyzer {
     const Ctx = w.AudioContext ?? w.webkitAudioContext;
     if (!Ctx) throw new Error("AudioAnalyzer: AudioContext not supported");
 
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (options.externalStream) {
+      // 외부 주입 stream — MicStreamProvider 가 lifecycle 책임. teardown 시 tracks.stop 호출 안 함.
+      stream = options.externalStream;
+      streamOwned = false;
+    } else {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamOwned = true;
+    }
     audioContext = new Ctx();
     if (audioContext.state === "suspended") {
       await audioContext.resume();
