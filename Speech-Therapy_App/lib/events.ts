@@ -207,6 +207,16 @@ export type AnalyticsEvent =
         surface: "result" | "reward" | "weekly_report";
       };
     }
+  // === FR-Q-011 — ROI 시뮬레이터 (Issue #52 / REQ-FUNC-048) ===
+  | {
+      // 슬라이더 변경 또는 첫 산출 시 발송. 입력 + 산출 매출 함께 기록.
+      name: "roi_simulated";
+      properties: {
+        studentCount: number;
+        monthlyFee: number;
+        monthlyRevenue: number;
+      };
+    }
   // === MON-002 — STT/Gemini 에러 메트릭 (REQ-NF-021/024) ===
   | {
       // STT 호출 실패 — 5분 윈도우 3% 임계.
