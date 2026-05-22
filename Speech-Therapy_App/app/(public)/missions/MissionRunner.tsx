@@ -14,6 +14,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MirrorMode } from "@/components/MirrorMode";
 import { trackEvent } from "@/lib/analytics";
 import { useMissionIntervention } from "@/lib/hooks/useMissionIntervention";
 
@@ -152,10 +153,13 @@ export function MissionRunner({
           />
         )}
         {intervention.mirrorActive && (
-          <MirrorModePlaceholder
-            targetPhoneme={targetPhoneme}
-            onClose={intervention.deactivateMirror}
-          />
+          <div data-testid="intervention-mirror">
+            <MirrorMode
+              active={true}
+              onClose={intervention.deactivateMirror}
+              referenceOverlay={phonemeToOverlay(targetPhoneme)}
+            />
+          </div>
         )}
         <div className="flex gap-2">
           <button
@@ -224,37 +228,21 @@ function ParentInterventionTooltip({
   );
 }
 
-// FR-C-006 2단계 — 거울 모드 (90s 침묵 시). Agent A 의 <MirrorMode active onClose />
-// 컴포넌트 (hooks/useMirrorMode + components/MirrorMode.tsx) merge 후 import 교체 예정.
-// 현재는 동일한 contract (active / onClose) 의 인라인 placeholder — /diagnose 진입 link 폴백.
-function MirrorModePlaceholder({
-  targetPhoneme,
-  onClose,
-}: {
-  targetPhoneme: string;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      role="status"
-      data-testid="intervention-mirror"
-      className="relative rounded-md border border-blue-200 bg-blue-50 px-4 py-3 pr-10 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100"
-    >
-      <p className="mb-2 font-medium">입 모양을 함께 보여줄까요?</p>
-      <Link
-        href={`/diagnose?phoneme=${encodeURIComponent(targetPhoneme)}`}
-        className="inline-block min-h-[36px] text-xs underline hover:no-underline"
-      >
-        발음 연습 화면 열기
-      </Link>
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="거울 모드 닫기"
-        className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-md text-blue-700 hover:bg-blue-100 dark:text-blue-200 dark:hover:bg-blue-900/40"
-      >
-        ×
-      </button>
-    </div>
-  );
+// FR-C-006 + FR-Q-014 — targetPhoneme → referenceOverlay 매핑.
+// 단순화: ㄱ/ㅅ/ㅈ 은 lips_open, ㄴ 은 lips_closed, ㄹ 은 tongue_up. 의료 도해 아님.
+function phonemeToOverlay(
+  phoneme: string,
+): "lips_open" | "lips_closed" | "tongue_up" | null {
+  switch (phoneme) {
+    case "ㄴ":
+      return "lips_closed";
+    case "ㄹ":
+      return "tongue_up";
+    case "ㄱ":
+    case "ㅅ":
+    case "ㅈ":
+      return "lips_open";
+    default:
+      return null;
+  }
 }
