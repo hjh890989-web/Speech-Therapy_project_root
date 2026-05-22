@@ -275,18 +275,39 @@ describe("SEC-003 — 동의서 전자서명 보안 검증 (XSS/length/replay/CS
       expect(PROXY_SRC).toMatch(/secure:\s*process\.env\.NODE_ENV\s*===\s*["']production["']/);
     });
 
-    it("⚠️ 후속 task — /api/consent/sign route 에 Origin 헤더 검증 부재 (단순화 1차)", () => {
-      // SEC-003 issue Scenario: SameSite cookie + Origin 헤더 검증.
-      // 현재 route.ts 는 placeholder 501 — Origin 체크 미구현. 본 sentinel 이
-      // FR-C-018 구현 시 Origin / Referer 검증 추가 강제.
-      expect(ROUTE_SRC).not.toMatch(/request\.headers\.get\(["']origin["']\)/i);
-      expect(ROUTE_SRC).not.toMatch(/request\.headers\.get\(["']referer["']\)/i);
+    it("✅ SEC-003 패치 — /api/consent/sign route 가 verifyOrigin (CSRF) 호출", () => {
+      // SEC-003 — Origin 검증 추가. route.ts 가 `lib/csrf.verifyOrigin` import +
+      // POST 진입 시 호출하는지 정적 검증. 동작 단위 테스트는 `__tests__/lib/csrf.test.ts`
+      // (node env) 에서 별도 — happy-dom 은 forbidden header (Origin/Referer) 를
+      // strip 하므로 본 happy-dom env 에서는 정적 검증 위주.
+      expect(ROUTE_SRC).toMatch(/from\s+["']@\/lib\/csrf["']/);
+      expect(ROUTE_SRC).toMatch(/verifyOrigin\s*\(\s*request\s*\)/);
     });
 
-    it("⚠️ 후속 task — CSRF token (double-submit cookie) 패턴 부재", () => {
-      // 일반 폼이라 Next.js Server Action 의 자동 CSRF 가 적용 안 됨 (Route Handler 직접 호출).
-      // 후속 task: CSRF token 헤더 + cookie 매칭 검증 추가 (혹은 Origin 검증으로 갈음).
-      expect(ROUTE_SRC).not.toMatch(/csrf/i);
+    it("✅ SEC-003 패치 — 403 CSRF_ORIGIN_MISMATCH 응답 분기 존재", () => {
+      // verifyOrigin 결과 ok=false 시 403 + error code 반환하는지 정적 검증.
+      expect(ROUTE_SRC).toMatch(/status:\s*403/);
+      expect(ROUTE_SRC).toMatch(/CSRF_ORIGIN_MISMATCH/);
+    });
+
+    it("✅ SEC-003 패치 — lib/csrf.ts 헬퍼가 Origin / Referer 모두 검사", () => {
+      // verifyOrigin 헬퍼 자체는 Origin 우선 + Referer fallback 구조여야 함.
+      const csrfSrc = readFileSync(join(PROJECT_ROOT, "lib", "csrf.ts"), "utf-8");
+      expect(csrfSrc).toMatch(/headers\.get\(["']Origin["']\)/);
+      expect(csrfSrc).toMatch(/headers\.get\(["']Referer["']\)/);
+    });
+
+    it("✅ SEC-003 패치 — lib/csrf.ts 가 환경별 분기 (production/preview/dev)", () => {
+      // SEC-004 / MON-002 패턴 — VERCEL_ENV / NODE_ENV prefix 활용.
+      const csrfSrc = readFileSync(join(PROJECT_ROOT, "lib", "csrf.ts"), "utf-8");
+      expect(csrfSrc).toMatch(/VERCEL_ENV/);
+      expect(csrfSrc).toMatch(/NODE_ENV/);
+    });
+
+    it("⚠️ 후속 task — 정식 CSRF token (double-submit cookie) 패턴 부재", () => {
+      // Origin 검증으로 일반 폼 1차 방어 완료. 본 sentinel 은 정식 token 패턴 (cookie
+      // + header 매칭) 부재 추적 — sensitive endpoint 확장 시 추가 검토.
+      expect(ROUTE_SRC).not.toMatch(/csrf[_-]?token/i);
     });
   });
 

@@ -1,13 +1,26 @@
 // API-008 — POST /api/consent/sign (E2 일반 웹폼) stub.
 // 구현은 FR-C-018 책임. 별도 /confirm 경로는 추후.
+//
+// SEC-003 — CSRF 1차 방어: Origin/Referer 헤더 검증 (lib/csrf.verifyOrigin).
+// 외부 도메인에서 POST 차단. 화이트리스트 환경 분기 (prod/preview/dev).
 
 import { NextResponse } from "next/server";
 import {
   ConsentCreateInputSchema,
   type ConsentCreateOutput,
 } from "@/lib/schemas/consent";
+import { verifyOrigin } from "@/lib/csrf";
 
 export async function POST(request: Request) {
+  // SEC-003 — CSRF Origin 검증. body parse 이전에 차단 (DoS 절약).
+  const csrf = verifyOrigin(request);
+  if (!csrf.ok) {
+    return NextResponse.json(
+      { error: csrf.reason ?? "CSRF_ORIGIN_MISMATCH" },
+      { status: 403 },
+    );
+  }
+
   // TODO: API-010 — principal / admin 역할 검증.
   let parsed;
   try {
