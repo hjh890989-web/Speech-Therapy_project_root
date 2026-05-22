@@ -131,15 +131,21 @@ Speech-Therapy_App/
 
 ### Cron Jobs (INFRA-002)
 
-`vercel.json` `crons` 배열에 5종 모두 **등록 완료**. Hobby plan 에서는 실제 활성은 1개로 제한되며 (Vercel 측에서 첫 항목만 채택), Pro plan 전환 시 별도 코드 변경 없이 **5종 모두 자동 활성**.
+`vercel.json` `crons` 배열에 6종 모두 **등록 완료**. Hobby plan 에서는 실제 활성은 1개로 제한되며 (Vercel 측에서 첫 항목만 채택), Pro plan 전환 시 별도 코드 변경 없이 **6종 모두 자동 활성**.
 
 | # | Path | Schedule | 책임 | Hobby 활성 | Pro 활성 |
 |---|---|---|---|---|---|
-| 1 | `/api/cron/hitl-monitor` | `0 0 * * *` (매일 0시 UTC) | HITL 24h+ pending → escalated + Slack alert | ✅ | ✅ (필요 시 `0 * * * *` 매시간으로 변경) |
+| 1 | `/api/cron/hitl-monitor` | `0 0 * * *` (매일 0시 UTC) | HITL 24h+ pending → escalated (bulk updateMany) + 집계 Slack alert | ✅ | ✅ (필요 시 `0 * * * *` 매시간으로 변경) |
 | 2 | `/api/cron/audio-cleanup` | `0 3 * * 0` (일요일 3시 UTC) | 음성 7일 폐기 (D6 — Sprint 1 No-op) | ❌ (등록만) | ✅ |
 | 3 | `/api/cron/weekly-reports` | `0 3 * * 0` (일요일 3시 UTC) | 주간 리포트 집계 → upsert | ❌ (등록만) | ✅ |
 | 4 | `/api/cron/consent-reminder` | `0 9 * * *` (매일 9시 UTC) | D+3 동의서 미서명 리마인더 (P2 stub) | ❌ (등록만) | ✅ |
 | 5 | `/api/cron/error-monitor` | `*/5 * * * *` (5분 주기) | 에러 burst 감지 + Slack alert (MON-002) | ❌ (등록만, Hobby 시간 단위 미지원) | ✅ |
+| 6 | `/api/cron/hitl-escalation` | `0 * * * *` (매시 정각) | HITL 24h+ per-item Slack 재알림 + escalatedAt 멱등 마킹 (FR-C-014) | ❌ (등록만, Hobby 시간 단위 미지원) | ✅ |
+
+> **hitl-monitor vs hitl-escalation 책임 분리**:
+> - `hitl-monitor` (#1, 매일 1회): bulk `updateMany` — 1쿼리 일괄 escalated 마킹 + 집계 Slack 1건 + SLA 임박 / 전문가 부담 알림.
+> - `hitl-escalation` (#6, 매시 1회): per-item `findMany` → 각 항목별 Slack 재알림 (확인 가능) → `escalatedAt IS NULL` 멱등 update.
+> - race-condition 안전: 두 cron 동일 항목 처리 시 후순위는 `WHERE escalatedAt IS NULL` 가드로 0 update (중복 Slack 위험 1회만).
 
 > **Vercel Hobby 한도** ([공식 문서](https://vercel.com/docs/cron-jobs/usage-and-pricing)):
 > - cron **1개 슬롯** + **일 단위 schedule** 만 지원 (시간 단위 / 분 단위 미지원).

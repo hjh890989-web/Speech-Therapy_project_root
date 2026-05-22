@@ -28,6 +28,10 @@
     {
       "path": "/api/cron/error-monitor",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/hitl-escalation",
+      "schedule": "0 * * * *"
     }
   ]
 }
