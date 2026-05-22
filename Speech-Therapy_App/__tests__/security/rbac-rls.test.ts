@@ -226,6 +226,7 @@ describe("SEC-002 — RBAC + RLS + Audit Log 통합", () => {
     const ALLOWED_USAGES = [
       "lib/supabase/admin.ts", // 정의 파일 자체.
       "app/api/cron/audio-cleanup/route.ts", // FR-C-004 음성 폐기 Cron.
+      "lib/audit.ts", // SEC-002 (DB-011 후속) — AuditLog INSERT helper. RLS INSERT default deny 우회 필수.
     ];
 
     it("getSupabaseAdmin import 사용처가 화이트리스트 안에만 존재", () => {
