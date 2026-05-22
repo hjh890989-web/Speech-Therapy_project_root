@@ -24,6 +24,7 @@ import { computePhoneticSimilarity } from "@/lib/phonetic-similarity";
 import { computeLinguisticScore } from "@/lib/linguistic-score";
 import { computeAcousticScore } from "@/lib/acoustic-score";
 import { enqueueForReview } from "@/lib/hitl";
+import { maybeEnqueueHitl } from "@/lib/hitl/enqueue";
 import { notifyHITLBySlack } from "@/lib/notifications/slack";
 import { getDiagnosisMock } from "@/lib/mocks/diagnosis";
 import {
@@ -176,6 +177,16 @@ export async function analyzeDiagnosis(
   } catch (err) {
     console.error("evaluation_result INSERT failed:", err);
   }
+
+  // ── FR-C-002 (#25) — confidence < 70 자동 HITL 이관 트리거 (fire-and-forget) ──
+  // 본 게이트는 articulationScore 와 별개 — FR-C-011 (Gemini 회귀) 통합 후 confidence 동적화 대비.
+  // 응답 지연 ≤ 1ms — await 하지 않음. 실패해도 응답 페이로드 영향 0.
+  void maybeEnqueueHitl({
+    userId,
+    diagnoseResultId: sessionId,
+    confidenceScore: confidence,
+    targetPhoneme: input.targetPhoneme,
+  }).catch((err) => console.error("[FR-C-002] maybeEnqueueHitl 예외:", err));
 
   const output: DiagnosisOutput = {
     sessionId,

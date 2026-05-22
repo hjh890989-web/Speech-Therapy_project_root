@@ -232,17 +232,20 @@ export type AnalyticsEvent =
         code: "gemini_rate_limited" | "gemini_429" | "gemini_timeout" | "gemini_schema_invalid" | "gemini_5xx" | "gemini_unknown";
       };
     }
-  // === API-005 / FR-C-002 — HITL 큐 등록 (서버 텔레메트리, 구조화 로그 경로) ===
+  // === API-005 (#6) + FR-C-002 (#25) — HITL 큐 등록 텔레메트리 (수동/외부 enqueue + 자동 트리거 공통) ===
   | {
-      // POST /api/hitl/queue 성공 응답 직전 emit. slackNotified 는 webhook 결과.
-      // R4 보호: 자녀 식별 정보 (anonymousUserId / email / 이름) 절대 노출 금지.
-      // properties 에는 sessionId / queueId / confidenceScore / slackNotified 만.
+      // 두 경로 공통:
+      //   1) POST /api/hitl/queue (외부 호출자 / admin 도구) 성공 직전
+      //   2) confidence < 70 자동 트리거 (lib/hitl/enqueue.ts maybeEnqueueHitl) 성공 직후
+      // R4 보호: 자녀 식별 정보 (userId / email / transcript / audioUrl / 이름) 절대 노출 금지.
+      // targetPhoneme 은 자동 트리거 경로에서만 캡처 (외부 enqueue API 입력엔 없음) — optional.
       name: "hitl_enqueued";
       properties: {
-        queueId: string;
-        sessionId: string;
-        confidenceScore: number;
+        queueId: string; // HITLQueue.id (UUID)
+        sessionId: string; // EvaluationResult.sessionId (HITLQueue.sessionId UNIQUE)
+        confidenceScore: number; // 0~100
         slackNotified: boolean;
+        targetPhoneme?: "ㄱ" | "ㄴ" | "ㅅ" | "ㅈ" | "ㄹ"; // FR-C-002 자동 트리거에서만
       };
     };
 
