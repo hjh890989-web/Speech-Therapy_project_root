@@ -33,6 +33,7 @@ import {
   buildEscalationMessage,
   findEscalationCandidates,
   ESCALATION_THRESHOLD_HOURS,
+  ESCALATION_BATCH_LIMIT,
 } from "@/lib/hitl/escalation";
 
 const ORIGINAL_CRON_SECRET = process.env.CRON_SECRET;
@@ -276,6 +277,59 @@ describe("/api/cron/hitl-escalation — DB 실패 graceful", () => {
     expect(body.escalatedCount).toBe(0);
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0].reason).toBe("concurrent_escalation_race");
+  });
+});
+
+// =============================================================================
+// [시나리오 12-14] #37 잔여 — 어뷰징 방어 보강 (batch limit / Slack rate-limit / 에러 알림)
+// =============================================================================
+describe("/api/cron/hitl-escalation — 어뷰징 방어 보강 (#37 잔여)", () => {
+  it("[시나리오 12] findEscalationCandidates take 옵션 = ESCALATION_BATCH_LIMIT (50건)", async () => {
+    hitlFindManyMock.mockResolvedValueOnce([]);
+    await findEscalationCandidates(new Date("2026-05-22T12:00:00Z"));
+    const arg = hitlFindManyMock.mock.calls[0][0] as { take: number };
+    expect(arg.take).toBe(ESCALATION_BATCH_LIMIT);
+    expect(ESCALATION_BATCH_LIMIT).toBe(50);
+  });
+
+  it("[시나리오 13] errors > 10 시 별도 운영 alert Slack 추가 호출", async () => {
+    // 12 candidates 모두 Slack 실패 → errors = 12 (임계 10 초과).
+    const candidates = Array.from({ length: 12 }, (_, i) =>
+      makeCandidate({ id: `q-${i}`, sessionId: `s-${i}` }),
+    );
+    hitlFindManyMock.mockResolvedValueOnce(candidates);
+    // 모든 Slack 호출 실패 (HTTP 500). 마지막 1회는 error alert.
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response("err", { status: 500 }));
+
+    const res = await GET(authedRequest());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.escalatedCount).toBe(0);
+    expect(body.errors.length).toBe(12);
+
+    // Slack fetch 호출 = candidates (12) + error alert (1) = 13.
+    const fetchMockRef = globalThis.fetch as ReturnType<typeof vi.fn>;
+    expect(fetchMockRef.mock.calls.length).toBeGreaterThanOrEqual(12);
+    // 마지막 호출 body 가 운영 alert 인지 검증.
+    const lastCallBody = JSON.parse(
+      (fetchMockRef.mock.calls.at(-1)![1] as RequestInit).body as string,
+    ) as { text: string };
+    expect(lastCallBody.text).toContain("HITL escalation cron 다수 실패");
+    expect(lastCallBody.text).toContain("errors: 12");
+  });
+
+  it("[시나리오 14] batchLimited 응답 키 노출 (candidates.length >= BATCH_LIMIT 시 true)", async () => {
+    // 정확히 BATCH_LIMIT 만큼 반환 → batchLimited:true.
+    const candidates = Array.from({ length: ESCALATION_BATCH_LIMIT }, (_, i) =>
+      makeCandidate({ id: `q-${i}`, sessionId: `s-${i}` }),
+    );
+    hitlFindManyMock.mockResolvedValueOnce(candidates);
+    hitlUpdateManyMock.mockResolvedValue({ count: 1 });
+
+    const res = await GET(authedRequest());
+    const body = await res.json();
+    expect(body.batchLimited).toBe(true);
+    expect(body.scannedCount).toBe(ESCALATION_BATCH_LIMIT);
   });
 });
 

@@ -2,6 +2,7 @@
 //
 // 책임:
 //   1. findEscalationCandidates() — 24h 초과 + escalatedAt IS NULL + status in (pending, in_review) 조회
+//      어뷰징 방어: BATCH_LIMIT (50) 으로 max take 제한 (DB 폭주 + Slack 폭주 방어).
 //   2. escalateItem({ item }) — Slack 재알림 + escalatedAt 마킹 (트랜잭션, all-or-nothing)
 //   3. buildEscalationMessage() / notifyEscalationBySlack() — Slack 본문 빌더
 //
@@ -31,6 +32,10 @@ import { prisma } from "@/lib/db";
 import { sendSlackMessage } from "@/lib/notifications/slack";
 
 const ESCALATION_HOURS = 24;
+
+/// 어뷰징 방어 (#37 잔여) — cron 1회 max 50건. DB 폭주 + Slack 폭주 방어.
+/// 50건 초과 시 다음 cron 주기로 자연 분산 (createdAt asc 정렬 → 가장 오래된 50건 우선).
+const BATCH_LIMIT = 50;
 
 /// FR-C-014 — 24h 초과 미처리 + 아직 escalation 안 된 큐 조회.
 /// status 후보:
@@ -67,9 +72,13 @@ export async function findEscalationCandidates(
       slaDueAt: true,
     },
     orderBy: { createdAt: "asc" },
+    take: BATCH_LIMIT,
   });
   return rows as EscalationCandidate[];
 }
+
+/// 상수 노출 (테스트 / 디버깅).
+export const ESCALATION_BATCH_LIMIT = BATCH_LIMIT;
 
 /// FR-C-014 — Slack 본문 빌더.
 /// R4: sessionId / queueId / confidence / createdAt 만 노출.

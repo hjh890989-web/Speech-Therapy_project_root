@@ -38,6 +38,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
  *   - config_change: 환경 설정 / role 변경
  *   - data_export: 사용자 데이터 export (GDPR / 개인정보보호법)
  *   - data_delete: 사용자 데이터 삭제 (계정 탈퇴 / 자녀 정보 폐기)
+ *   - hitl_manually_escalated: FR-C-014 (#37) admin 수동 에스컬레이션 — `PATCH /api/hitl/[id]/escalate`
  */
 export type AuditAction =
   | "sign_in"
@@ -47,7 +48,8 @@ export type AuditAction =
   | "reward_grant"
   | "config_change"
   | "data_export"
-  | "data_delete";
+  | "data_delete"
+  | "hitl_manually_escalated";
 
 const VALID_ACTIONS: readonly AuditAction[] = [
   "sign_in",
@@ -58,6 +60,7 @@ const VALID_ACTIONS: readonly AuditAction[] = [
   "config_change",
   "data_export",
   "data_delete",
+  "hitl_manually_escalated",
 ];
 
 /**

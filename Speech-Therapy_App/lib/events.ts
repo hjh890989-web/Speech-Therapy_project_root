@@ -282,6 +282,18 @@ export type AnalyticsEvent =
         hadCorrection: boolean;
         expertRole: "admin" | "principal" | "expert";
       };
+    }
+  // === FR-C-014 (#37 잔여) — HITL 수동 에스컬레이션 (admin 버튼 + PATCH /api/hitl/[id]/escalate) ===
+  | {
+      // admin/principal/expert 가 detail page 에서 수동으로 escalate 버튼 클릭한 시점.
+      // R4: queueId 만 노출 (sessionId / userId 미포함). reason 은 zod enum 만 허용 + 폴백 "manual".
+      // expertRole: User.role (audit log 와 분리된 별도 KPI 축 — 어떤 role 이 가장 많이 escalate?)
+      name: "hitl_manually_escalated";
+      properties: {
+        queueId: string;
+        reason: "expert_judgment" | "sla_at_risk" | "duplicate" | "manual";
+        expertRole: "admin" | "principal" | "expert";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

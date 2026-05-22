@@ -306,6 +306,10 @@ model HITLQueue {
   slaDueAt         DateTime
   /// 24h 초과 시 Cron 이 자동 마킹 (FR-C-014).
   escalatedAt      DateTime?
+  /// FR-C-014 잔여 (#37) — 수동/자동 escalation 주체 User.id (자동 cron 시 null).
+  escalatedBy      String?
+  /// FR-C-014 잔여 (#37) — 'expert_judgment' | 'sla_at_risk' | 'duplicate' | 'manual' | 'auto_cron_24h'.
+  escalationReason String?
   completedAt      DateTime?
   createdAt        DateTime   @default(now())
 
