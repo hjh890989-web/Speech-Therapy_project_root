@@ -195,6 +195,18 @@ export type AnalyticsEvent =
         improvementDelta: number;
       };
     }
+  // === FR-C-012 — 결과/보상 공유 (Replace 67-D1, REQ-FUNC-030/031) ===
+  | {
+      // 공유 버튼 클릭 → 실제 공유 수단(web_share / clipboard / unsupported) 분기 결과까지 포함.
+      // 카카오 의존성 0 (67-D1 Replace) — 실 채널은 OS share sheet / clipboard 만.
+      name: "share_clicked";
+      properties: {
+        method: "web_share" | "clipboard" | "unsupported";
+        // user cancel (AbortError) 시 false. 폴백/성공 모두 true.
+        succeeded: boolean;
+        surface: "result" | "reward" | "weekly_report";
+      };
+    }
   // === MON-002 — STT/Gemini 에러 메트릭 (REQ-NF-021/024) ===
   | {
       // STT 호출 실패 — 5분 윈도우 3% 임계.
