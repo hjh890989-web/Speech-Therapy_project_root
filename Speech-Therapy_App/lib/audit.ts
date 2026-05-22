@@ -43,6 +43,7 @@ export type AuditAction =
   | "sign_in"
   | "consent_sign"
   | "hitl_assign"
+  | "hitl_comment_added"
   | "reward_grant"
   | "config_change"
   | "data_export"
@@ -52,6 +53,7 @@ const VALID_ACTIONS: readonly AuditAction[] = [
   "sign_in",
   "consent_sign",
   "hitl_assign",
+  "hitl_comment_added",
   "reward_grant",
   "config_change",
   "data_export",

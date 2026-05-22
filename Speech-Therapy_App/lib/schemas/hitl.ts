@@ -59,3 +59,29 @@ export const HitlCommentOutputSchema = z.object({
   userNotified: z.boolean(),
 });
 export type HitlCommentOutput = z.infer<typeof HitlCommentOutputSchema>;
+
+// ============ FR-C-013 (#36): PATCH /api/hitl/[id]/comment ============
+// 위 HitlCommentInputSchema 와 분리 — 본 endpoint 는 detail page Client Component 입력 shape:
+//   - queueId 는 path param 으로 전달 (body 에 미포함)
+//   - expertId 는 Supabase auth 세션에서 추출 (body 에 미포함, 변조 방지)
+//   - groundTruthScore (3축) 대신 단일 correctedScore (선택) 사용 — 보정 점수 단순화
+
+/// Sprint 1 단순화: 본 endpoint 가 부모용 단일 종합 보정 점수만 수신.
+/// 3축 보정 (groundTruthScore JSON) 은 Supabase Studio 수동 작업으로 우회.
+export const HitlCommentPatchBodySchema = z.object({
+  expertComment: z.string().min(1).max(2_000),
+  correctedScore: z.number().int().min(0).max(100).optional(),
+});
+export type HitlCommentPatchBody = z.infer<typeof HitlCommentPatchBodySchema>;
+
+export const HitlCommentPatchResponseSchema = z.object({
+  success: z.literal(true),
+  queueId: z.string(),
+  reviewedAt: z.string().datetime(),
+  status: z.literal("completed"),
+  expertComment: z.string(),
+  correctedScore: z.number().int().nullable(),
+  /// 호출 측 디버깅 — audit INSERT 가 graceful 실패하면 false (코멘트는 저장됨).
+  auditRecorded: z.boolean(),
+});
+export type HitlCommentPatchResponse = z.infer<typeof HitlCommentPatchResponseSchema>;

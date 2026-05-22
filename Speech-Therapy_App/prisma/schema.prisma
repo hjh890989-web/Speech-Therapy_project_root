@@ -296,6 +296,12 @@ model HITLQueue {
   expertComment    String?
   /// 보정 3축 점수 {articulation, linguistic, acoustic, peerPercentile}.
   groundTruthScore Json?
+  /// FR-C-013 (#36) — 전문가 보정 단일 종합 점수 (0~100, 선택). groundTruthScore (3축) 와 보완 관계.
+  correctedScore   Int?
+  /// FR-C-013 (#36) — 검토(코멘트 PATCH) 완료 시각. completedAt 과 별도: completedAt 은 큐 라이프사이클 종료 시점.
+  reviewedAt       DateTime?
+  /// FR-C-013 (#36) — 검토 actor (Supabase auth uid). assignedExpertId 와 다를 수 있음 (admin 대리 검토).
+  reviewedBy       String?
   /// 등록 시각 + 48h (REQ-NF-012).
   slaDueAt         DateTime
   /// 24h 초과 시 Cron 이 자동 마킹 (FR-C-014).

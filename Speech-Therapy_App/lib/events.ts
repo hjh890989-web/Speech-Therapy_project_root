@@ -269,6 +269,19 @@ export type AnalyticsEvent =
         slackNotified: boolean;
         targetPhoneme?: "ㄱ" | "ㄴ" | "ㅅ" | "ㅈ" | "ㄹ"; // FR-C-002 자동 트리거에서만
       };
+    }
+  // === FR-C-013 (#36) — HITL 전문가 코멘트 PATCH 텔레메트리 ===
+  | {
+      // /api/hitl/[id]/comment PATCH 성공 직후 (DB update + audit 완료 후) 1회.
+      // R4 보호: 자녀 식별 정보 (userId / email / 코멘트 본문 / transcript) 절대 노출 금지.
+      // expertRole 은 admin / principal / expert 중 하나 (proxy.ts allow-list).
+      // hadCorrection: correctedScore 가 포함되었는지 — 보정 vs 코멘트만 분기 측정.
+      name: "hitl_comment_submitted";
+      properties: {
+        queueId: string;
+        hadCorrection: boolean;
+        expertRole: "admin" | "principal" | "expert";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
