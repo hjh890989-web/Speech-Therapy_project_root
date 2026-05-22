@@ -283,6 +283,25 @@ export type AnalyticsEvent =
         expertRole: "admin" | "principal" | "expert";
       };
     }
+  // === MON-001 (#64) — 퍼널 CVR 일간 ±20% 변동 alert (server-side cron 발송) ===
+  | {
+      // /api/cron/funnel-alert 가 단일 step 임계 초과 시 발송. 1 alert = N step items.
+      // 본 이벤트는 cron 측 telemetry 용 (Slack alert 와 별개 — Vercel Analytics 측정 X,
+      // 단 server-side telemetry sink 도입 시 사용 가능).
+      // R4: step 명 + 방향 + 변동 폭만 — userId / sessionId 0건.
+      name: "funnel_alert_triggered";
+      properties: {
+        step:
+          | "landing"
+          | "diagnose_started"
+          | "diagnose_completed"
+          | "mission_started"
+          | "mission_completed"
+          | "reward_granted";
+        direction: "up" | "down";
+        deltaPct: number;
+      };
+    }
   // === FR-C-014 (#37 잔여) — HITL 수동 에스컬레이션 (admin 버튼 + PATCH /api/hitl/[id]/escalate) ===
   | {
       // admin/principal/expert 가 detail page 에서 수동으로 escalate 버튼 클릭한 시점.
