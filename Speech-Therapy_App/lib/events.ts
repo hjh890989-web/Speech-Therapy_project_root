@@ -328,6 +328,19 @@ export type AnalyticsEvent =
         reason: "expert_judgment" | "sla_at_risk" | "duplicate" | "manual";
         expertRole: "admin" | "principal" | "expert";
       };
+    }
+  // === REQ-FUNC-007 — 60dB SPL 게이트 (환경 소음 측정 + Toast 알림) ===
+  | {
+      // useSplMeter 가 persistMs (default 5s) 동안 thresholdDb (default 60) 를 초과한 시점.
+      // surface 는 본 PR 에서 "diagnose" 만 통합 (mission 은 후속 PR — sibling Agent 충돌 회피).
+      // peakDb 는 초과 구간의 관측 최대 dB (SPL-like, splOffsetDb 보정 후). 절대 보정 X.
+      // R4 보호: raw audio / FFT data 절대 노출 금지 — 단순 카운트 + dB 메트릭만.
+      name: "noise_threshold_exceeded";
+      properties: {
+        peakDb: number;
+        durationMs: number;
+        surface: "diagnose" | "mission";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

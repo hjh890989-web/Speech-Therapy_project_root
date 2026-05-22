@@ -14,6 +14,8 @@ import { useSilenceDetection } from "@/lib/hooks/useSilenceDetection";
 import { useNetworkAware } from "@/lib/hooks/useNetworkAware";
 import { useAudioAnalyzer } from "@/lib/hooks/useAudioAnalyzer";
 import type { AcousticFeatures } from "@/lib/audio/analyzer";
+import { useSplMeter } from "@/lib/audio/useSplMeter";
+import { SplToast } from "@/components/SplToast";
 import { analyzeDiagnosis } from "@/app/actions/diagnosis";
 import { trackEvent } from "@/lib/analytics";
 
@@ -113,6 +115,43 @@ export function DiagnosisForm() {
   // - recording: audio analyzer 단독 작동 중
   // - done: features 캡처 완료, submit 가능
   const [audioPhase, setAudioPhase] = useState<AudioPhase>("idle");
+
+  // REQ-FUNC-007 — 60dB SPL 게이트 (환경 소음 측정 + Toast).
+  // 활성 조건: 동의 체크 완료 + STT/audio analyzer 미점유 + 미제출 상태.
+  //   - STT (status="listening"/"retrying") 와 동시 점유는 브라우저 충돌 위험 → SPL meter idle.
+  //   - audio analyzer phase="recording" 도 mic 점유 → SPL meter idle.
+  // 단순화 정책: 발화 시작 전 / 사이 (transcript 도착 후 ready phase) 에만 환경 노이즈 측정.
+  // 후속 PR refactor: STT 와 SPL meter 의 mic stream 공유 (현재는 별도 stream).
+  const splMeterEnabled =
+    agreed &&
+    status !== "listening" &&
+    status !== "retrying" &&
+    audioPhase !== "recording" &&
+    !isSubmitting;
+  const {
+    isOverThreshold: noiseOverThreshold,
+    peakDb: noisePeakDb,
+    overThresholdMs: noiseOverMs,
+  } = useSplMeter({ enabled: splMeterEnabled });
+  const [splToastVisible, setSplToastVisible] = useState(false);
+  const splEventFiredRef = useRef(false);
+
+  // SPL toast 트리거 — 5초 임계 도달 1회만 노출 + 이벤트 발송.
+  // dismiss 후에도 새로운 over-threshold 사이클 (overThresholdMs=0 으로 리셋 후 재진입) 시 다시 노출.
+  useEffect(() => {
+    if (noiseOverThreshold && !splEventFiredRef.current) {
+      setSplToastVisible(true);
+      trackEvent("noise_threshold_exceeded", {
+        peakDb: Math.round(noisePeakDb),
+        durationMs: noiseOverMs,
+        surface: "diagnose",
+      });
+      splEventFiredRef.current = true;
+    } else if (!noiseOverThreshold && noiseOverMs === 0) {
+      // 카운터 리셋 — 다음 over-threshold 사이클 시 재발송 허용.
+      splEventFiredRef.current = false;
+    }
+  }, [noiseOverThreshold, noisePeakDb, noiseOverMs]);
 
   // transcript 변경 시 silence 카운터 reset + STT 단계 audio_recorded 발송 (1회).
   useEffect(() => {
@@ -315,6 +354,9 @@ export function DiagnosisForm() {
         void handleSubmit();
       }}
     >
+      {/* REQ-FUNC-007 — 60dB SPL 게이트 Toast (5초 자동 닫힘 + 사용자 닫기) */}
+      <SplToast visible={splToastVisible} onDismiss={() => setSplToastVisible(false)} />
+
       {/* FR-C-007 — 오프라인 배너 */}
       {isMounted && !isOnline && (
         <div className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
