@@ -16,7 +16,7 @@
 //   6) Empty / null 입력 차단 — required 필드 누락 → 400 응답
 //   7) 부정 형식 (이메일 / 전화) — invalid format → Zod 거부 → 400 응답
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -24,6 +24,11 @@ import {
   ConsentConfirmInputSchema,
 } from "@/lib/schemas/consent";
 import { POST } from "@/app/api/consent/sign/route";
+// SEC-003 (2차) — route 가 SEC-004 ratelimit + lib/replay 와 통합되었으므로,
+// 본 sentinel 테스트가 POST 를 다수 호출할 때 in-memory 카운터가 누적되어
+// 후속 테스트가 429 / 409 를 받지 않도록 매 it 마다 격리 reset.
+import { __resetRateLimitForTest } from "@/lib/ratelimit";
+import { __resetReplayForTest } from "@/lib/replay";
 
 const PROJECT_ROOT = process.cwd();
 const SCHEMA_SRC = readFileSync(
@@ -70,6 +75,13 @@ async function postSign(body: unknown): Promise<{ status: number; payload: unkno
 }
 
 describe("SEC-003 — 동의서 전자서명 보안 검증 (XSS/length/replay/CSRF)", () => {
+  beforeEach(() => {
+    // 매 테스트 in-memory state 격리 — RPM / 일 50회 / nonce 누적이 후속 테스트에
+    // 영향 주지 않도록. (lib/csrf 는 stateless 라 reset 불필요)
+    __resetRateLimitForTest();
+    __resetReplayForTest();
+  });
+
   // ===== 시나리오 1: XSS 차단 =====
   describe("시나리오 1 — XSS 페이로드 차단", () => {
     // childNickname / signedName / parentEmail 에 XSS payload 주입.
@@ -226,12 +238,22 @@ describe("SEC-003 — 동의서 전자서명 보안 검증 (XSS/length/replay/CS
 
   // ===== 시나리오 4: Replay 공격 =====
   describe("시나리오 4 — Replay 공격 (idempotency / nonce / timestamp)", () => {
-    it("⚠️ 후속 task — ConsentConfirmInputSchema 에 nonce / idempotencyKey 필드 부재", () => {
-      // SEC-003 issue Acceptance §Scenario 4: PATCH 헤더에 nonce + DB 저장 → 재사용 차단.
-      // 현재 schema 미반영 — 단순화 모드 1차 구현은 placeholder 401 응답.
-      // 본 sentinel 이 후속 PR (FR-C-018 구현) 시 nonce 필드 추가 강제.
-      expect(SCHEMA_SRC).not.toMatch(/nonce/i);
-      expect(SCHEMA_SRC).not.toMatch(/idempotencyKey/i);
+    it("✅ SEC-003 (2차) 패치 — route.ts 가 verifyReplay + recordNonce 통합", () => {
+      // SEC-003 issue Acceptance §Scenario 4: nonce 헤더 + 저장 → 재사용 차단.
+      // 패치 후 (SEC-003 2차): lib/replay.ts in-memory nonce store (24h TTL) +
+      // route.ts 가 X-Idempotency-Key 헤더에서 nonce 추출 → verifyReplay → recordNonce.
+      // schema 변경 없이 (lib/schemas/consent.ts 불가침) 헤더 기반 idempotency 구현.
+      expect(ROUTE_SRC).toMatch(/from\s+["']@\/lib\/replay["']/);
+      expect(ROUTE_SRC).toMatch(/verifyReplay\s*\(/);
+      expect(ROUTE_SRC).toMatch(/recordNonce\s*\(/);
+      // X-Idempotency-Key 헤더 또는 nonce 추출 패턴 존재.
+      expect(ROUTE_SRC).toMatch(/idempotency[-_]?key/i);
+    });
+
+    it("✅ SEC-003 (2차) 패치 — 409 REPLAY_DETECTED 응답 분기 존재", () => {
+      // verifyReplay 결과 ok=false 시 409 + REPLAY_DETECTED 코드 반환.
+      expect(ROUTE_SRC).toMatch(/status:\s*409/);
+      expect(ROUTE_SRC).toMatch(/REPLAY_DETECTED/);
     });
 
     it("⚠️ 후속 task — ConsentConfirmInputSchema 에 client-supplied timestamp 필드 부재 (서버 시간 권위)", () => {
@@ -308,6 +330,31 @@ describe("SEC-003 — 동의서 전자서명 보안 검증 (XSS/length/replay/CS
       // Origin 검증으로 일반 폼 1차 방어 완료. 본 sentinel 은 정식 token 패턴 (cookie
       // + header 매칭) 부재 추적 — sensitive endpoint 확장 시 추가 검토.
       expect(ROUTE_SRC).not.toMatch(/csrf[_-]?token/i);
+    });
+  });
+
+  // ===== 시나리오 5b: Rate Limiter (SEC-004 통합) =====
+  describe("시나리오 5b — Rate Limiter 통합 (SEC-004 글로벌 RPM + 사용자 일 50회)", () => {
+    it("✅ SEC-003 (2차) 패치 — route.ts 가 checkRateLimit (lib/ratelimit) 호출", () => {
+      // SEC-004 통합 — 동의서 endpoint 가 SEC-004 ratelimit 글로벌/사용자 한도 통과.
+      // 정적 검증: import + 호출. 동작 단위 테스트는 __tests__/lib/ratelimit.test.ts
+      // 가 담당 (in-memory state 격리 + fake timer).
+      expect(ROUTE_SRC).toMatch(/from\s+["']@\/lib\/ratelimit["']/);
+      expect(ROUTE_SRC).toMatch(/checkRateLimit\s*\(/);
+    });
+
+    it("✅ SEC-003 (2차) 패치 — 429 RATE_LIMITED 응답 + Retry-After 헤더 분기", () => {
+      // checkRateLimit 결과 allowed=false 시 429 + retryAfterSec + Retry-After.
+      expect(ROUTE_SRC).toMatch(/status:\s*429/);
+      expect(ROUTE_SRC).toMatch(/RATE_LIMITED/);
+      expect(ROUTE_SRC).toMatch(/Retry-After/i);
+      expect(ROUTE_SRC).toMatch(/retryAfterSec/);
+    });
+
+    it("✅ SEC-003 (2차) 패치 — userId 추출 (anonymous_user_id cookie 우선 + IP fallback)", () => {
+      // RateLimit 키 = anonymous_user_id (proxy.ts 가 발급 보장) → 부재 시 IP.
+      expect(ROUTE_SRC).toMatch(/ANONYMOUS_USER_COOKIE|anonymous_user_id/);
+      expect(ROUTE_SRC).toMatch(/x-forwarded-for/i);
     });
   });
 
@@ -431,13 +478,17 @@ describe("SEC-003 — 동의서 전자서명 보안 검증 (XSS/length/replay/CS
   // ===== 후속 task 트래킹 (INFO) =====
   describe("보안 결함 회귀 sentinel — 후속 task 트래킹", () => {
     it("INFO — 본 PR 범위 외 후속 task", () => {
-      // 1) Zod transform 단계 DOMPurify/sanitize-html 통합 — XSS 짧은 payload 방어
-      // 2) Confirm endpoint 의 nonce 헤더 + DB 별도 저장 (replay 차단)
-      // 3) /api/consent/sign route 에 Origin 헤더 검증 (CSRF 1차 방어)
-      // 4) Rate Limiter (Upstash) — IP 당 1분 5회 / 무차별 대입 방어 (SEC-004 통합)
-      // 5) Audit Log INSERT (sign/rescind 모든 행위 → audit_log)
-      // 6) 실 침투 테스트 — sqlmap / OWASP ZAP / token 추측 (UUID 1000회)
-      // 7) 법적 효력 문서 (`docs/electronic-signature-legal.md`) — 전자서명법·개인정보보호법
+      // 1) Zod transform 단계 DOMPurify/sanitize-html 정식 통합 — XSS 단어 sanitize 강화
+      // 2) ✅ 완료 (SEC-003 2차) — /api/consent/sign 의 X-Idempotency-Key 헤더 기반
+      //    in-memory nonce store (lib/replay.ts) + 24h TTL 으로 replay 차단
+      // 3) ✅ 완료 (SEC-003 1차) — /api/consent/sign route Origin 헤더 검증
+      // 4) ✅ 완료 (SEC-003 2차) — SEC-004 ratelimit 통합 (글로벌 RPM 14 + 사용자 일 50회)
+      // 5) 정식 CSRF token (double-submit cookie) — sensitive endpoint 확장 시
+      // 6) Audit Log INSERT (sign/rescind 모든 행위 → audit_log)
+      // 7) Replay nonce 다중 인스턴스 안전 — Prisma nonce 테이블 or Upstash Redis
+      //    (현재 옵션 B in-memory: Vercel Hobby single region 가정)
+      // 8) 실 침투 테스트 — sqlmap / OWASP ZAP / token 추측 (UUID 1000회)
+      // 9) 법적 효력 문서 (`docs/electronic-signature-legal.md`) — 전자서명법·개인정보보호법
       expect(true).toBe(true);
     });
   });
