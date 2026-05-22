@@ -231,6 +231,19 @@ export type AnalyticsEvent =
       properties: {
         code: "gemini_rate_limited" | "gemini_429" | "gemini_timeout" | "gemini_schema_invalid" | "gemini_5xx" | "gemini_unknown";
       };
+    }
+  // === API-005 / FR-C-002 — HITL 큐 등록 (서버 텔레메트리, 구조화 로그 경로) ===
+  | {
+      // POST /api/hitl/queue 성공 응답 직전 emit. slackNotified 는 webhook 결과.
+      // R4 보호: 자녀 식별 정보 (anonymousUserId / email / 이름) 절대 노출 금지.
+      // properties 에는 sessionId / queueId / confidenceScore / slackNotified 만.
+      name: "hitl_enqueued";
+      properties: {
+        queueId: string;
+        sessionId: string;
+        confidenceScore: number;
+        slackNotified: boolean;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

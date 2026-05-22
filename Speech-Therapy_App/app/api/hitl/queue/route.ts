@@ -7,6 +7,7 @@
 //  3) lib/hitl.enqueueForReview (DB UPSERT, idempotent)
 //  4) notifyHITLBySlack (graceful)
 //  5) Rate Limit (in-memory, 1분 내 동일 sessionId 차단)
+//  6) 서버 텔레메트리: hitl_enqueued 구조화 로그 (lib/events.ts catalog 참조)
 
 import { NextResponse } from "next/server";
 import {
@@ -15,6 +16,22 @@ import {
 } from "@/lib/schemas/hitl";
 import { enqueueForReview } from "@/lib/hitl";
 import { notifyHITLBySlack } from "@/lib/notifications/slack";
+import type { AnalyticsEvent } from "@/lib/events";
+
+// R4 보호: 자녀 식별 정보 절대 미포함 — sessionId / queueId / confidenceScore / slackNotified 만 노출.
+function logHitlEnqueuedTelemetry(
+  properties: Extract<AnalyticsEvent, { name: "hitl_enqueued" }>["properties"],
+) {
+  // Vercel Logs / Drains 가 수집할 수 있는 구조화 JSON 로그.
+  // 브라우저 trackEvent (lib/analytics.ts) 는 서버 routes 에서 호출 불가 — 서버는 console 경로.
+  console.log(
+    JSON.stringify({
+      level: "info",
+      event: "hitl_enqueued",
+      properties,
+    }),
+  );
+}
 
 // in-memory rate limit. 단일 lambda 인스턴스 내에서만 유효 (Vercel cold start 마다 리셋).
 // Sprint 1 단순화. 본격은 SEC-004 (Redis/KV) 와 통합.
@@ -88,5 +105,14 @@ export async function POST(request: Request) {
     slaDueAt: queue.slaDueAt.toISOString(),
     slackNotified: slackResult.ok,
   };
+
+  // 6) 서버 텔레메트리 — R4 보호 (자녀 식별 정보 미노출).
+  logHitlEnqueuedTelemetry({
+    queueId: queue.id,
+    sessionId: parsed.sessionId,
+    confidenceScore: parsed.confidenceScore,
+    slackNotified: slackResult.ok,
+  });
+
   return NextResponse.json(payload, { status: 200 });
 }
