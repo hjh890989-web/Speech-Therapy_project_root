@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- FR-Q-014 (#55) — 입 모양 가이드 placeholder. 의료적 도해 아님. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="입을 살짝 다문 모양 가이드">
+  <ellipse cx="100" cy="100" rx="70" ry="45" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.85" />
+  <path d="M55 100 Q100 115 145 100" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.9" stroke-linecap="round" />
+  <text x="100" y="180" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#ffffff" fill-opacity="0.9">입을 살짝</text>
+</svg>

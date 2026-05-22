@@ -232,6 +232,28 @@ export type AnalyticsEvent =
         code: "gemini_rate_limited" | "gemini_429" | "gemini_timeout" | "gemini_schema_invalid" | "gemini_5xx" | "gemini_unknown";
       };
     }
+  // === FR-Q-014 (#55) — 카메라 거울 모드 (입 모양 가이드, 단순 self-view) ===
+  | {
+      // 거울 모드 활성화 시점 (getUserMedia 호출 직전 / 권한 prompt 직전).
+      // trigger 분기:
+      //   - "manual": 사용자가 버튼 클릭으로 직접 활성화
+      //   - "silence_intervention": FR-C-006 침묵 감지 → mirror intervention 자동 활성화 (sibling Agent C)
+      // PII 보호: 카메라 stream / 영상 frame 절대 외부 전송 금지 — 본 이벤트는 활성 카운트만.
+      name: "mirror_mode_activated";
+      properties: {
+        missionId?: string;
+        trigger: "manual" | "silence_intervention";
+      };
+    }
+  | {
+      // 카메라 권한 거부 또는 디바이스 부재 시 — 미션 진행 차단 안 함, fallback UI 노출 카운트.
+      // errorName 은 DOMException.name 매핑 (NotAllowedError / NotFoundError / other).
+      name: "mirror_mode_denied";
+      properties: {
+        missionId?: string;
+        errorName: "NotAllowedError" | "NotFoundError" | "other";
+      };
+    }
   // === API-005 (#6) + FR-C-002 (#25) — HITL 큐 등록 텔레메트리 (수동/외부 enqueue + 자동 트리거 공통) ===
   | {
       // 두 경로 공통:
