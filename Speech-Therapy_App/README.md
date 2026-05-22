@@ -216,6 +216,41 @@ Prisma 7 `prisma.config.ts` 가 dotenv 로 `.env` 를 로드.
 
 ---
 
+## CI (GitHub Actions)
+
+`.github/workflows/ci.yml` 가 모든 `push` (main / develop) + `pull_request` (main) 시 자동 실행.
+
+| Job | 검증 항목 | 활성 조건 |
+|---|---|---|
+| `quality-gate` | `tsc --noEmit` + `eslint` + `vitest run` | 항상 실행 (Node 24 + npm cache) |
+| `prisma-drift` | `npx prisma migrate status` (schema ↔ DB migration history 일치) | `DATABASE_URL` + `DIRECT_URL` secrets 등록 시에만 실행, 미설정 시 자동 skip |
+
+### prisma-drift 활성화 절차 (1회)
+
+> RewardLog RLS schema drift 같은 사고 (2026-05-22 SEC-002 sub-session) 재발 방지를 위한 게이트.
+
+1. GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+2. 다음 2개 secret 등록:
+   - `DATABASE_URL` — Supabase Transaction pooler (`?pgbouncer=true`, port 6543, 위 § 환경 변수 표와 동일 값)
+   - `DIRECT_URL` — Supabase Direct connection (port 5432, prisma migrate 전용)
+3. 다음 push / PR 부터 `prisma-drift` job 이 자동 활성. 실패 시 빌드 fail → 머지 차단 가능.
+
+### 브랜치 보호 권장 설정
+
+GitHub repo → **Settings** → **Branches** → **Branch protection rules** → `main` 추가:
+
+- ✅ Require status checks to pass before merging
+  - 필수 체크: `quality-gate (tsc + lint + vitest)`, (secrets 등록 후) `prisma-drift (migrate status)`
+- ✅ Require branches to be up to date before merging
+- ✅ Do not allow bypassing the above settings (관리자 포함)
+
+### CI 실패 시 대응
+
+- **quality-gate 실패** → 로컬 `npm run lint && npx tsc --noEmit && npm test` 재현 + 수정 후 재푸시
+- **prisma-drift 실패** → schema.prisma 와 운영 DB 의 migration history 가 어긋남. `npx prisma migrate status` 로 미적용 migration 확인 → `npx prisma migrate deploy` (운영) 또는 hotfix PR 로 schema 보정
+
+---
+
 ## Gemini Rate Limiter (SEC-004)
 
 비용 가드 + 무료 티어 보호. 구현: [`lib/ratelimit.ts`](lib/ratelimit.ts), 통합: [`lib/ai/gemini.ts`](lib/ai/gemini.ts).

@@ -1,27 +1,35 @@
-# Sprint 1 회귀 게이트 — Speech-Therapy_App 변경 시 자동 검증.
+# Speech-Therapy CI — 모든 push (main / develop) + PR (main) 시 회귀 자동 검증.
+#
+# 본 워크플로의 목적:
+#   - RewardLog RLS schema drift 같은 사고의 재발 방지 (2026-05-22 SEC-002 sub-session 학습)
+#   - 머지 전 자동 게이트 → 브랜치 보호 (별도 GitHub Settings) 와 결합 시 머지 차단
 #
 # 검증 범위:
-#   - tsc --noEmit (타입 안전)
-#   - eslint (코드 스타일 + 잠재 버그)
-#   - vitest run (단위/통합 테스트 128 케이스)
+#   quality-gate  : tsc --noEmit + eslint + vitest run
+#   prisma-drift  : prisma migrate status (DB 연결 — secrets 필요)
 #
 # 범위 외 (의도적 제외):
 #   - next build / playwright e2e — Vercel CI 가 책임 (이중 비용 회피)
 #   - 로컬 next build 는 E: 드라이브 filesystem 한계로 실패 (Linux runner 는 정상)
 #
 # 트리거:
-#   - main 브랜치 push (직접 푸시 후 회귀 검증)
-#   - PR (머지 전 게이트)
+#   - main / develop 브랜치 push (직접 푸시 후 회귀 검증)
+#   - PR (main) — 머지 전 게이트
 #   - paths 필터로 docs / 위키 / keep-warm 워크플로 변경 시 스킵
 #
 # 동시성:
 #   - 같은 ref 의 이전 실행은 자동 취소 (rebase / force-push 시 불필요한 실행 방지)
+#
+# 필요 GitHub Secrets (prisma-drift job 활성화 조건):
+#   - DATABASE_URL : Supabase Transaction pooler (?pgbouncer=true, port 6543)
+#   - DIRECT_URL   : Supabase Direct connection (port 5432) — prisma migrate 전용
+#   secrets 미설정 시 prisma-drift job 은 자동 skip (실패 아님). 등록 방법은 README 참조.
 
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - "Speech-Therapy_App/**"
       - ".github/workflows/ci.yml"
@@ -38,8 +46,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: tsc + lint + test
+  quality-gate:
+    name: quality-gate (tsc + lint + vitest)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -57,10 +65,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node 22 + npm cache
+      - name: Setup Node 24 + npm cache
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: Speech-Therapy_App/package-lock.json
 
@@ -73,5 +81,55 @@ jobs:
       - name: ESLint
         run: npm run lint
 
-      - name: Vitest (단위 + 통합 128 케이스)
+      - name: Vitest (단위 + 통합 전체)
         run: npm test
+
+  # ---------------------------------------------------------------------------
+  # prisma-drift — schema.prisma 와 운영 DB 의 migration history 일치 검증.
+  # secrets (DATABASE_URL / DIRECT_URL) 미설정 시 자동 skip → 안전한 기본값.
+  # 사용자가 GitHub Settings → Secrets and variables → Actions 에 등록 후 활성화.
+  # ---------------------------------------------------------------------------
+  prisma-drift:
+    name: prisma-drift (migrate status)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    # secrets 컨텍스트는 job-level if 에서 직접 비교 불가 → env 로 끌어내려 비교.
+    # DATABASE_URL secret 이 빈 문자열이거나 미설정이면 job 자체를 skip.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    defaults:
+      run:
+        working-directory: Speech-Therapy_App
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+    steps:
+      - name: Guard — secrets 미설정 시 조기 종료 (정상)
+        id: guard
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL }}" ] || [ -z "${{ secrets.DIRECT_URL }}" ]; then
+            echo "::warning::DATABASE_URL / DIRECT_URL secret 미설정 → prisma-drift skip. README CI 섹션 참조하여 등록 후 활성화 가능."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        if: steps.guard.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24 + npm cache
+        if: steps.guard.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: Speech-Therapy_App/package-lock.json
+
+      - name: Install dependencies (npm ci, postinstall prisma generate)
+        if: steps.guard.outputs.skip != 'true'
+        run: npm ci
+
+      - name: Prisma migrate status (drift 감지 — 실패 시 빌드 fail)
+        if: steps.guard.outputs.skip != 'true'
+        run: npx prisma migrate status
