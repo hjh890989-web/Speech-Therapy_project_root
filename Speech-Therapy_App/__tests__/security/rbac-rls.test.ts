@@ -22,10 +22,16 @@ import { join } from "node:path";
 const MIGRATIONS_DIR = join(process.cwd(), "prisma", "migrations");
 
 function readRlsMigration(): string {
+  // RLS 관련 모든 migration 을 concat — base (_enable_rls_policies) + 후속 보완 (_*_rls 또는 _rls_*).
+  // 신규 RLS migration 추가 시 자동 통합 (filename 에 'rls' 포함 + .sql 패턴).
   const dirs = readdirSync(MIGRATIONS_DIR);
-  const target = dirs.find((d) => d.endsWith("_enable_rls_policies"));
-  if (!target) throw new Error("enable_rls_policies migration 폴더 미존재");
-  return readFileSync(join(MIGRATIONS_DIR, target, "migration.sql"), "utf-8");
+  const rlsDirs = dirs
+    .filter((d) => /rls/i.test(d))
+    .sort(); // timestamp prefix 순서
+  if (rlsDirs.length === 0) throw new Error("RLS migration 폴더 미존재");
+  return rlsDirs
+    .map((d) => readFileSync(join(MIGRATIONS_DIR, d, "migration.sql"), "utf-8"))
+    .join("\n\n-- ===== migration boundary =====\n\n");
 }
 
 /** lib/ + app/ 전체에서 특정 import 토큰을 사용하는 파일 경로 수집 (test 코드 제외). */
@@ -71,7 +77,7 @@ describe("SEC-002 — RBAC + RLS + Audit Log 통합", () => {
 
   // ===== 시나리오 1: RLS 정책 coverage 매트릭스 (테이블 × 동작) =====
   describe("시나리오 1 — RLS 정책 coverage 매트릭스", () => {
-    // 9개 테이블 (RewardLog 제외 — 별도 회귀 케이스에서 다룸).
+    // 11개 테이블 (RewardLog 보완 완료 — 2026-05-22 add_reward_log_rls migration).
     // (table, requiredPolicyNames[]) — 1개 이상 존재해야 함.
     const POLICY_MATRIX: Array<{ table: string; policies: string[] }> = [
       { table: "User", policies: ["users_select_own", "users_update_own"] },
@@ -82,6 +88,7 @@ describe("SEC-002 — RBAC + RLS + Audit Log 통합", () => {
       { table: "MissionCard", policies: ["missions_select_authenticated", "missions_modify_admin"] },
       { table: "WeeklyReport", policies: ["reports_select_own"] },
       { table: "RewardProgress", policies: ["rewards_select_own", "rewards_modify_own"] },
+      { table: "RewardLog", policies: ["reward_log_select_own", "reward_log_insert_own"] },
       { table: "HITLQueue", policies: ["hitl_select_visible", "hitl_update_assigned_expert"] },
       { table: "AuditLog", policies: ["audit_select_admin"] },
     ];
@@ -333,12 +340,13 @@ describe("SEC-002 — RBAC + RLS + Audit Log 통합", () => {
 
   // ===== 보안 결함 회귀 sentinel =====
   describe("보안 결함 회귀 sentinel", () => {
-    it("⚠️ RewardLog 는 RLS 활성화 누락 (별도 후속 task 필요) — 본 sentinel 이 발견 시 알림", () => {
-      // 현재 enable_rls_policies migration 은 9 테이블만 다루며 RewardLog 는 미포함.
-      // DB-008b 가 Sprint 2 추가된 테이블이라 RLS 정책이 후행 누락 → 별도 PR 권장.
-      // 본 테스트는 negative — RewardLog 가 ENABLE RLS 가입되면 즉시 깨져 후속 task 트래킹.
-      expect(sql).not.toMatch(/ALTER TABLE "RewardLog" ENABLE ROW LEVEL SECURITY/);
-      // 후속 PR 에서 RLS 추가 시 본 케이스 .toMatch 로 교체 + matrix 에 RewardLog 등록.
+    it("✅ RewardLog RLS 활성화 완료 (2026-05-22 add_reward_log_rls migration, SEC-002 후속 보완)", () => {
+      // 초기 SEC-002 #72 (commit 227fb7f) 의 sentinel 이 RewardLog RLS 누락 발견.
+      // 즉시 보완 — 신규 migration 으로 ENABLE RLS + select/insert 정책 추가.
+      // 본 케이스 가 RewardLog RLS 회귀 (실수로 정책 제거) 즉시 노출.
+      expect(sql).toMatch(/ALTER TABLE "RewardLog" ENABLE ROW LEVEL SECURITY/);
+      expect(sql).toMatch(/CREATE POLICY\s+"reward_log_select_own"\s+ON\s+"RewardLog"/);
+      expect(sql).toMatch(/CREATE POLICY\s+"reward_log_insert_own"\s+ON\s+"RewardLog"/);
     });
 
     it("audit.uid()::text 캐스팅 패턴 강제 — uuid vs text 타입 mismatch 방어", () => {
