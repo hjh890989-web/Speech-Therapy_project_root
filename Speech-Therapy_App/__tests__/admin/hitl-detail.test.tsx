@@ -37,6 +37,8 @@ const notFoundMock = vi.fn(() => {
 });
 vi.mock("next/navigation", () => ({
   notFound: () => notFoundMock(),
+  // HitlEscalateButton (Agent B integration) 가 useRouter 사용 — refresh stub.
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
 }));
 
 vi.mock("next/link", () => ({
@@ -239,18 +241,18 @@ describe("/admin/hitl/[id] — FR-C-013 detail page", () => {
     }
   });
 
-  it("[시나리오 7] Escalate 버튼 placeholder 노출 + disabled (sibling Agent B contract)", async () => {
+  it("[시나리오 7] Escalate 버튼 실 노출 (Agent B HitlEscalateButton 통합)", async () => {
     findUniqueMock.mockResolvedValueOnce(rowBase());
 
     const ui = await HitlDetailPage(makeProps(QUEUE_ID));
     const { container } = render(ui);
 
     const btn = container.querySelector(
-      "[data-testid='hitl-detail-escalate-placeholder']",
+      "[data-testid='hitl-escalate-button']",
     ) as HTMLButtonElement | null;
     expect(btn).not.toBeNull();
-    expect(btn?.disabled).toBe(true);
-    expect(btn?.getAttribute("aria-disabled")).toBe("true");
+    // escalatedAt: null → alreadyEscalated=false → 버튼 활성화 상태.
+    expect(btn?.disabled).toBe(false);
   });
 
   it("[시나리오 8] SLA 초과 항목 강조 (rose tone)", async () => {

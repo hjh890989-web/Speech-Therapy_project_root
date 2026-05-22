@@ -35,6 +35,7 @@ import {
   truncateUserId,
 } from "@/lib/hitl/admin";
 import { HitlCommentForm } from "@/components/admin/HitlCommentForm";
+import { HitlEscalateButton } from "@/components/admin/HitlEscalateButton";
 
 export const dynamic = "force-dynamic";
 
@@ -275,21 +276,10 @@ export default async function HitlDetailPage({ params }: PageProps) {
         <p className="mb-3 text-xs">
           24시간 자동 cron 외에 검토 부담이 큰 항목은 즉시 상위 전문가로 이관 요청할 수 있어요.
         </p>
-        {/*
-          sibling Agent B 의 /api/hitl/[id]/escalate PATCH endpoint 가 같은 PR 묶음으로 도착.
-          본 placeholder 는 단순 form action (사용자가 직접 호출) — Client interactivity 는
-          Agent B 가 별도 component 로 wrap 할 예정. 본 PR 은 contract 만 노출.
-        */}
-        <button
-          type="button"
-          data-testid="hitl-detail-escalate-placeholder"
-          disabled
-          aria-disabled="true"
-          title="sibling PR: /api/hitl/[id]/escalate (Agent B)"
-          className="inline-flex min-h-[36px] cursor-not-allowed items-center rounded border border-amber-400 bg-white px-3 py-1 text-xs font-medium text-amber-700 opacity-70"
-        >
-          상위 전문가에게 에스컬레이트 (준비 중)
-        </button>
+        <HitlEscalateButton
+          queueId={row.id}
+          alreadyEscalated={row.escalatedAt !== null}
+        />
       </section>
 
       <footer className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
