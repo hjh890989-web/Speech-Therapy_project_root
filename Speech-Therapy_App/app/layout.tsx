@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { ServiceWorkerRegister } from "./sw-register";
+import { InstitutionHeader } from "@/components/InstitutionHeader";
 
 // 부팅 시 1회 환경변수 검증 — 누락 시 부팅 단계에서 throw (사용자 첫 요청 전 차단).
 // 본 import 의 side-effect (zod parse) 가 검증 트리거. ESLint 의 "unused" 회피 위해
@@ -54,6 +56,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {/* FR-Q-010 — 전역 기관 헤더. RSC + Suspense fallback 으로 ≤ 1초 렌더 보장.
+            DB / Supabase 오류 시 InstitutionHeader 내부에서 default "Speech-Therapy" 폴백. */}
+        <Suspense fallback={null}>
+          <InstitutionHeader />
+        </Suspense>
         {children}
         <ServiceWorkerRegister />
         <Analytics />
