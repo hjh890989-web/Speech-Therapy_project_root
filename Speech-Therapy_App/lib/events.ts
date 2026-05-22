@@ -270,6 +270,21 @@ export type AnalyticsEvent =
         targetPhoneme?: "ㄱ" | "ㄴ" | "ㅅ" | "ㅈ" | "ㄹ"; // FR-C-002 자동 트리거에서만
       };
     }
+  // === FR-C-010 (#33) — 주간 리포트 cron 생성 텔레메트리 ===
+  | {
+      // 매주 일요일 cron 의 사용자별 weekly_report upsert 성공 직후.
+      // R4 보호: userId 만 노출 (server-side cron 이므로 분석 백엔드에선 자동 해시 적용).
+      //   weekStart (YYYY-MM-DD) / sessionCount / wAurAchieved 만 — 자녀 식별 정보 0.
+      // 본 PR (FR-C-010) 의 cron 은 PostHog/GA 클라이언트 미사용 → console.log 로 대체하나,
+      // 향후 server-side analytics (PostHog Node SDK) 도입 시 본 카탈로그가 type-safe 표면 제공.
+      name: "weekly_report_generated";
+      properties: {
+        userId: string;
+        weekStart: string;
+        sessionCount: number;
+        wAurAchieved: boolean;
+      };
+    }
   // === FR-C-013 (#36) — HITL 전문가 코멘트 PATCH 텔레메트리 ===
   | {
       // /api/hitl/[id]/comment PATCH 성공 직후 (DB update + audit 완료 후) 1회.

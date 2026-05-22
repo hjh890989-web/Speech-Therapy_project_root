@@ -1,20 +1,25 @@
-// INFRA-002 + FR-C-010 — 주간 리포트 Cron Route Handler.
+// INFRA-002 + FR-C-010 (#33) — 주간 리포트 Cron Route Handler.
 // schedule: 매주 일요일 03:00 UTC (한국 12시) — vercel.json 의 "0 3 * * 0"
 //
 // 동작:
 //  1) Cron Secret 검증
-//  2) 지난 주의 ISO week 계산
-//  3) evaluation_results 가 있는 unique user 모두 순회
-//  4) 각 user 별 aggregateWeeklyScores → weekly_reports upsert
-//  5) 5건 이상 실패 시 Slack alert
+//  2) 지난 주의 ISO week 계산 + [weekStart, weekEnd) UTC 범위 산출
+//  3) 활성 user (evaluation_results 가 있는 unique user) 식별 → getActiveUsers
+//  4) 각 user 별 aggregateWeeklyReport → upsertWeeklyReport (멱등)
+//  5) 사용자별 실패는 graceful — failureCount 누적 + 다른 user 계속 진행
+//  6) 5건 이상 실패 시 Slack alert
+//  7) 응답: { successCount, failureCount, wAurAchievedCount, durationMs }
+//
+// 본 route 는 thin wrapper — 핵심 로직은 lib/reports/weekly-aggregator.ts.
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { verifyCronSecret } from "@/lib/cron-auth";
+import { getCurrentWeekNumber } from "@/lib/weekly-report";
 import {
-  aggregateWeeklyScores,
-  getCurrentWeekNumber,
-} from "@/lib/weekly-report";
+  getActiveUsers,
+  aggregateWeeklyReport,
+  upsertWeeklyReport,
+} from "@/lib/reports/weekly-aggregator";
 import { sendSlackMessage } from "@/lib/notifications/slack";
 
 const SLACK_ALERT_THRESHOLD = 5;
@@ -27,25 +32,21 @@ export async function GET(request: Request) {
 
   const start = Date.now();
 
-  // 지난 주의 ISO week 계산.
+  // 지난 주의 ISO week 계산 (cron 은 일요일 03:00 UTC 발화 — "지난 주" = -7d 기준 ISO 주차).
   const now = new Date();
   const lastSunday = new Date(now);
   lastSunday.setUTCDate(now.getUTCDate() - 7);
   const { year, week } = getCurrentWeekNumber(lastSunday);
 
-  // evaluation_results 가 있는 모든 unique user 추출 (지난 주 범위).
+  // 활성 user 추출 — ISO 주차 [start, end) UTC 범위.
   const weekStart = new Date(lastSunday);
   weekStart.setUTCHours(0, 0, 0, 0);
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekStart.getUTCDate() + 7);
 
-  let users: { userId: string }[] = [];
+  let userIds: string[] = [];
   try {
-    users = await prisma.evaluationResult.findMany({
-      where: { createdAt: { gte: weekStart, lt: weekEnd } },
-      select: { userId: true },
-      distinct: ["userId"],
-    });
+    userIds = await getActiveUsers(weekStart, weekEnd);
   } catch (err) {
     console.error("weekly-reports: user 조회 실패", err);
     return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
@@ -53,35 +54,22 @@ export async function GET(request: Request) {
 
   let successCount = 0;
   let failureCount = 0;
+  let wAurAchievedCount = 0;
 
-  for (const { userId } of users) {
+  for (const userId of userIds) {
     try {
-      const agg = await aggregateWeeklyScores(userId, year, week);
-      if (!agg) continue; // 데이터 부족 — skip (FR-Q-006 가 별도 처리).
-      await prisma.weeklyReport.upsert({
-        where: { userId_year_weekNumber: { userId, year, weekNumber: week } },
-        create: {
-          userId,
-          year,
-          weekNumber: week,
-          scoreTrend: agg.scoreTrend,
-          articulationAvg: agg.articulationAvg,
-          linguisticAvg: agg.linguisticAvg,
-          acousticAvg: agg.acousticAvg,
-          peerPercentileAvg: agg.peerPercentileAvg,
-          sessionCount: agg.sessionCount,
-        },
-        update: {
-          scoreTrend: agg.scoreTrend,
-          articulationAvg: agg.articulationAvg,
-          linguisticAvg: agg.linguisticAvg,
-          acousticAvg: agg.acousticAvg,
-          peerPercentileAvg: agg.peerPercentileAvg,
-          sessionCount: agg.sessionCount,
-          generatedAt: new Date(),
-        },
-      });
+      const data = await aggregateWeeklyReport({ userId, year, weekNumber: week });
+      if (!data) continue; // 0 session — skip (FR-Q-006 EmptyState 분기 책임).
+      await upsertWeeklyReport(data);
       successCount += 1;
+      if (data.wAurAchieved) wAurAchievedCount += 1;
+      // 분석 이벤트는 server-side cron 이므로 console.log 로 대체
+      // (trackEvent 는 client-side analytics — 본 cron 은 PostHog/GA 등 직접 호출 0).
+      console.log(
+        `weekly-reports: generated userId=${userId} week=${year}-W${week} ` +
+          `sessions=${data.sessionCount} wAurAchieved=${data.wAurAchieved} ` +
+          `predicted=${data.predictedNextScore ?? "null"}`,
+      );
     } catch (err) {
       failureCount += 1;
       console.error("weekly-reports: user 처리 실패", userId, err);
@@ -100,8 +88,10 @@ export async function GET(request: Request) {
     job: "weekly-reports",
     year,
     week,
+    processedUsers: userIds.length,
     successCount,
     failureCount,
+    wAurAchievedCount,
     durationMs,
   });
 }
