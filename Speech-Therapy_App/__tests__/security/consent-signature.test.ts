@@ -105,15 +105,22 @@ describe("SEC-003 — 동의서 전자서명 보안 검증 (XSS/length/replay/CS
       expect(result.success).toBe(false);
     });
 
-    it("⚠️ 후속 task — childNickname 짧은 XSS (예: '<a>') 는 max(20) 통과 (React escape 의존)", () => {
-      // sentinel: Zod 자체엔 sanitize 미적용. 짧은 <a>foo</a> 는 length 20 이하라 통과.
-      // 방어는 _렌더 측_ React 의 기본 escape (dangerouslySetInnerHTML 사용 금지) 에 의존.
-      // 후속 task: Zod transform 단계에서 DOMPurify / sanitize-html 적용 검토 (SEC-003 §확장).
-      const shortXss = "<a>x</a>"; // 8자 — max(20) 통과.
+    it("✅ SEC-003 패치 — childNickname 짧은 XSS (예: '<a>') 는 sanitize transform 으로 escape", () => {
+      // 이전 sentinel: Zod 에 sanitize 미적용 → React escape 의존.
+      // 패치 후 (SEC-003): lib/schemas/consent.ts sanitizeNickname 인라인 regex 가
+      // `<`, `>`, `&`, `"`, `'`, `javascript:` 등 위험 문자 escape (HTML entity).
+      // 별도 task: DOMPurify 정식 통합 (npm 의존성 추가).
+      const shortXss = "<a>x</a>"; // 8자 — max(20) 통과 → transform 으로 entity escape.
       const result = ConsentCreateInputSchema.safeParse(
         makeValidCreatePayload({ childNickname: shortXss }),
       );
-      expect(result.success).toBe(true); // 의도적 — 후속 task sentinel.
+      expect(result.success).toBe(true);
+      // 핵심 검증: transform 결과가 escape 된 안전한 문자열인지.
+      expect(result.success && result.data.childNickname).toBe(
+        "&lt;a&gt;x&lt;/a&gt;",
+      );
+      // 원본 XSS 토큰 (`<`, `>`) 은 결과에 없어야 함.
+      expect(result.success && result.data.childNickname).not.toMatch(/[<>]/);
     });
 
     it("signedName 의 max(50) — 50자 이내 XSS 는 통과 (renderer 측 escape 의존)", () => {
@@ -136,14 +143,14 @@ describe("SEC-003 — 동의서 전자서명 보안 검증 (XSS/length/replay/CS
       expect(result.success).toBe(false);
     });
 
-    it("⚠️ 후속 task — parentEmail 1MB 입력 (Zod email 길이 제한 없음 — RFC 5321 64자 미강제)", () => {
-      // Zod v4 email() 은 RFC local-part 64자 제약 미강제 → 1MB local part 통과.
-      // sentinel: 후속 task — parentEmail 에 .max(254) (RFC 5321 total) 추가 필요.
+    it("✅ SEC-003 패치 — parentEmail 1MB 입력 → .max(254) (RFC 5321) 거부", () => {
+      // 이전 sentinel: Zod v4 email() 은 RFC local-part 64자 제약 미강제 → 1MB 통과.
+      // 패치 후 (SEC-003): lib/schemas/consent.ts parentEmail 에 .max(254) (RFC 5321 total) 추가.
       const huge = "a".repeat(1_000_000) + "@example.com";
       const result = ConsentCreateInputSchema.safeParse(
         makeValidCreatePayload({ parentEmail: huge }),
       );
-      expect(result.success).toBe(true); // 의도적 — 후속 task sentinel.
+      expect(result.success).toBe(false);
     });
 
     it("parentPhone 100KB 입력 → regex (8-20자) 차단", () => {
