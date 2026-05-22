@@ -98,27 +98,45 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
     expect(screen.getByTestId("mission-runner-completed")).toBeInTheDocument();
   });
 
-  it("running 60s 무인터랙션 → silence intervention banner + mission_silence_intervention 발송", async () => {
+  it("running 60s 무인터랙션 → 부모 개입 tooltip + mission_silence_intervention(tooltip) 발송 (FR-C-006 1단계)", async () => {
     // durationSec 충분히 길게 (180s) 잡아 silence 60s 가 timer 종료 전에 발생하도록.
     render(<MissionRunner {...baseProps} durationSec={180} />);
     fireEvent.click(screen.getByRole("button", { name: /미션 시작/ }));
     trackMock.mockClear();
 
     await act(async () => {
-      // 60s 무인터랙션 → useSilenceDetection threshold (60_000ms) 초과.
+      // 60s 무인터랙션 → useMissionIntervention thresholdMs (60_000ms) 초과 → tooltip.
       vi.advanceTimersByTime(60_500);
       await Promise.resolve();
     });
 
-    expect(screen.getByTestId("silence-intervention")).toBeInTheDocument();
-    expect(trackMock).toHaveBeenCalledWith(
-      "mission_silence_intervention",
-      expect.objectContaining({
-        missionId: "mock-ㅅ-2",
-        silenceMs: 60_000,
-      }),
+    expect(screen.getByTestId("intervention-tooltip")).toBeInTheDocument();
+    expect(screen.queryByTestId("intervention-mirror")).not.toBeInTheDocument();
+    const tooltipCall = trackMock.mock.calls.find(
+      (c) => c[0] === "mission_silence_intervention" && c[1].intervention === "tooltip",
     );
-    const call = trackMock.mock.calls.find((c) => c[0] === "mission_silence_intervention");
-    expect(["mirror", "tooltip"]).toContain(call![1].intervention);
+    expect(tooltipCall).toBeTruthy();
+    expect(tooltipCall![1]).toMatchObject({ missionId: "mock-ㅅ-2", intervention: "tooltip" });
+  });
+
+  it("running 90s 무인터랙션 → tooltip + 거울 모드 동시 노출 + 2종 이벤트 (FR-C-006 2단계)", async () => {
+    render(<MissionRunner {...baseProps} durationSec={180} />);
+    fireEvent.click(screen.getByRole("button", { name: /미션 시작/ }));
+    trackMock.mockClear();
+
+    await act(async () => {
+      vi.advanceTimersByTime(90_500);
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("intervention-tooltip")).toBeInTheDocument();
+    expect(screen.getByTestId("intervention-mirror")).toBeInTheDocument();
+    const silenceCalls = trackMock.mock.calls.filter(
+      (c) => c[0] === "mission_silence_intervention",
+    );
+    expect(silenceCalls).toHaveLength(2);
+    const stages = silenceCalls.map((c) => c[1].intervention);
+    expect(stages).toContain("tooltip");
+    expect(stages).toContain("mirror");
   });
 });

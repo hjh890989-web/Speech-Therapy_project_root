@@ -15,7 +15,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics";
-import { useSilenceDetection, type SilenceIntervention } from "@/lib/hooks/useSilenceDetection";
+import { useMissionIntervention } from "@/lib/hooks/useMissionIntervention";
 
 type Phase = "ready" | "running" | "completed";
 type SupportedPhoneme = "ㄱ" | "ㄴ" | "ㅅ" | "ㅈ" | "ㄹ";
@@ -45,23 +45,12 @@ export function MissionRunner({
   const startTimestampRef = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // FR-Q-003 Scenario 4 — useSilenceDetection (REQ-FUNC-019).
-  // mic 불사용 — 사용자 인터랙션 부재 60s+ = 도움 필요로 해석. FR-C-006 mic 통합 시 reportSpeech 연동.
-  const handleSilenceExceeded = useCallback(
-    (intervention: SilenceIntervention) => {
-      trackEvent("mission_silence_intervention", {
-        missionId,
-        intervention,
-        silenceMs: 60_000,
-      });
-    },
-    [missionId],
-  );
-  const silence = useSilenceDetection({
+  // FR-C-006 — 미션 침묵 감지 → 2단계 intervention (60s tooltip → 90s mirror).
+  // orchestrator 가 trackEvent("mission_silence_intervention") 발화 + cooldown / reset 모두 처리.
+  // 향후 마이크 통합 (useSpeechRecognition onspeechstart) 에서 intervention.reportSpeech() 호출 예정.
+  const intervention = useMissionIntervention({
+    missionId,
     enabled: phase === "running",
-    thresholdMs: 60_000,
-    tickMs: 1000,
-    onSilenceExceeded: handleSilenceExceeded,
   });
 
   const clearTimer = useCallback(() => {
@@ -156,10 +145,16 @@ export function MissionRunner({
             style={{ width: `${progressPct}%` }}
           />
         </div>
-        {silence.intervention && (
-          <SilenceInterventionBanner
-            intervention={silence.intervention}
+        {intervention.tooltipVisible && (
+          <ParentInterventionTooltip
             targetPhoneme={targetPhoneme}
+            onDismiss={intervention.dismissTooltip}
+          />
+        )}
+        {intervention.mirrorActive && (
+          <MirrorModePlaceholder
+            targetPhoneme={targetPhoneme}
+            onClose={intervention.deactivateMirror}
           />
         )}
         <div className="flex gap-2">
@@ -198,40 +193,68 @@ export function MissionRunner({
   );
 }
 
-// FR-Q-003 Scenario 4 — 침묵 (= 60s 무인터랙션) 시 부모 개입 안내.
-// "mirror" → 거울 모드 (FR-Q-014 미구현, /diagnose 폴백). "tooltip" → 인라인 안내.
-function SilenceInterventionBanner({
-  intervention,
+// FR-C-006 1단계 — 부모 개입 툴팁 (60s 침묵 시).
+// CON-04: "치료/진단/장애" 금칙어 미사용. 친화적 코칭 카피만.
+function ParentInterventionTooltip({
   targetPhoneme,
+  onDismiss,
 }: {
-  intervention: SilenceIntervention;
   targetPhoneme: string;
+  onDismiss: () => void;
 }) {
-  if (intervention === "mirror") {
-    return (
-      <div
-        role="status"
-        data-testid="silence-intervention"
-        className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100"
-      >
-        <p className="mb-2 font-medium">입 모양을 함께 보여줄까요?</p>
-        <Link
-          href={`/diagnose?phoneme=${encodeURIComponent(targetPhoneme)}`}
-          className="inline-block min-h-[36px] text-xs underline hover:no-underline"
-        >
-          발음 연습 화면 열기
-        </Link>
-      </div>
-    );
-  }
-  // tooltip
   return (
-    <p
+    <div
       role="status"
-      data-testid="silence-intervention"
-      className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+      data-testid="intervention-tooltip"
+      className="relative rounded-md border border-amber-200 bg-amber-50 px-4 py-3 pr-10 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
     >
-      함께 천천히 입을 움직이며 발음해 보세요. 옆에서 한 번 시범을 보여주셔도 좋아요.
-    </p>
+      <p className="mb-1 font-medium">아이가 따라하기 어려워 보이면 함께 발음해 보세요</p>
+      <p className="text-xs">
+        부모님이 옆에서 천천히 &ldquo;{targetPhoneme}&rdquo; 소리를 한 번 보여주시면 큰 도움이 돼요.
+      </p>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="툴팁 닫기"
+        className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-md text-amber-700 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-900/40"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+// FR-C-006 2단계 — 거울 모드 (90s 침묵 시). Agent A 의 <MirrorMode active onClose />
+// 컴포넌트 (hooks/useMirrorMode + components/MirrorMode.tsx) merge 후 import 교체 예정.
+// 현재는 동일한 contract (active / onClose) 의 인라인 placeholder — /diagnose 진입 link 폴백.
+function MirrorModePlaceholder({
+  targetPhoneme,
+  onClose,
+}: {
+  targetPhoneme: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      data-testid="intervention-mirror"
+      className="relative rounded-md border border-blue-200 bg-blue-50 px-4 py-3 pr-10 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100"
+    >
+      <p className="mb-2 font-medium">입 모양을 함께 보여줄까요?</p>
+      <Link
+        href={`/diagnose?phoneme=${encodeURIComponent(targetPhoneme)}`}
+        className="inline-block min-h-[36px] text-xs underline hover:no-underline"
+      >
+        발음 연습 화면 열기
+      </Link>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="거울 모드 닫기"
+        className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-md text-blue-700 hover:bg-blue-100 dark:text-blue-200 dark:hover:bg-blue-900/40"
+      >
+        ×
+      </button>
+    </div>
   );
 }
