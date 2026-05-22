@@ -107,6 +107,28 @@ function mapErrorCode(error: string): SpeechRecognitionErrorCode {
   }
 }
 
+// MON-002 — SpeechRecognitionErrorCode → error-catalog SttErrorCode.
+function mapToErrorCatalog(
+  code: SpeechRecognitionErrorCode,
+): "stt_no_speech" | "stt_network" | "stt_aborted" | "stt_permission_denied" | "stt_audio_capture" | "stt_unknown" {
+  switch (code) {
+    case "no_speech":
+      return "stt_no_speech";
+    case "network":
+      return "stt_network";
+    case "aborted":
+      return "stt_aborted";
+    case "permission_denied":
+      return "stt_permission_denied";
+    case "audio_capture":
+      return "stt_audio_capture";
+    case "not_supported":
+    case "unknown":
+    default:
+      return "stt_unknown";
+  }
+}
+
 // useSyncExternalStore: subscribe 는 noop (값이 변하지 않으므로),
 // client snapshot 은 실제 window 검사, server snapshot 은 false 고정.
 const noopSubscribe = () => () => {};
@@ -193,6 +215,9 @@ export function useSpeechRecognition(options: { lang?: string } = {}): UseSpeech
           isRetryableTransient(code) ? code : "unknown";
         trackEvent("stt_retry_failed", { finalError });
       }
+      // MON-002 — 영구 오류 또는 재시도 후 실패는 메트릭 기록.
+      // 임계 윈도우 5분 / 3% (REQ-NF-021).
+      trackEvent("stt_error", { code: mapToErrorCatalog(code) });
     };
     instance.onend = () => {
       setStatus((current) => (current === "listening" ? "idle" : current));

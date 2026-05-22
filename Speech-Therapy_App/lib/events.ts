@@ -194,6 +194,21 @@ export type AnalyticsEvent =
         predicted: number;
         improvementDelta: number;
       };
+    }
+  // === MON-002 — STT/Gemini 에러 메트릭 (REQ-NF-021/024) ===
+  | {
+      // STT 호출 실패 — 5분 윈도우 3% 임계.
+      name: "stt_error";
+      properties: {
+        code: "stt_no_speech" | "stt_network" | "stt_aborted" | "stt_permission_denied" | "stt_audio_capture" | "stt_unknown";
+      };
+    }
+  | {
+      // Gemini 호출 실패 — 1시간 윈도우 5% 임계.
+      name: "gemini_error";
+      properties: {
+        code: "gemini_rate_limited" | "gemini_429" | "gemini_timeout" | "gemini_schema_invalid" | "gemini_5xx" | "gemini_unknown";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

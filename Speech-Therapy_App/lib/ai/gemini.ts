@@ -14,6 +14,8 @@ import { generateObject, generateText } from "ai";
 import type { ZodTypeAny, z } from "zod";
 
 import { checkRateLimit, recordCall, RateLimitedError } from "@/lib/ratelimit";
+import { trackError, trackSuccess } from "@/lib/error-tracking";
+import type { GeminiErrorCode } from "@/lib/error-catalog";
 export { RateLimitedError } from "@/lib/ratelimit";
 
 // gemini-2.5-flash-lite — gemini-2.5-flash 대비 thinking 모드 없음 → 응답 속도 ~50% 빠름.
@@ -66,18 +68,25 @@ export async function generateJson<S extends ZodTypeAny>(args: {
   ensureApiKey();
   if (args.userId) enforceRateLimit(args.userId);
   const model = google(args.model ?? DEFAULT_MODEL);
-  const result = await withTimeout(
-    generateObject({
-      model,
-      system: args.system,
-      prompt: args.prompt,
-      schema: args.schema,
-    }),
-  );
-  if (args.userId) recordCall(args.userId);
-  // generateObject 의 추론 타입은 InferSchema 헬퍼라 Zod output 과 한 단계 어긋남 →
-  // Zod 검증을 한 번 더 통과시켜 z.infer<S> 로 안전 확정.
-  return args.schema.parse(result.object) as z.infer<S>;
+  try {
+    const result = await withTimeout(
+      generateObject({
+        model,
+        system: args.system,
+        prompt: args.prompt,
+        schema: args.schema,
+      }),
+    );
+    if (args.userId) recordCall(args.userId);
+    // generateObject 의 추론 타입은 InferSchema 헬퍼라 Zod output 과 한 단계 어긋남 →
+    // Zod 검증을 한 번 더 통과시켜 z.infer<S> 로 안전 확정.
+    const parsed = args.schema.parse(result.object) as z.infer<S>;
+    trackSuccess("gemini");
+    return parsed;
+  } catch (err) {
+    trackError(classifyGeminiError(err));
+    throw err;
+  }
 }
 
 /// FR-C-001 §4 — Plain text 응답 (쿠션 카피 등).
@@ -91,15 +100,32 @@ export async function generatePlainText(args: {
   ensureApiKey();
   if (args.userId) enforceRateLimit(args.userId);
   const model = google(args.model ?? DEFAULT_MODEL);
-  const result = await withTimeout(
-    generateText({
-      model,
-      system: args.system,
-      prompt: args.prompt,
-    }),
-  );
-  if (args.userId) recordCall(args.userId);
-  return result.text;
+  try {
+    const result = await withTimeout(
+      generateText({
+        model,
+        system: args.system,
+        prompt: args.prompt,
+      }),
+    );
+    if (args.userId) recordCall(args.userId);
+    trackSuccess("gemini");
+    return result.text;
+  } catch (err) {
+    trackError(classifyGeminiError(err));
+    throw err;
+  }
+}
+
+/// MON-002 — Gemini 에러 분류 (error-catalog GeminiErrorCode 매핑).
+function classifyGeminiError(err: unknown): GeminiErrorCode {
+  if (err instanceof RateLimitedError) return "gemini_rate_limited";
+  if (err instanceof LLMTimeoutError) return "gemini_timeout";
+  const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase();
+  if (msg.includes("429") || msg.includes("rate limit") || msg.includes("quota")) return "gemini_429";
+  if (msg.includes("5") && /\b5\d{2}\b/.test(msg)) return "gemini_5xx";
+  if (msg.includes("schema") || msg.includes("zod") || msg.includes("invalid")) return "gemini_schema_invalid";
+  return "gemini_unknown";
 }
 
 /// 호출 전 rate-limit 검사 — 차단 시 RateLimitedError throw (Gemini 미호출 보호).
