@@ -26,6 +26,7 @@ import {
   aggregateWeeklyScores,
   type ScoreTrend,
 } from "@/lib/weekly-report";
+import { predictNextScore as predictNextScoreFromGemini } from "@/lib/predictions/gemini";
 
 // ----- W-AUR 임계값 -----
 
@@ -87,7 +88,10 @@ export interface AggregateInput {
  * 사용자 1명, 주 1회 집계.
  * - 0 session → null (호출 측에서 skip, FR-Q-006 의 긍정 메시지는 별도 RSC 분기 책임).
  * - wAurAchieved 는 sessionCount 기반 — W_AUR_MIN_SESSIONS 상수만 source of truth.
- * - predictedNextScore 는 mock 공식 ("이번 주 평균 + 5"). FR-C-011 통합 전 placeholder.
+ * - predictedNextScore 는 FR-C-011 통합 후 lib/predictions/gemini.predictNextScore 사용
+ *   (graceful — Gemini 실패 시 mock fallback 으로 항상 number 반환).
+ *   * NODE_ENV === 'test' / GEMINI_DISABLED='1' 시 mock 만 사용 — 기존 prisma mock 보존.
+ *   * prod 환경에선 직전 4주 weeklyReport 를 추가 조회하여 회귀 입력으로 사용.
  */
 export async function aggregateWeeklyReport(
   input: AggregateInput,
@@ -97,11 +101,26 @@ export async function aggregateWeeklyReport(
   if (!agg) return null;
 
   const wAurAchieved = agg.sessionCount >= W_AUR_MIN_SESSIONS;
-  const predictedNextScore = computeMockPredictedScore({
-    articulationAvg: agg.articulationAvg,
-    linguisticAvg: agg.linguisticAvg,
-    acousticAvg: agg.acousticAvg,
+
+  // FR-C-011 — Gemini 회귀 예측 (graceful fallback). 테스트 / mock 환경에서는 weekHistory 조회 skip
+  // 하여 기존 prisma.evaluationResult.findMany mock 시나리오와 충돌 회피.
+  const weekHistory = await fetchWeekHistoryForPrediction(userId);
+  const prediction = await predictNextScoreFromGemini({
+    userId,
+    // 현재 주 + 직전 주들 → Gemini 회귀 입력. 비어 있어도 graceful (mock fallback).
+    weekHistory: [
+      ...weekHistory,
+      {
+        weekNumber,
+        articulationAvg: agg.articulationAvg,
+        linguisticAvg: agg.linguisticAvg,
+        acousticAvg: agg.acousticAvg,
+        sessionCount: agg.sessionCount,
+        wAurAchieved,
+      },
+    ],
   });
+  const predictedNextScore = prediction.predicted;
 
   return {
     userId,
@@ -116,6 +135,55 @@ export async function aggregateWeeklyReport(
     wAurAchieved,
     predictedNextScore,
   };
+}
+
+/**
+ * 직전 4주 weeklyReport 조회 — Gemini 회귀 입력용.
+ * 테스트 환경 / GEMINI_DISABLED='1' / API key 미설정 시 빈 배열 반환 (Gemini 미호출 → 추가 DB 조회 절감).
+ * R4: userId 만 사용, 자녀 식별 정보 0건.
+ */
+async function fetchWeekHistoryForPrediction(userId: string): Promise<
+  Array<{
+    weekNumber: number;
+    articulationAvg: number;
+    linguisticAvg: number;
+    acousticAvg: number;
+    sessionCount: number;
+    wAurAchieved: boolean;
+  }>
+> {
+  // 강제 mock 모드면 weekHistory 불필요 (mock 은 직전 주 평균만 사용).
+  if (
+    process.env.NODE_ENV === "test" ||
+    process.env.GEMINI_DISABLED === "1" ||
+    !process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  ) {
+    return [];
+  }
+  try {
+    const recents = await prisma.weeklyReport.findMany({
+      where: { userId },
+      orderBy: { generatedAt: "desc" },
+      take: 4,
+      select: {
+        weekNumber: true,
+        articulationAvg: true,
+        linguisticAvg: true,
+        acousticAvg: true,
+        sessionCount: true,
+      },
+    });
+    return recents.map((r) => ({
+      weekNumber: r.weekNumber,
+      articulationAvg: r.articulationAvg,
+      linguisticAvg: r.linguisticAvg,
+      acousticAvg: r.acousticAvg,
+      sessionCount: r.sessionCount,
+      wAurAchieved: r.sessionCount >= W_AUR_MIN_SESSIONS,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 // ----- 멱등 upsert -----

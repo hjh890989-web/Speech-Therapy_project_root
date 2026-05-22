@@ -176,6 +176,23 @@ export type AnalyticsEvent =
         missionFrequency: "low" | "normal" | "high";
       };
     }
+  | {
+      // FR-C-011 — Gemini 실 호출이 차단/실패하여 mock 폴백으로 응답한 경우 1회.
+      // R4: userId 노출은 PII 분석 백엔드에서 자동 해시 (server-side 텔레메트리 가정).
+      // reason 매트릭스 — graceful 분기 추적 (rate_limited 비중이 높으면 quota 상향 의사결정).
+      name: "prediction_fallback_used";
+      properties: {
+        userId: string;
+        reason:
+          | "api_key_missing"
+          | "rate_limited"
+          | "api_error"
+          | "timeout"
+          | "schema_invalid"
+          | "disabled"
+          | "insufficient_history";
+      };
+    }
   // === FR-Q-012 — /predictions 상세 페이지 (EXP-2 검증 핵심) ===
   | {
       // 페이지 mount 1회 (Strict Mode 가드).
