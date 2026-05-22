@@ -15,6 +15,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MirrorMode } from "@/components/MirrorMode";
+import { SplToast } from "@/components/SplToast";
+import { MicStreamProvider } from "@/lib/audio/MicStreamProvider";
+import { useSplMeter } from "@/lib/audio/useSplMeter";
 import { trackEvent } from "@/lib/analytics";
 import { useMissionIntervention } from "@/lib/hooks/useMissionIntervention";
 
@@ -22,6 +25,11 @@ type Phase = "ready" | "running" | "completed";
 type SupportedPhoneme = "ㄱ" | "ㄴ" | "ㅅ" | "ㅈ" | "ㄹ";
 
 const SUPPORTED_PHONEMES: ReadonlyArray<SupportedPhoneme> = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"];
+
+// REQ-FUNC-007 — noise_threshold_exceeded 이벤트 cooldown.
+// useMissionIntervention 의 cooldownMs (300_000) 와 동일 정책 — 미션 1회 안에서 같은
+// SPL alert 가 spam 처럼 발화하지 않도록 보호. Toast 노출도 cooldown 안엔 skip.
+const SPL_ALERT_COOLDOWN_MS = 300_000;
 
 function isSupportedPhoneme(p: string): p is SupportedPhoneme {
   return (SUPPORTED_PHONEMES as ReadonlyArray<string>).includes(p);
@@ -35,7 +43,24 @@ export interface MissionRunnerProps {
   durationSec?: number;
 }
 
-export function MissionRunner({
+/**
+ * REQ-FUNC-007 (#106 잔여) — 미션 페이지에 환경 소음 측정 게이트 통합.
+ *
+ * MicStreamProvider 가 SPL meter (그리고 추후 audio analyzer) 의 단일 mic stream 을 공유 관리.
+ * DiagnosisForm 과 동일 패턴 — outer 컴포넌트는 Provider wrap 만 책임, 실제 로직은 Inner 가 보유.
+ *
+ * Provider scope 는 본 컴포넌트 sub-tree 한정 — 미션 종료 (phase="completed") 후에도
+ * Provider 자체는 mount 유지되지만, useSplMeter(enabled=false) → reference counter 0 → stream 종료.
+ */
+export function MissionRunner(props: MissionRunnerProps): React.JSX.Element {
+  return (
+    <MicStreamProvider>
+      <MissionRunnerInner {...props} />
+    </MicStreamProvider>
+  );
+}
+
+function MissionRunnerInner({
   missionId,
   targetPhoneme,
   difficultyLevel,
@@ -53,6 +78,47 @@ export function MissionRunner({
     missionId,
     enabled: phase === "running",
   });
+
+  // REQ-FUNC-007 — 환경 소음 SPL 게이트.
+  // 활성 조건: phase==="running" 일 때만. ready / completed → enabled=false → stream teardown.
+  // splOffsetDb 는 default 사용 — 추후 sibling Agent B 의 calibration UI 가 반영 (lib/audio/useSplMeter 본체 책임).
+  // SPL 게이트는 useMissionIntervention 과 독립 축 (90s 침묵 + 60dB 환경 소음 동시 발생 시 두 UI 모두 노출 가능).
+  const {
+    isOverThreshold: noiseOverThreshold,
+    peakDb: noisePeakDb,
+    overThresholdMs: noiseOverMs,
+  } = useSplMeter({ enabled: phase === "running", thresholdDb: 60, persistMs: 5_000 });
+
+  const [splToastVisible, setSplToastVisible] = useState(false);
+  // 본 미션 instance 안에서 마지막 SPL alert 시각 — 5분 cooldown 판정용.
+  // useMissionIntervention 의 cooldown 패턴 (useRef + Date.now) 그대로 차용.
+  // null = 한 번도 발화 안 함. setState 대신 ref 사용 — render churn 회피.
+  const splLastAlertAtRef = useRef<number | null>(null);
+  // 현재 over-threshold 사이클 안에서 이미 alert 처리했는지 — 사이클 끝 (below-threshold) 에 리셋.
+  const splAlertedThisRunRef = useRef(false);
+
+  // SPL toast 트리거 — 5초 임계 도달 1회 + 5분 cooldown 체크 + 1회 trackEvent 발송.
+  // 정책: cooldown 안엔 Toast 노출/이벤트 발송 모두 skip (한 번 알렸으면 그만).
+  useEffect(() => {
+    if (noiseOverThreshold && !splAlertedThisRunRef.current) {
+      splAlertedThisRunRef.current = true;
+      const now = Date.now();
+      const sinceLast =
+        splLastAlertAtRef.current === null ? Infinity : now - splLastAlertAtRef.current;
+      if (sinceLast >= SPL_ALERT_COOLDOWN_MS) {
+        splLastAlertAtRef.current = now;
+        setSplToastVisible(true);
+        trackEvent("noise_threshold_exceeded", {
+          peakDb: Math.round(noisePeakDb),
+          durationMs: noiseOverMs,
+          surface: "mission",
+        });
+      }
+    } else if (!noiseOverThreshold && noiseOverMs === 0) {
+      // below-threshold 사이클 진입 — 다음 over-threshold 발생 시 cooldown 재평가 허용.
+      splAlertedThisRunRef.current = false;
+    }
+  }, [noiseOverThreshold, noisePeakDb, noiseOverMs]);
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -74,6 +140,10 @@ export function MissionRunner({
         elapsedSec,
         completedReason: reason,
       });
+      // REQ-FUNC-007 — 미션 종료 시 잔여 SPL Toast 정리 + 사이클 ref 리셋.
+      // useSplMeter 는 enabled=false 전환에 따라 자동 teardown — 본 setState 는 UI 잔존 방지용.
+      setSplToastVisible(false);
+      splAlertedThisRunRef.current = false;
       setPhase("completed");
       setRemainingSec(0);
     },
@@ -111,22 +181,33 @@ export function MissionRunner({
   const mm = Math.floor(remainingSec / 60);
   const ss = remainingSec % 60;
 
+  // REQ-FUNC-007 — SPL Toast 는 phase 무관 노출 가능 위치. running 중 임계 도달 시 자동 표시.
+  // ready / completed phase 에서는 useSplMeter enabled=false 라 noiseOverThreshold 발생 자체가 없음.
+  // 단 cooldown 안에서 phase 전환 발생 시 위 useEffect 가 setSplToastVisible(false) 처리.
+  const splToast = (
+    <SplToast visible={splToastVisible} onDismiss={() => setSplToastVisible(false)} />
+  );
+
   if (phase === "ready") {
     return (
-      <button
-        type="button"
-        onClick={start}
-        className="inline-block min-h-[44px] rounded-md bg-emerald-600 px-5 py-3 text-sm font-medium text-white hover:bg-emerald-700"
-        aria-label={`미션 시작 (${durationSec}초 타이머)`}
-      >
-        미션 시작하기
-      </button>
+      <>
+        {splToast}
+        <button
+          type="button"
+          onClick={start}
+          className="inline-block min-h-[44px] rounded-md bg-emerald-600 px-5 py-3 text-sm font-medium text-white hover:bg-emerald-700"
+          aria-label={`미션 시작 (${durationSec}초 타이머)`}
+        >
+          미션 시작하기
+        </button>
+      </>
     );
   }
 
   if (phase === "running") {
     return (
       <div className="space-y-3" aria-live="polite" data-testid="mission-runner-running">
+        {splToast}
         <div className="flex items-baseline justify-between">
           <p className="text-xs text-gray-600 dark:text-gray-400">남은 시간</p>
           <p className="text-2xl font-bold tabular-nums">
@@ -184,6 +265,7 @@ export function MissionRunner({
   // completed
   return (
     <div className="space-y-3" data-testid="mission-runner-completed">
+      {splToast}
       <p className="rounded-md bg-emerald-100 px-4 py-3 text-sm text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
         잘 했어요! 발음 연습으로 별을 모아 볼까요?
       </p>
