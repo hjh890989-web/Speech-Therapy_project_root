@@ -36,6 +36,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useOptionalMicStream } from "@/lib/audio/MicStreamProvider";
+import { getCalibrationOffset } from "@/lib/audio/spl-calibration";
 
 export interface UseSplMeterArgs {
   /// true 일 때만 mic stream 점유 + 측정. false → idle.
@@ -46,9 +47,11 @@ export interface UseSplMeterArgs {
   persistMs?: number;
   /// 측정 주기 (ms). default 100.
   tickMs?: number;
-  /// SPL 보정 offset (dBFS → SPL-like 변환). default 100.
-  ///   - 노트북 빌트인 마이크 평균 가정. 디바이스별 실측 보정 권장.
-  ///   - 본 PR 에선 상수 — 후속 PR 에서 calibration UI 도입 시 동적 조정.
+  /// SPL 보정 offset (dBFS → SPL-like 변환).
+  ///   - 미지정 시 lib/audio/spl-calibration 의 getCalibrationOffset() 결과 사용
+  ///     (사용자가 /settings/calibration 에서 저장한 디바이스별 offset → localStorage).
+  ///   - 미보정 / SSR / localStorage 사용 불가 → DEFAULT_SPL_OFFSET_DB (100) 로 fallback.
+  ///   - 명시 호출 (DiagnosisForm 등 외부 호출처 포함) 시 prop 값을 우선 — 하위 호환 100%.
   splOffsetDb?: number;
 }
 
@@ -68,7 +71,8 @@ export interface UseSplMeterReturn {
 const DEFAULT_THRESHOLD_DB = 60;
 const DEFAULT_PERSIST_MS = 5_000;
 const DEFAULT_TICK_MS = 100;
-const DEFAULT_SPL_OFFSET_DB = 100;
+// Default SPL offset 은 lib/audio/spl-calibration 의 DEFAULT_OFFSET (100) 로 단일 출처화.
+// 호출 측에서 splOffsetDb 미지정 시 getCalibrationOffset() (localStorage → 100 fallback) 가 자동 활용.
 const FFT_SIZE = 1024;
 
 interface AudioContextWindow extends Window {
@@ -97,8 +101,19 @@ export function useSplMeter(args: UseSplMeterArgs): UseSplMeterReturn {
     thresholdDb = DEFAULT_THRESHOLD_DB,
     persistMs = DEFAULT_PERSIST_MS,
     tickMs = DEFAULT_TICK_MS,
-    splOffsetDb = DEFAULT_SPL_OFFSET_DB,
+    splOffsetDb,
   } = args;
+
+  // calibration default 해상: prop 명시 → 그 값 / 미지정 → localStorage (없으면 100).
+  // mount 시 1회 평가 — 본 hook 의 effect dep 으로 들어가 stream/interval 재구성 트리거.
+  // 사용자가 /settings/calibration 에서 값을 바꿔도 다음 mount/페이지 진입 시 반영.
+  const resolvedSplOffsetDb = useMemo(() => {
+    if (splOffsetDb !== undefined) return splOffsetDb;
+    // SSR 안전 — getCalibrationOffset 자체가 window 가드 + DEFAULT_OFFSET fallback.
+    return getCalibrationOffset();
+    // 의도적 single-mount 평가 — splOffsetDb prop 변경만 재계산.
+    // calibration 갱신 후 즉시 반영이 필요한 페이지는 prop 명시 또는 hook 호출 컴포넌트 remount.
+  }, [splOffsetDb]);
 
   const micCtx = useOptionalMicStream();
   const sharedMode = micCtx !== null;
@@ -267,7 +282,7 @@ export function useSplMeter(args: UseSplMeterArgs): UseSplMeterReturn {
           // dBFS 계산: rms=0 (완전 무음) 보호용 floor.
           const safeRms = Math.max(rms, 1e-7);
           const dbfs = 20 * Math.log10(safeRms);
-          const splLikeDb = dbfs + splOffsetDb;
+          const splLikeDb = dbfs + resolvedSplOffsetDb;
 
           setCurrentDb(splLikeDb);
 
@@ -317,7 +332,7 @@ export function useSplMeter(args: UseSplMeterArgs): UseSplMeterReturn {
       setOverThresholdMs(0);
       setPeakDb(-Infinity);
     };
-    // thresholdDb / persistMs / tickMs / splOffsetDb 는 tick callback 안에서 closure 로 사용 —
+    // thresholdDb / persistMs / tickMs / resolvedSplOffsetDb 는 tick callback 안에서 closure 로 사용 —
     // 변경 시 effect 재실행으로 새 stream / interval 재구성. enabled toggle 과 동일 경로.
     // sharedMode 가 활성일 땐 micCtx.stream 변경 시에도 재실행 — Provider 가 stream 재발급 시 분석기 재구성.
   }, [
@@ -327,7 +342,7 @@ export function useSplMeter(args: UseSplMeterArgs): UseSplMeterReturn {
     thresholdDb,
     persistMs,
     tickMs,
-    splOffsetDb,
+    resolvedSplOffsetDb,
     teardownResources,
   ]);
 

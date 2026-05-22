@@ -369,6 +369,18 @@ export type AnalyticsEvent =
         durationMs: number;
         surface: "diagnose" | "mission";
       };
+    }
+  // === REQ-FUNC-007 잔여 (#106) — SPL calibration UI 1회 완료 ===
+  | {
+      // /settings/calibration 에서 부모가 "이 환경으로 설정" 버튼 클릭 직후.
+      // offsetDb: 새로 저장된 splOffsetDb (60~140 clamp 후).
+      // measuredAvgDb: 5초 측정 평균 (Toast 기준 60dB 대비 사용자 환경 위치 분석).
+      // R4 보호: raw audio / FFT / userId 0건 — 단순 numeric 메트릭만.
+      name: "spl_calibration_completed";
+      properties: {
+        offsetDb: number;
+        measuredAvgDb: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
