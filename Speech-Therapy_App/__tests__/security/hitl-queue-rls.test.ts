@@ -26,11 +26,12 @@ function readHitlQueueRlsMigration(): string {
   return readFileSync(join(MIGRATIONS_DIR, target, "migration.sql"), "utf-8");
 }
 
-/** SQL 본문만 추출 — `-- ...` 한 줄 주석 제거. 패턴 카운팅 시 comment noise 제거 목적. */
+/** SQL 본문만 추출 — `-- ...` 한 줄 주석 제거. 패턴 카운팅 시 comment noise 제거 목적.
+ *  CRLF 환경에서 `$` 가 `\r` 앞에서 매칭 실패하는 이슈 회피를 위해 `$` 앵커 미사용. */
 function stripSqlComments(sql: string): string {
   return sql
-    .split("\n")
-    .map((line) => line.replace(/--.*$/, ""))
+    .split(/\r?\n/)
+    .map((line) => line.replace(/--.*/, ""))
     .join("\n");
 }
 
