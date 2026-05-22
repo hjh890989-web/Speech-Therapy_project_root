@@ -5,14 +5,16 @@
 // 변경 핵심: Gemini 텍스트 평가 → phonetic similarity (의도 vs 실현 자모 비교).
 // Web Speech API 의 STT 보정으로 사라지던 발음 차이 정보를 결정적 알고리즘으로 복원.
 //
-// 5 단계 (Sprint 1 의 §A: 쿠션 분리, §B: user upsert 병렬, §C: Slack fire-and-forget 유지):
+// 6 단계 (Sprint 1 의 §A: 쿠션 분리, §B: user upsert 병렬, §C: Slack fire-and-forget 유지):
 //  1. Zod 입력 검증 (intendedWord 필수)
 //  2. (익명 시) user upsert
 //  3. phonetic similarity 계산 → articulationScore (결정적, 즉시)
-//  4. SessionLog + EvaluationResult nested INSERT
-//  5. articulationScore < 50 → HITL 큐 등록 + Slack 알림 (fire-and-forget)
-//
-// Gemini 호출 제거 → 응답 시간 ~5~10s 추가 단축 기대.
+//  4. FR-C-002 — computeDiagnosisConfidence (Gemini swap, dormant 트리거 해제)
+//     - 실 Gemini 출력 또는 graceful fallback (3축 평균 - 분산 패널티)
+//     - test / 키 미설정 시 fallback 사용 — throw 금지 보장
+//  5. SessionLog + EvaluationResult nested INSERT
+//  6. articulationScore < 50 → HITL 큐 등록 + Slack 알림 (fire-and-forget)
+//     + maybeEnqueueHitl (confidence < 70 자동 게이트) — 이젠 실 confidence 로 작동.
 
 import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
@@ -23,10 +25,12 @@ import { compositeScore, computePeerPercentile } from "@/lib/peer-percentile";
 import { computePhoneticSimilarity } from "@/lib/phonetic-similarity";
 import { computeLinguisticScore } from "@/lib/linguistic-score";
 import { computeAcousticScore } from "@/lib/acoustic-score";
+import { computeDiagnosisConfidence } from "@/lib/diagnose/confidence";
 import { enqueueForReview } from "@/lib/hitl";
-import { maybeEnqueueHitl } from "@/lib/hitl/enqueue";
+import { maybeEnqueueHitl, HITL_CONFIDENCE_THRESHOLD } from "@/lib/hitl/enqueue";
 import { notifyHITLBySlack } from "@/lib/notifications/slack";
 import { getDiagnosisMock } from "@/lib/mocks/diagnosis";
+import { trackEvent } from "@/lib/analytics";
 import {
   DiagnosisInputSchema,
   DiagnosisOutputSchema,
@@ -114,8 +118,19 @@ export async function analyzeDiagnosis(
     input.acousticFeatures ?? null,
   );
 
-  // 결정적 알고리즘이므로 confidence 는 항상 높음 (95). HITL 트리거는 articulationScore 기반.
-  const confidence = 95;
+  // FR-C-002 (#25) — confidence Gemini swap (dormant 트리거 해제).
+  // 기존 결정적 95 하드코딩 → 실 Gemini 출력 (또는 graceful fallback) 으로 교체.
+  // computeDiagnosisConfidence 는 절대 throw 하지 않음 — test/no-key 시 fallback 공식 사용.
+  // fallback 공식: clamp(평균(3축) - (분산>=30 ? 15 : 0), 0, 100).
+  const confidenceResult = await computeDiagnosisConfidence({
+    articulationScore,
+    linguisticScore,
+    acousticScore,
+    targetPhoneme: input.targetPhoneme,
+    childAgeMonths: input.childAgeMonths,
+    userId,
+  });
+  const confidence = confidenceResult.confidence;
 
   const composite = compositeScore({
     articulationScore,
@@ -130,7 +145,12 @@ export async function analyzeDiagnosis(
 
   // ── 4단계: SessionLog + EvaluationResult nested INSERT ──────────
   // aiCushionText 는 generateCushion Server Action 이 결과 페이지 마운트 시 비동기로 채움.
-  const requiresHITL = articulationScore < HITL_SIMILARITY_THRESHOLD;
+  // FR-C-002 (#25) — requiresHITL 정확화: phonetic similarity 게이트 OR confidence < 70 게이트.
+  //   두 게이트는 OR — 어느 한쪽이라도 위반하면 응답 페이로드의 requiresHITL=true 로 노출.
+  //   confidence 트리거 실행 자체는 maybeEnqueueHitl 가 동일 임계 (< 70) 로 분기 보장.
+  const requiresHITL =
+    articulationScore < HITL_SIMILARITY_THRESHOLD ||
+    confidence < HITL_CONFIDENCE_THRESHOLD;
 
   try {
     await prisma.sessionLog.create({
@@ -179,14 +199,36 @@ export async function analyzeDiagnosis(
   }
 
   // ── FR-C-002 (#25) — confidence < 70 자동 HITL 이관 트리거 (fire-and-forget) ──
-  // 본 게이트는 articulationScore 와 별개 — FR-C-011 (Gemini 회귀) 통합 후 confidence 동적화 대비.
+  // 본 게이트는 articulationScore 와 별개 — confidence 가 Gemini swap (FR-C-002) 이후 동적이므로
+  // dormant 트리거가 실 신뢰도에 의해 정상 작동.
   // 응답 지연 ≤ 1ms — await 하지 않음. 실패해도 응답 페이로드 영향 0.
-  void maybeEnqueueHitl({
-    userId,
-    diagnoseResultId: sessionId,
-    confidenceScore: confidence,
-    targetPhoneme: input.targetPhoneme,
-  }).catch((err) => console.error("[FR-C-002] maybeEnqueueHitl 예외:", err));
+  //
+  // 중복 호출 방지: 위 5단계 (articulation < 50) 에서 이미 enqueueForReview + Slack 발송 완료한 경우
+  // maybeEnqueueHitl 의 추가 호출은 DB 측 UNIQUE 멱등성으로 update no-op 이지만 Slack 중복 알림 발생.
+  // → articulation 게이트가 이미 발화했다면 confidence 게이트는 skip (동일 sessionId, 동일 큐).
+  const articulationGateFired = articulationScore < HITL_SIMILARITY_THRESHOLD;
+  if (!articulationGateFired) {
+    void maybeEnqueueHitl({
+      userId,
+      diagnoseResultId: sessionId,
+      confidenceScore: confidence,
+      targetPhoneme: input.targetPhoneme,
+    }).catch((err) => console.error("[FR-C-002] maybeEnqueueHitl 예외:", err));
+  }
+
+  // ── FR-C-002 텔레메트리 — confidence < 70 분기 (Gemini vs fallback 분기 추적) ──
+  // 본 이벤트는 dormant 해제 비율 측정용. R4 보호: 자녀 식별 정보 미포함.
+  // trackEvent 는 dev console.debug / prod no-op (server-side) — 흐름 차단 X.
+  if (confidence < HITL_CONFIDENCE_THRESHOLD) {
+    try {
+      trackEvent("diagnose_confidence_low", {
+        confidence,
+        source: confidenceResult.source,
+      });
+    } catch (err) {
+      console.error("[FR-C-002] diagnose_confidence_low trackEvent 예외:", err);
+    }
+  }
 
   const output: DiagnosisOutput = {
     sessionId,

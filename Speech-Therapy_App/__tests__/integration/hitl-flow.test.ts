@@ -159,10 +159,11 @@ describe("TEST-002 — Sprint 2 §2 phonetic similarity 기반 HITL 분기", () 
 
   it("[시나리오 5] enqueueForReview — TEST-014 신규 패턴 (findUnique → create) 셰이프", async () => {
     await analyzeDiagnosis(VALID_INPUT_LOW_MATCH);
+    // FR-C-002 (Gemini swap) 이후 — fire-and-forget maybeEnqueueHitl 도 같은 sessionId 로
+    // 두 번째 호출 가능. UNIQUE 멱등성 시뮬 (beforeEach) 가 update 경로로 전환 보장.
+    await vi.waitFor(() => expect(hitlCreateMock).toHaveBeenCalled());
 
-    expect(hitlFindUniqueMock).toHaveBeenCalledTimes(1);
-    expect(hitlCountMock).toHaveBeenCalledTimes(1); // abuse 검사
-    expect(hitlCreateMock).toHaveBeenCalledTimes(1);
+    expect(hitlCreateMock).toHaveBeenCalledTimes(1); // create 는 단 1회 (UNIQUE 멱등)
     const arg = hitlCreateMock.mock.calls[0][0] as {
       data: { sessionId: string; confidenceScore: number; slaDueAt: Date; status: string };
     };

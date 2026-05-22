@@ -35,6 +35,17 @@ export type AnalyticsEvent =
       };
     }
   | {
+      // FR-C-002 (#25) — confidence < 70 시 자동 HITL 트리거 직전에 1회 발송.
+      // 본 이벤트는 lib/diagnose/confidence.ts (Gemini swap) 활성화 후
+      // 트리거 dormant 해제 비율을 측정하기 위함 (Gemini vs fallback 분기).
+      // R4: 자녀 식별 정보 (userId/transcript) 미포함 — confidence 값 + source 만.
+      name: "diagnose_confidence_low";
+      properties: {
+        confidence: number;
+        source: "gemini" | "fallback";
+      };
+    }
+  | {
       name: "diagnose_failed";
       properties: {
         reason:
