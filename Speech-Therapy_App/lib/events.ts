@@ -444,6 +444,20 @@ export type AnalyticsEvent =
         trees: number;
         aiArtsCount: number;
       };
+    }
+  // === FR-C-008 (#31) — 적응형 난이도 자동 하향 (3연속 실패 → -1, 은밀히) ===
+  | {
+      // checkAdaptiveDifficulty 가 shouldLower=true 반환 후 호출 측이 적용 직후 1회 발송.
+      // "은밀히" 사양 — 사용자 UI 알림은 절대 발송 안 함. 본 이벤트는 백엔드 분석 전용.
+      // R4 보호: userId / 자녀 식별 정보 0건 — 음소 + 카운트 + 난이도 변화만.
+      // newLevel 은 호출 측 clamp (>= 1) 적용 후 값 — previousLevel 과 같을 수 있음 (이미 1).
+      name: "difficulty_adjusted";
+      properties: {
+        targetPhoneme: "ㄱ" | "ㄴ" | "ㅅ" | "ㅈ" | "ㄹ";
+        consecutiveFailures: number;
+        previousLevel: number;
+        newLevel: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
