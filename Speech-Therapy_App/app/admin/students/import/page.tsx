@@ -15,6 +15,7 @@
 import { redirect } from "next/navigation";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/db";
 import { StudentBulkImportClient } from "@/components/admin/StudentBulkImportClient";
 
 export const dynamic = "force-dynamic";
@@ -95,6 +96,20 @@ export default async function StudentBulkImportPage() {
     );
   }
 
+  // FR-Q-009 / FR-C-005 — 부모 초대 이메일 본문에 표시할 기관 이름 조회.
+  // 조회 실패 / 기관 미존재 시 Client default ("우리 기관") 으로 폴백.
+  let institutionName: string | undefined;
+  try {
+    const institution = await prisma.institution.findUnique({
+      where: { id: institutionId },
+      select: { name: true },
+    });
+    institutionName = institution?.name ?? undefined;
+  } catch {
+    // 조회 실패는 graceful — 기본 라벨 사용.
+    institutionName = undefined;
+  }
+
   return (
     <main
       data-testid="student-bulk-import-page"
@@ -114,7 +129,10 @@ export default async function StudentBulkImportPage() {
         </p>
       </header>
 
-      <StudentBulkImportClient institutionId={institutionId} />
+      <StudentBulkImportClient
+        institutionId={institutionId}
+        institutionName={institutionName}
+      />
 
       <footer
         aria-label="안내"

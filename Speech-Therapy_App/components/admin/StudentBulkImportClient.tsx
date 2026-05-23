@@ -35,6 +35,12 @@ import { trackEvent } from "@/lib/analytics";
 export interface StudentBulkImportClientProps {
   /** 원장 본인의 institutionId — server 가 다시 검증. */
   institutionId: string;
+  /**
+   * 기관 이름 — 부모 초대 이메일 본문에 표시. 미전달 시 "우리 기관" 기본값.
+   *
+   * Server Component 에서 prisma.institution.findUnique 로 조회 후 prop drop.
+   */
+  institutionName?: string;
 }
 
 /** 화면에 표시되는 행 모델 — 사용자가 인라인 수정 시 mutable. */
@@ -46,6 +52,17 @@ interface EditableRow {
   parentEmail: string;
 }
 
+/**
+ * FR-Q-009 / FR-C-005 — 부모 초대 요약 (UI 표시용).
+ *
+ * Server Action 응답의 parentInvites 그대로 — 집계 카운트만 (R4: PII 0건).
+ */
+interface ParentInviteSummaryView {
+  attempted: number;
+  sent: number;
+  skipped: number;
+}
+
 type Phase =
   | { state: "idle" }
   | { state: "parsing" }
@@ -55,6 +72,8 @@ type Phase =
       state: "success" | "partial";
       successCount: number;
       errorCount: number;
+      /** 옵션 체크 + 응답에 parentInvites 가 있을 때만 set. */
+      parentInvites?: ParentInviteSummaryView;
     }
   | { state: "error"; message: string };
 
@@ -94,11 +113,23 @@ function editableToRaw(row: EditableRow, institutionId: string): unknown {
 
 export function StudentBulkImportClient({
   institutionId,
+  institutionName,
 }: StudentBulkImportClientProps) {
   const [phase, setPhase] = useState<Phase>({ state: "idle" });
   const [rows, setRows] = useState<EditableRow[]>([]);
   const [errors, setErrors] = useState<ImportErrorRow[]>([]);
+  /**
+   * FR-Q-009 / FR-C-005 — 부모 초대 같이 발송 옵션 체크박스 상태.
+   * default false — 옵트인 (실수 발송 방지).
+   */
+  const [sendInvites, setSendInvites] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  /** 부모 초대 이메일 본문에 표시할 기관 이름. 미설정 시 default. */
+  const effectiveInstitutionName =
+    institutionName && institutionName.trim().length > 0
+      ? institutionName.trim()
+      : "우리 기관";
 
   const errorsByRow = useMemo(() => {
     const map = new Map<number, ImportErrorRow>();
@@ -170,7 +201,12 @@ export function StudentBulkImportClient({
     setPhase({ state: "submitting" });
     const rawRows = rows.map((r) => editableToRaw(r, institutionId));
     try {
-      const res = await submitBulkImport(rawRows, institutionId);
+      // FR-Q-009 / FR-C-005 — 체크박스 선택 시에만 sendParentInvites=true 전달.
+      // institutionName 은 항상 함께 전달 (서버 측 기본값 폴백 보유).
+      const res = await submitBulkImport(rawRows, institutionId, {
+        sendParentInvites: sendInvites,
+        institutionName: effectiveInstitutionName,
+      });
       if (res.status !== "ok") {
         setPhase({ state: "error", message: res.message });
         return;
@@ -183,10 +219,20 @@ export function StudentBulkImportClient({
         successCount,
         errorCount,
       });
+      // 부모 초대 응답 — 옵션 미선택 / 응답 부재 / 0 attempted 인 경우 UI 표시 skip.
+      const inviteSummary =
+        sendInvites && res.parentInvites && res.parentInvites.attempted > 0
+          ? {
+              attempted: res.parentInvites.attempted,
+              sent: res.parentInvites.sent,
+              skipped: res.parentInvites.skipped,
+            }
+          : undefined;
       setPhase({
         state: errorCount === 0 ? "success" : "partial",
         successCount,
         errorCount,
+        parentInvites: inviteSummary,
       });
     } catch (err) {
       setPhase({
@@ -418,7 +464,60 @@ export function StudentBulkImportClient({
         </div>
       )}
 
-      {/* 5. 액션 버튼 */}
+      {/* 5. 부모 초대 발송 옵션 (FR-Q-009 / FR-C-005) */}
+      {rows.length > 0 && (
+        <div className="rounded-lg border border-slate-200 bg-white p-3">
+          <label
+            htmlFor="student-bulk-import-send-invites"
+            className="flex items-start gap-2"
+            data-testid="student-bulk-import-invite-label"
+          >
+            <input
+              id="student-bulk-import-send-invites"
+              data-testid="student-bulk-import-send-invites"
+              type="checkbox"
+              checked={sendInvites}
+              onChange={(e) => setSendInvites(e.target.checked)}
+              disabled={
+                phase.state === "parsing" || phase.state === "submitting"
+              }
+              className="mt-0.5 h-4 w-4 cursor-pointer rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
+            />
+            <span className="text-sm text-slate-800">
+              부모 초대 이메일 같이 발송하기
+              <span className="ml-1 text-xs text-slate-500">
+                — 부모 이메일이 입력된 행에만 발송됩니다.
+              </span>
+            </span>
+          </label>
+        </div>
+      )}
+
+      {/* 6. 부모 초대 결과 (성공/부분성공 + 옵션 ON 시) */}
+      {(phase.state === "success" || phase.state === "partial") &&
+        phase.parentInvites && (
+          <div
+            data-testid="student-bulk-import-invite-result"
+            className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900"
+            role="status"
+            aria-live="polite"
+          >
+            <p className="font-semibold">부모 초대 발송 결과</p>
+            <ul className="mt-1 ml-4 list-disc space-y-0.5 text-xs text-emerald-800">
+              <li data-testid="student-bulk-import-invite-sent">
+                발송 성공: {phase.parentInvites.sent}건
+              </li>
+              <li data-testid="student-bulk-import-invite-skipped">
+                발송 보류: {phase.parentInvites.skipped}건
+                <span className="ml-1 text-emerald-700">
+                  (부모 이메일 부재 또는 발송 환경 미설정)
+                </span>
+              </li>
+            </ul>
+          </div>
+        )}
+
+      {/* 7. 액션 버튼 */}
       {rows.length > 0 && (
         <div className="flex flex-wrap items-center gap-3">
           <button
