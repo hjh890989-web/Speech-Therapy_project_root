@@ -17,7 +17,10 @@ const userUpsertMock = vi.fn();
 const sessionLogCreateMock = vi.fn();
 const hitlUpsertMock = vi.fn();
 const cookieGetMock = vi.fn();
+const txQueryRawMock = vi.fn();
 
+// DB-011: app/actions/diagnosis.ts 가 익명 user.upsert 호출을 withActor 로 감쌌으므로
+// prisma mock 에 $transaction 추가 (tx.user.upsert + tx.$queryRaw 노출).
 vi.mock("@/lib/db", () => ({
   prisma: {
     user: {
@@ -31,6 +34,15 @@ vi.mock("@/lib/db", () => ({
     },
     evaluationResult: {
       findUnique: vi.fn(),
+    },
+    $transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        $queryRaw: (...args: unknown[]) => txQueryRawMock(...args),
+        user: {
+          upsert: (...args: unknown[]) => userUpsertMock(...args),
+        },
+      };
+      return fn(tx);
     },
   },
 }));
@@ -81,6 +93,8 @@ beforeEach(() => {
   sessionLogCreateMock.mockReset();
   hitlUpsertMock.mockReset();
   cookieGetMock.mockReset();
+  txQueryRawMock.mockReset();
+  txQueryRawMock.mockResolvedValue([{ set_config: "" }]);
   cookieGetMock.mockReturnValue(undefined);
 
   userUpsertMock.mockResolvedValue({ id: "mocked-user" });

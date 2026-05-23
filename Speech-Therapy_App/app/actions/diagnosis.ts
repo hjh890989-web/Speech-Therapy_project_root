@@ -21,6 +21,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { withActor } from "@/lib/db/with-actor";
 import { compositeScore, computePeerPercentile } from "@/lib/peer-percentile";
 import { computePhoneticSimilarity } from "@/lib/phonetic-similarity";
 import { computeLinguisticScore } from "@/lib/linguistic-score";
@@ -91,15 +92,21 @@ export async function analyzeDiagnosis(
   const isAnonymous = !input.userId;
 
   if (isAnonymous) {
-    await prisma.user.upsert({
-      where: { id: userId },
-      update: {},
-      create: {
-        id: userId,
-        role: "parent",
-        childAgeMonths: input.childAgeMonths,
-      },
-    });
+    // DB-011: User upsert 의 update 분기는 audit_user_changes TRIGGER 발화 →
+    // withActor(userId, ...) 로 익명 user 본인 id 캡처.
+    // 익명 흐름의 userId 는 anonymous_user_id (cookie) 또는 supabase auth.uid —
+    // 모두 withActor 의 ACTOR_ID_PATTERN ([a-zA-Z0-9_-]{1,128}) 통과.
+    await withActor(userId, (tx) =>
+      tx.user.upsert({
+        where: { id: userId },
+        update: {},
+        create: {
+          id: userId,
+          role: "parent",
+          childAgeMonths: input.childAgeMonths,
+        },
+      }),
+    );
   }
 
   // ── 3단계: 3축 점수 계산 (Sprint 3 §1 분리 + §2 A 신호 기반 acoustic) ─

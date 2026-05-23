@@ -12,6 +12,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
+import { withActor } from "@/lib/db/with-actor";
 import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 
 export async function GET(request: Request) {
@@ -46,16 +47,20 @@ export async function GET(request: Request) {
   }
 
   // Prisma User upsert (Supabase Auth user.id 와 동일 UUID 사용).
+  // DB-011: User 가 기존 row 인 경우 update 분기에서 audit_user_changes TRIGGER 발화 →
+  // actorId 미주입 시 'system' 으로 적재됨. withActor(authUserId, ...) 로 본인 id 캡처.
   try {
-    await prisma.user.upsert({
-      where: { id: authUserId },
-      update: { email: authEmail ?? undefined },
-      create: {
-        id: authUserId,
-        email: authEmail,
-        role: "parent",
-      },
-    });
+    await withActor(authUserId, (tx) =>
+      tx.user.upsert({
+        where: { id: authUserId },
+        update: { email: authEmail ?? undefined },
+        create: {
+          id: authUserId,
+          email: authEmail,
+          role: "parent",
+        },
+      }),
+    );
   } catch (err) {
     console.error("auth/callback: User upsert 실패", err);
   }
@@ -76,43 +81,53 @@ export async function GET(request: Request) {
 
 async function migrateAnonymousData(anonymousUserId: string, authUserId: string) {
   try {
-    // SessionLog / EvaluationResult / RewardLog 는 userId 단순 갱신.
-    await prisma.$transaction([
-      prisma.sessionLog.updateMany({ where: { userId: anonymousUserId }, data: { userId: authUserId } }),
-      prisma.evaluationResult.updateMany({
+    // DB-011: 마이그레이션 트랜잭션 전체를 withActor(authUserId, ...) 안으로 이동.
+    // 본 흐름은 _authUserId_ (인증 사용자) 의 의지로 익명 데이터를 본인 계정에 병합 →
+    // audit_user_changes (User DELETE) / audit_reward_log_inserts 등 TRIGGER 발화 시
+    // authUserId 가 actor 로 캡처되어야 무결성 분석에서 책임 추적 가능.
+    //
+    // 단, prisma.$transaction([...]) batch 시그니처는 tx (TransactionClient) 와
+    // 사용성이 다름 → withActor 의 함수형 트랜잭션으로 직렬 호출 전환.
+    await withActor(authUserId, async (tx) => {
+      // SessionLog / EvaluationResult / RewardLog 는 userId 단순 갱신.
+      await tx.sessionLog.updateMany({ where: { userId: anonymousUserId }, data: { userId: authUserId } });
+      await tx.evaluationResult.updateMany({
         where: { userId: anonymousUserId },
         data: { userId: authUserId },
-      }),
-      prisma.rewardLog.updateMany({ where: { userId: anonymousUserId }, data: { userId: authUserId } }),
-    ]);
+      });
+      await tx.rewardLog.updateMany({ where: { userId: anonymousUserId }, data: { userId: authUserId } });
 
-    // RewardProgress 는 @unique(userId) 라 단순 update 가 충돌 가능 — 합산 후 익명 row 삭제.
-    const anonymousProgress = await prisma.rewardProgress.findUnique({ where: { userId: anonymousUserId } });
-    if (anonymousProgress) {
-      const authProgress = await prisma.rewardProgress.findUnique({ where: { userId: authUserId } });
-      if (authProgress) {
-        // 두 row 모두 존재 → 합산 후 익명 삭제.
-        await prisma.rewardProgress.update({
-          where: { userId: authUserId },
-          data: {
-            cumulativeStars: { increment: anonymousProgress.cumulativeStars },
-            treeGrowthLevel: { increment: anonymousProgress.treeGrowthLevel },
-            aiDrawingCount: { increment: anonymousProgress.aiDrawingCount },
-          },
-        });
-        await prisma.rewardProgress.delete({ where: { userId: anonymousUserId } });
-      } else {
-        // 익명 row 만 존재 → userId 갱신.
-        await prisma.rewardProgress.update({
-          where: { userId: anonymousUserId },
-          data: { userId: authUserId },
-        });
+      // RewardProgress 는 @unique(userId) 라 단순 update 가 충돌 가능 — 합산 후 익명 row 삭제.
+      const anonymousProgress = await tx.rewardProgress.findUnique({ where: { userId: anonymousUserId } });
+      if (anonymousProgress) {
+        const authProgress = await tx.rewardProgress.findUnique({ where: { userId: authUserId } });
+        if (authProgress) {
+          // 두 row 모두 존재 → 합산 후 익명 삭제.
+          await tx.rewardProgress.update({
+            where: { userId: authUserId },
+            data: {
+              cumulativeStars: { increment: anonymousProgress.cumulativeStars },
+              treeGrowthLevel: { increment: anonymousProgress.treeGrowthLevel },
+              aiDrawingCount: { increment: anonymousProgress.aiDrawingCount },
+            },
+          });
+          await tx.rewardProgress.delete({ where: { userId: anonymousUserId } });
+        } else {
+          // 익명 row 만 존재 → userId 갱신.
+          await tx.rewardProgress.update({
+            where: { userId: anonymousUserId },
+            data: { userId: authUserId },
+          });
+        }
       }
-    }
 
-    // 익명 User row 정리 (FK 제거됐으므로 안전).
-    await prisma.user.delete({ where: { id: anonymousUserId } }).catch((err) => {
-      console.warn("auth/callback: 익명 User 정리 실패 (FK 잔존?)", err);
+      // 익명 User row 정리 (FK 제거됐으므로 안전).
+      // audit_user_changes (DELETE) TRIGGER 발화 → actorId=authUserId 캡처.
+      try {
+        await tx.user.delete({ where: { id: anonymousUserId } });
+      } catch (err) {
+        console.warn("auth/callback: 익명 User 정리 실패 (FK 잔존?)", err);
+      }
     });
   } catch (err) {
     console.error("auth/callback: 익명 데이터 마이그레이션 실패", err);

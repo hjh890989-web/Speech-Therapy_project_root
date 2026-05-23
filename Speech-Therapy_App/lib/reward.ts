@@ -4,8 +4,16 @@
 // Sprint 2 멱등성: RewardLog 테이블 @@unique([userId, idempotencyKey]) 로 강화.
 // 다중 Vercel 인스턴스 + 동시 호출 모두 SQL 레벨에서 중복 차단.
 // 동시성: Prisma `upsert` + `update.increment` 가 PostgreSQL 에서 atomic 보장.
+//
+// DB-011 후속 마이그레이션:
+//   User upsert (audit_user_changes TRIGGER) + RewardLog INSERT
+//   (audit_reward_log_inserts TRIGGER) 두 곳에 withActor(input.userId, ...) 주입.
+//   → AuditLog row 의 actorId 가 실 사용자 id 로 캡처됨 ('system' 폴백 회피).
+//   actor 식별: input.userId 를 그대로 사용 (Server Action 측에서 인증 user.id
+//   또는 anonymous_user_id 로 이미 정규화된 값).
 
 import { prisma } from "@/lib/db";
+import { withActor } from "@/lib/db/with-actor";
 import type {
   RewardInput,
   RewardOutput,
@@ -45,22 +53,31 @@ function isUniqueConstraintError(err: unknown): boolean {
  */
 export async function grantReward(input: RewardInput): Promise<RewardOutput> {
   // anonymous 진단 사용자를 위한 User 보장 (FK 충돌 방지).
-  await prisma.user.upsert({
-    where: { id: input.userId },
-    update: {},
-    create: { id: input.userId, role: "parent" },
-  });
+  // DB-011: User row 가 신규 생성되는 경우 INSERT 는 TRIGGER 비대상이나,
+  // 기존 row 가 있어 update 분기로 들어가면 audit_user_changes TRIGGER 발화 →
+  // actor_id GUC 가 비면 'system' 으로 적재됨. withActor 로 input.userId 주입.
+  await withActor(input.userId, (tx) =>
+    tx.user.upsert({
+      where: { id: input.userId },
+      update: {},
+      create: { id: input.userId, role: "parent" },
+    }),
+  );
 
   // RewardLog INSERT — 멱등성 게이트. 중복 시 P2002 throw.
+  // DB-011: audit_reward_log_inserts TRIGGER 가 INSERT 마다 발화 → 같은 actorId
+  // (보상 수령 본인) 를 audit row 에 캡처. lib/audit.ts 의 reward_grant 와 보완.
   try {
-    await prisma.rewardLog.create({
-      data: {
-        userId: input.userId,
-        rewardType: input.rewardType,
-        amount: input.amount,
-        idempotencyKey: input.idempotencyKey,
-      },
-    });
+    await withActor(input.userId, (tx) =>
+      tx.rewardLog.create({
+        data: {
+          userId: input.userId,
+          rewardType: input.rewardType,
+          amount: input.amount,
+          idempotencyKey: input.idempotencyKey,
+        },
+      }),
+    );
   } catch (err) {
     if (isUniqueConstraintError(err)) {
       // 멱등 재호출 — 현재 상태만 반환.

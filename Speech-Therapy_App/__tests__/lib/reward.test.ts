@@ -7,7 +7,11 @@ const upsertProgressMock = vi.fn();
 const findProgressMock = vi.fn();
 const upsertUserMock = vi.fn();
 const createRewardLogMock = vi.fn();
+const txQueryRawMock = vi.fn();
 
+// DB-011: lib/reward.ts 가 withActor (prisma.$transaction 래핑) 를 통해
+// user.upsert / rewardLog.create 를 호출. mock 은 $transaction 안에서
+// 동일 user.upsert / rewardLog.create 표면을 노출하도록 구성.
 vi.mock("@/lib/db", () => ({
   prisma: {
     rewardProgress: {
@@ -19,6 +23,18 @@ vi.mock("@/lib/db", () => ({
     },
     rewardLog: {
       create: (...args: unknown[]) => createRewardLogMock(...args),
+    },
+    $transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        $queryRaw: (...args: unknown[]) => txQueryRawMock(...args),
+        user: {
+          upsert: (...args: unknown[]) => upsertUserMock(...args),
+        },
+        rewardLog: {
+          create: (...args: unknown[]) => createRewardLogMock(...args),
+        },
+      };
+      return fn(tx);
     },
   },
 }));
@@ -38,6 +54,8 @@ beforeEach(() => {
   findProgressMock.mockReset();
   upsertUserMock.mockReset();
   createRewardLogMock.mockReset();
+  txQueryRawMock.mockReset();
+  txQueryRawMock.mockResolvedValue([{ set_config: "" }]);
   upsertUserMock.mockResolvedValue({ id: USER_ID });
 });
 
