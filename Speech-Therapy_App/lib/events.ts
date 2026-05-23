@@ -394,6 +394,20 @@ export type AnalyticsEvent =
         classCount: number;
         studentCount: number;
       };
+    }
+  // === FR-C-016 (#39) — 원아 일괄 등록 (CSV 업로드 후 Server Action 호출 완료) ===
+  | {
+      // submitBulkImport Server Action 응답 직후 클라이언트에서 1회 발송.
+      // totalRows: 사용자가 등록 시도한 전체 행 수 (UI 테이블 length).
+      // successCount: Prisma createMany 가 보고한 INSERT 카운트 (멱등성 skip 제외).
+      // errorCount: client/server 양쪽 검증에서 reject 된 행 수.
+      // R4 보호: 행별 원아 정보 (이름/학번/이메일) 절대 노출 금지 — 집계 메트릭만.
+      name: "student_bulk_import_submitted";
+      properties: {
+        totalRows: number;
+        successCount: number;
+        errorCount: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
