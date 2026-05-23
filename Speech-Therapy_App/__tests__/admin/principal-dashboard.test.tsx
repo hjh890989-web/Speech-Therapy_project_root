@@ -111,9 +111,30 @@ function fullDashboard(institutionId: string) {
     thisWeekDiagnoseCount: 120,
     articulationAvg: 72.5,
     classrooms: [
-      { id: "class-1", name: "햇님반", studentCount: 20, diagnoseCount: 50, avgScore: 78 },
-      { id: "class-2", name: "달님반", studentCount: 15, diagnoseCount: 40, avgScore: 70 },
-      { id: "class-3", name: "별님반", studentCount: 10, diagnoseCount: 30, avgScore: 68 },
+      {
+        id: "class-1",
+        name: "햇님반",
+        studentCount: 20,
+        diagnoseCount: 50,
+        avgScore: 78,
+        students: [],
+      },
+      {
+        id: "class-2",
+        name: "달님반",
+        studentCount: 15,
+        diagnoseCount: 40,
+        avgScore: 70,
+        students: [],
+      },
+      {
+        id: "class-3",
+        name: "별님반",
+        studentCount: 10,
+        diagnoseCount: 30,
+        avgScore: 68,
+        students: [],
+      },
     ],
     classroomsEmpty: false,
   };

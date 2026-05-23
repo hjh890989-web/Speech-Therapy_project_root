@@ -16,8 +16,10 @@
 //   향후 Student / ChildProfile 모델 도입 시 본 함수만 갱신 — page.tsx / Component 변경 없음.
 //
 // R4 (자녀 식별 정보 노출 금지):
-//   - 반환에 userId / email / 이름 절대 미포함 — 집계 카운트 + 반 이름만.
+//   - 반환에 email / 이름 절대 미포함 — 집계 카운트 + 반 이름만.
 //   - 반 이름은 원장이 입력한 비식별 라벨 ("햇님반" 등) — R4 위반 아님.
+//   - students[].id (User.id UUID) 는 timeline/PDF navigation 용으로 노출 — UI 측 (StudentRow)
+//     은 4자리 truncate 표기 + tooltip 으로만 풀길이 노출. 본 모듈은 raw id 그대로 반환.
 //
 // CON-04 (의료 금칙어): 본 모듈은 UI 카피 미생성 — DB 데이터 그대로 반환. UI 측에서 sanitize.
 //
@@ -31,18 +33,37 @@ import { prisma } from "@/lib/db";
  */
 export const PRINCIPAL_RECENT_DAYS = 7;
 
-/** 1개 반 단위 집계 결과. R4 — userId 노출 0. */
+/**
+ * 반당 노출 학생(원아) 최대 수 — 본 PR 단순화 정책.
+ * 30 명 = 어린이집/유치원 평균 학급 정원 상한. 초과 시 후속 PR 에서 페이지네이션 도입 예정.
+ */
+export const PRINCIPAL_STUDENTS_PER_CLASS = 30;
+
+/**
+ * 1명 원아(보호자 계정) 단위 navigation 메타. R4:
+ *  - displayName 은 UI 측 (StudentRow) 에서 id 4자리 truncate 로 산출 — 본 타입에는 raw id 만.
+ *  - email / 이름 / role 등 자녀 식별 정보 일체 미포함.
+ */
+export interface ClassroomStudent {
+  /// User.id (UUID) — /admin/timeline/[userId] + /admin/centers/pdf/[userId] navigation 용.
+  id: string;
+}
+
+/** 1개 반 단위 집계 결과. R4 — userId 는 students[] 안에만 (UI 측 truncate 책임). */
 export interface ClassroomSummary {
   /// Class.id (Class detail page 라우팅용 — 본 PR 은 표시 없음, 후속 PR 에서 사용).
   id: string;
   /// Class.name (원장 입력 라벨, 비식별).
   name: string;
-  /// 해당 반에 속한 User(role=parent) 수.
+  /// 해당 반에 속한 User(role=parent) 수 (반 전체, 노출 students[] 길이와 다를 수 있음).
   studentCount: number;
   /// 최근 PRINCIPAL_RECENT_DAYS 일 내 evaluationResult 수.
   diagnoseCount: number;
   /// 최근 PRINCIPAL_RECENT_DAYS 일 내 articulationScore 평균 (0~100). 데이터 0건이면 null.
   avgScore: number | null;
+  /// 본 반에 속한 원아(보호자) 목록 — 최대 PRINCIPAL_STUDENTS_PER_CLASS 명.
+  /// 정렬: User.id 오름차순 (Prisma select order 안정성). 후속 PR 에서 createdAt 정렬 가능.
+  students: ClassroomStudent[];
 }
 
 /** 원장 대시보드 단일 집계 결과. */
@@ -118,6 +139,8 @@ export async function loadPrincipalDashboard(
           users: {
             where: { role: "parent" },
             select: { id: true },
+            orderBy: { id: "asc" },
+            take: PRINCIPAL_STUDENTS_PER_CLASS,
           },
         },
       }),
@@ -126,9 +149,12 @@ export async function loadPrincipalDashboard(
   // 반별 evaluationResult 집계 — 각 반의 parent userId 집합으로 1회씩 조회.
   // N+1 우려: 반 N개 → N 회 쿼리. 단일 기관당 반 수 ≤ 30 가정 (어린이집/유치원 상한)
   // → 운영상 N = 5~15 이므로 단일 RSC 내 acceptable. 추후 Class 모델에 집계 컬럼 캐시 시 단순화.
+  // Prisma 7 typed-client 미가용 환경 (app/generated/prisma/client 부재) 회피용 명시 타입.
+  type ClassRow = { id: string; name: string; users: Array<{ id: string }> };
   const classroomSummaries: ClassroomSummary[] = await Promise.all(
-    classrooms.map(async (cls) => {
-      const userIds = cls.users.map((u) => u.id);
+    (classrooms as ClassRow[]).map(async (cls: ClassRow) => {
+      const userIds = cls.users.map((u: { id: string }) => u.id);
+      const students: ClassroomStudent[] = cls.users.map((u: { id: string }) => ({ id: u.id }));
       if (userIds.length === 0) {
         return {
           id: cls.id,
@@ -136,6 +162,7 @@ export async function loadPrincipalDashboard(
           studentCount: 0,
           diagnoseCount: 0,
           avgScore: null,
+          students,
         };
       }
       const [diagnoseCount, classAvg] = await Promise.all([
@@ -159,6 +186,7 @@ export async function loadPrincipalDashboard(
         studentCount: userIds.length,
         diagnoseCount,
         avgScore: classAvg._avg.articulationScore ?? null,
+        students,
       };
     }),
   );

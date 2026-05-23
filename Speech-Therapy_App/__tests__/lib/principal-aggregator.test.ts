@@ -1,13 +1,14 @@
 // FR-Q-009 (#50) — loadPrincipalDashboard 단위 테스트 (Prisma mock).
 //
 // 검증 시나리오 (≥ 5):
-//   1. 정상 — class/user/evaluation 모두 존재 → 4종 카운트 + classrooms 채워짐
+//   1. 정상 — class/user/evaluation 모두 존재 → 4종 카운트 + classrooms 채워짐 + students[] 포함
 //   2. 빈 institutionId → emptyPayload (Prisma 미호출)
 //   3. 빈 데이터 — 모든 카운트 0 + classrooms=[], classroomsEmpty=true
 //   4. cross-tenant 보호 — where 절에 institutionId 가 정확히 입력값으로만 전달
 //   5. articulationAvg null → 데이터 0건 처리
-//   6. 반 안 원아 0명 — diagnoseCount/avgScore 추가 쿼리 skip + 0/null
+//   6. 반 안 원아 0명 — diagnoseCount/avgScore 추가 쿼리 skip + 0/null + students=[]
 //   7. 최근 7일 since 윈도우 검증 (gte filter)
+//   8. (확장) class.findMany select.users 가 take=PRINCIPAL_STUDENTS_PER_CLASS + orderBy id asc 전달
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -39,6 +40,7 @@ vi.mock("@/lib/db", () => ({
 import {
   loadPrincipalDashboard,
   PRINCIPAL_RECENT_DAYS,
+  PRINCIPAL_STUDENTS_PER_CLASS,
 } from "@/lib/admin/principal-aggregator";
 
 const INSTITUTION_A = "11111111-1111-4111-8111-111111111111";
@@ -97,6 +99,7 @@ describe("loadPrincipalDashboard — FR-Q-009 집계 helper", () => {
       studentCount: 2,
       diagnoseCount: 40,
       avgScore: 75,
+      students: [{ id: "u-1" }, { id: "u-2" }],
     });
     expect(data.classrooms[1]).toEqual({
       id: "class-2",
@@ -104,6 +107,7 @@ describe("loadPrincipalDashboard — FR-Q-009 집계 helper", () => {
       studentCount: 1,
       diagnoseCount: 10,
       avgScore: 60,
+      students: [{ id: "u-3" }],
     });
   });
 
@@ -212,8 +216,25 @@ describe("loadPrincipalDashboard — FR-Q-009 집계 helper", () => {
       studentCount: 0,
       diagnoseCount: 0,
       avgScore: null,
+      students: [],
     });
     expect(data.classroomsEmpty).toBe(false);
+  });
+
+  it("[7b] class.findMany.users select — take=PRINCIPAL_STUDENTS_PER_CLASS + orderBy id asc (navigation list)", async () => {
+    classCountMock.mockResolvedValueOnce(0);
+    userCountMock.mockResolvedValueOnce(0);
+    evalCountMock.mockResolvedValueOnce(0);
+    evalAggregateMock.mockResolvedValueOnce({ _avg: { articulationScore: null } });
+    classFindManyMock.mockResolvedValueOnce([]);
+
+    await loadPrincipalDashboard(INSTITUTION_A);
+
+    const arg = classFindManyMock.mock.calls[0][0];
+    expect(arg.select.users.take).toBe(PRINCIPAL_STUDENTS_PER_CLASS);
+    expect(arg.select.users.orderBy).toEqual({ id: "asc" });
+    expect(arg.select.users.where).toEqual({ role: "parent" });
+    expect(arg.select.users.select).toEqual({ id: true });
   });
 
   it("[7] 최근 N일 since 윈도우 — createdAt.gte 가 (now - PRINCIPAL_RECENT_DAYS) 이내", async () => {
