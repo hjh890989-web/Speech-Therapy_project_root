@@ -458,6 +458,26 @@ export type AnalyticsEvent =
         previousLevel: number;
         newLevel: number;
       };
+    }
+  // === FR-C-007 (#30 Replace D5) — 오프라인 감지 Toast (Service Worker / IndexedDB 미사용 단순화) ===
+  | {
+      // navigator.onLine === false 로 전환된 직후 1회. OfflineToast 가 발송.
+      // path: window.location.pathname (어떤 화면에서 가장 자주 발생하는지 분석용).
+      // R4 보호: userId / query string / hash 0건 — pathname 만.
+      // 본 PR 범위 외: Service Worker 등록 / IndexedDB 소급 보상 — 향후 PWA 트랙에서 별도 처리.
+      name: "offline_detected";
+      properties: {
+        path: string;
+      };
+    }
+  | {
+      // navigator.onLine === true 복귀 직후 1회. 직전 offline_detected 이벤트와 pair.
+      // offlineDurationMs: 이번 offline → online 사이의 경과 시간 (≥ 0).
+      // R4 보호: userId 0건 — 단순 numeric 메트릭만.
+      name: "online_restored";
+      properties: {
+        offlineDurationMs: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

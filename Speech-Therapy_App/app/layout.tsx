@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { ServiceWorkerRegister } from "./sw-register";
 import { InstitutionHeader } from "@/components/InstitutionHeader";
+import { OfflineToast } from "@/components/OfflineToast";
 
 // 부팅 시 1회 환경변수 검증 — 누락 시 부팅 단계에서 throw (사용자 첫 요청 전 차단).
 // 본 import 의 side-effect (zod parse) 가 검증 트리거. ESLint 의 "unused" 회피 위해
@@ -62,6 +63,9 @@ export default function RootLayout({
           <InstitutionHeader />
         </Suspense>
         {children}
+        {/* FR-C-007 (#30 Replace D5) — 전역 오프라인 감지 Toast. 단일 mount 위치 (다중 노출 회피).
+            Service Worker / IndexedDB 미사용 단순화 안 — navigator.onLine 만 구독. */}
+        <OfflineToast />
         <ServiceWorkerRegister />
         <Analytics />
         <SpeedInsights />
