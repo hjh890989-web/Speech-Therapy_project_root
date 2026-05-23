@@ -22,6 +22,7 @@ import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { loadRewardCollection } from "@/lib/rewards/aggregator";
 import { RewardCardGrid } from "@/components/rewards/RewardCardGrid";
+import { RewardShareButton } from "@/components/rewards/RewardShareButton";
 import { RewardCollectionViewedBeacon } from "./RewardCollectionViewedBeacon";
 
 export const metadata = {
@@ -54,6 +55,10 @@ export default async function RewardCollectionPage() {
     ? await loadRewardCollection(userId)
     : { stars: 0, trees: 0, aiArtsCount: 0, aiArts: [] };
 
+  // FR-C-012 — 모든 보상이 0 이면 공유할 게 없으므로 share 버튼 미노출.
+  const hasReward =
+    collection.stars > 0 || collection.trees > 0 || collection.aiArtsCount > 0;
+
   return (
     <main
       data-testid="reward-collection-page"
@@ -84,6 +89,14 @@ export default async function RewardCollectionPage() {
         aiArtsCount={collection.aiArtsCount}
         aiArts={collection.aiArts}
       />
+
+      {hasReward && (
+        <RewardShareButton
+          stars={collection.stars}
+          trees={collection.trees}
+          aiArtsCount={collection.aiArtsCount}
+        />
+      )}
 
       <div className="mt-10 text-center">
         <Link
