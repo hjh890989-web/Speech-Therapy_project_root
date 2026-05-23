@@ -566,6 +566,19 @@ export type AnalyticsEvent =
         emailSkipped: boolean;
         hasError: boolean;
       };
+    }
+  // === FR-Q-013 (#54) — 자녀 통합 타임라인 페이지 mount (앱 세션 + 센터 오프라인 placeholder) ===
+  | {
+      // /admin/timeline/[userId] 페이지 RSC mount 직후 1회 (server-side console.log telemetry).
+      // R4 보호: userId 는 server-side 텔레메트리에서 분석 백엔드 자동 해시 가정 (PII 직접 노출 금지).
+      // entriesCount: diagnose + mission entry 합계 (≥ 0). hasMissionData / hasDiagnoseData 분기 진단용.
+      name: "timeline_viewed";
+      properties: {
+        userId: string;
+        entriesCount: number;
+        hasMissionData: boolean;
+        hasDiagnoseData: boolean;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
