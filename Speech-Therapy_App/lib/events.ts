@@ -478,6 +478,20 @@ export type AnalyticsEvent =
       properties: {
         offlineDurationMs: number;
       };
+    }
+  // === API-012 (#13) — Resend 이메일 어댑터 발송 텔레메트리 (Replace 67-D1 + D8) ===
+  | {
+      // lib/email/resend.ts sendEmail 직후 호출 측이 1회 발송.
+      // template: 'parent_invite' / 'consent_signature' / 'cushion_note' / ... (호출 측 라벨).
+      // skipped: RESEND_API_KEY 미설정 또는 NODE_ENV='test' 로 실 발송 차단된 경우 true.
+      // hasError: Resend SDK 호출 실패 / timeout / banned_term 등 ok=false 분기.
+      // R4 보호: 자녀 식별 정보 (이름 / 이메일 / userId) 절대 노출 금지 — 분기 메트릭만.
+      name: "email_sent";
+      properties: {
+        template: string;
+        skipped: boolean;
+        hasError: boolean;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
