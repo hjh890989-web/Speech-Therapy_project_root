@@ -24,6 +24,7 @@ import { useCallback, useState } from "react";
 
 import { trackEvent } from "@/lib/analytics";
 import { shareOrCopy } from "@/lib/share";
+import { sendCushionNoteToParent } from "@/app/actions/cushion-note";
 
 const SWAP_MARKER = "[__CUSHION_SWAP__]";
 
@@ -31,6 +32,12 @@ export interface CushionNoteGeneratorProps {
   evaluationResultId: string;
   /** 부모 호칭 prefill (원장 → 부모 직접 전달용). UI 가 선택 입력 허용. */
   defaultStudentName?: string;
+  /**
+   * FR-C-017+ — 부모 이메일 (Resend 발송용).
+   * 서버에서 EvaluationResult → User.email 로 미리 조회한 값. 빈 문자열 / undefined 면 이메일 버튼 disabled.
+   * 본 컴포넌트는 표시 + confirmation 용도로만 사용 — 실제 발송 인증은 Server Action 가 재검증.
+   */
+  parentEmail?: string;
 }
 
 type Status =
@@ -38,20 +45,47 @@ type Status =
   | { state: "streaming"; charCount: number }
   | { state: "done"; charCount: number; source: "gemini" | "template" }
   | { state: "copied"; method: "web_share" | "clipboard" | "unsupported" }
+  | {
+      state: "email_sent";
+      sent: boolean;
+      skipped: boolean;
+      errorMessage?: string;
+    }
   | { state: "error"; message: string };
+
+type EmailUiState =
+  | { kind: "idle" }
+  | { kind: "confirm" }
+  | { kind: "sending" }
+  | { kind: "sent" }
+  | { kind: "error"; message: string };
 
 export function CushionNoteGenerator({
   evaluationResultId,
   defaultStudentName,
+  parentEmail,
 }: CushionNoteGeneratorProps) {
   const [studentName, setStudentName] = useState<string>(defaultStudentName ?? "");
   const [text, setText] = useState<string>("");
   const [status, setStatus] = useState<Status>({ state: "idle" });
+  const [emailUi, setEmailUi] = useState<EmailUiState>({ kind: "idle" });
 
   const isStreaming = status.state === "streaming";
   const hasText = text.trim().length > 0;
+  const isEmailSending = emailUi.kind === "sending";
   const canCopy =
-    (status.state === "done" || status.state === "copied") && hasText;
+    (status.state === "done" ||
+      status.state === "copied" ||
+      status.state === "email_sent") &&
+    hasText;
+  const hasParentEmail = !!(parentEmail && parentEmail.trim().length > 0);
+  const canSendEmail =
+    (status.state === "done" ||
+      status.state === "copied" ||
+      status.state === "email_sent") &&
+    hasText &&
+    hasParentEmail &&
+    !isEmailSending;
 
   const handleGenerate = useCallback(async () => {
     setText("");
@@ -156,6 +190,75 @@ export function CushionNoteGenerator({
     });
   }, [text, evaluationResultId, hasText]);
 
+  // FR-C-017+ — 부모 이메일로 발송 (Resend 통합).
+  // 흐름: 버튼 클릭 → confirmation dialog → Server Action 호출 → 결과 토스트 + 이벤트.
+  const handleRequestEmail = useCallback(() => {
+    if (!hasText || !hasParentEmail) return;
+    setEmailUi({ kind: "confirm" });
+  }, [hasText, hasParentEmail]);
+
+  const handleCancelEmail = useCallback(() => {
+    setEmailUi({ kind: "idle" });
+  }, []);
+
+  const handleConfirmEmail = useCallback(async () => {
+    if (!hasText || !hasParentEmail) return;
+    setEmailUi({ kind: "sending" });
+    try {
+      const result = await sendCushionNoteToParent({
+        evaluationResultId,
+        noteText: text,
+        parentName: undefined,
+        childName: studentName.trim() || undefined,
+        senderName: undefined,
+      });
+
+      const isSuccess = result.sent;
+      const isSkipped = result.skipped;
+      const hasError = !isSuccess && !isSkipped;
+
+      setStatus({
+        state: "email_sent",
+        sent: isSuccess,
+        skipped: isSkipped,
+        errorMessage: result.error,
+      });
+
+      if (isSuccess) {
+        setEmailUi({ kind: "sent" });
+      } else if (isSkipped) {
+        setEmailUi({
+          kind: "error",
+          message: `메일 발송이 건너뛰어졌어요${
+            result.error ? ` (${result.error})` : ""
+          }. 환경 설정을 확인해 주세요.`,
+        });
+      } else {
+        setEmailUi({
+          kind: "error",
+          message: `메일 발송 실패 — ${result.error ?? "원인 불명"}`,
+        });
+      }
+
+      trackEvent("cushion_note_emailed", {
+        evaluationResultId,
+        emailSkipped: isSkipped,
+        hasError,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setEmailUi({
+        kind: "error",
+        message: `메일 발송 중 오류 — ${message}`,
+      });
+      trackEvent("cushion_note_emailed", {
+        evaluationResultId,
+        emailSkipped: false,
+        hasError: true,
+      });
+    }
+  }, [evaluationResultId, text, studentName, hasText, hasParentEmail]);
+
   return (
     <section
       data-testid="cushion-note-generator"
@@ -237,6 +340,23 @@ export function CushionNoteGenerator({
           클립보드 복사
         </button>
 
+        {canCopy && (
+          <button
+            type="button"
+            data-testid="cushion-email-button"
+            onClick={handleRequestEmail}
+            disabled={!canSendEmail}
+            title={
+              hasParentEmail
+                ? "부모 이메일로 직접 발송합니다."
+                : "이 결과에 등록된 부모 이메일이 없어요."
+            }
+            className="inline-flex min-h-[40px] items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isEmailSending ? "발송 중…" : "부모 이메일로 발송"}
+          </button>
+        )}
+
         {status.state === "done" && (
           <span
             data-testid="cushion-status-done"
@@ -266,7 +386,70 @@ export function CushionNoteGenerator({
             {status.message}
           </span>
         )}
+
+        {emailUi.kind === "sent" && (
+          <span
+            data-testid="cushion-email-status-sent"
+            className="text-xs font-medium text-indigo-700"
+          >
+            부모 이메일로 발송 완료
+          </span>
+        )}
+        {emailUi.kind === "error" && (
+          <span
+            data-testid="cushion-email-status-error"
+            role="alert"
+            className="text-xs text-rose-700"
+          >
+            {emailUi.message}
+          </span>
+        )}
       </div>
+
+      {emailUi.kind === "confirm" && hasParentEmail && (
+        <div
+          data-testid="cushion-email-confirm-dialog"
+          role="dialog"
+          aria-labelledby="cushion-email-confirm-heading"
+          className="rounded-md border border-indigo-200 bg-indigo-50 p-4"
+        >
+          <h3
+            id="cushion-email-confirm-heading"
+            className="mb-2 text-sm font-semibold text-indigo-900"
+          >
+            부모 이메일로 발송하시겠어요?
+          </h3>
+          <p className="mb-1 text-xs text-indigo-900">
+            받는 사람:{" "}
+            <strong data-testid="cushion-email-confirm-address">
+              {parentEmail}
+            </strong>
+          </p>
+          <p className="mb-3 text-xs text-indigo-800">
+            본문은 위에 표시된 알림장 그대로 발송돼요. 발송 후 취소할 수 없어요.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-testid="cushion-email-confirm-button"
+              onClick={handleConfirmEmail}
+              disabled={isEmailSending}
+              className="inline-flex min-h-[36px] items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isEmailSending ? "발송 중…" : "발송"}
+            </button>
+            <button
+              type="button"
+              data-testid="cushion-email-cancel-button"
+              onClick={handleCancelEmail}
+              disabled={isEmailSending}
+              className="inline-flex min-h-[36px] items-center rounded-md border border-indigo-300 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -23,6 +23,10 @@ import {
   type CushionFallbackReason,
   type TargetPhoneme,
 } from "@/lib/cushion/generate";
+import {
+  sendCushionNoteEmail,
+  type CushionEmailResult,
+} from "@/lib/cushion/email";
 
 const InputSchema = z.object({
   evaluationResultId: z.string().min(1),
@@ -140,6 +144,142 @@ export async function generateCushionNoteAction(
     text: out.text,
     source: out.source,
     fallbackReason: out.fallbackReason,
+    evaluationResultId: evaluation.id,
+  };
+}
+
+// =====================================================================
+// FR-C-017+ — 쿠션어 알림장을 부모에게 이메일로 직접 발송 (Resend 통합).
+//
+// 기존 generateCushionNoteAction (클립보드 복사 경로) 와 공존:
+//   - 클립보드 복사 경로 — 원장이 수동으로 채널 (카카오톡 / 문자) 발송
+//   - 본 Action — 원장 클릭 1회로 Resend 가 부모 이메일 자동 발송
+//
+// RBAC: principal / admin / expert 만 (parent 제외 — 본인이 본인에게 보내는 시나리오 차단).
+// R4: parentEmail = EvaluationResult.user.email (자녀 본인 own evaluation 의 parent)
+//   - cross-institution 차단 (admin 제외)
+//   - parentEmailOverride 는 admin 만 허용 (테스트 / 보강 시나리오)
+// =====================================================================
+
+const SEND_TO_PARENT_ALLOWED_ROLES = ["admin", "principal", "expert"] as const;
+
+const SendInputSchema = z.object({
+  evaluationResultId: z.string().min(1),
+  noteText: z.string().min(1).max(2000),
+  /// (선택) 원장이 수정한 본문 → DB 의 부모 email 대신 직접 지정.
+  /// admin 만 허용 — 일반 원장은 무시.
+  parentEmailOverride: z.string().email().optional(),
+  /// (선택) 부모 호칭 — 인사말 prefix.
+  parentName: z.string().max(40).optional(),
+  /// (선택) 자녀 호칭 — UI 가 입력한 값. 본문 인사 + subject 에 사용.
+  childName: z.string().max(40).optional(),
+  /// (선택) 발신자 이름 — 원장이 직접 입력. 서명 line.
+  senderName: z.string().max(40).optional(),
+});
+
+export interface SendCushionNoteToParentResult extends CushionEmailResult {
+  evaluationResultId: string;
+}
+
+/**
+ * 쿠션어 알림장을 부모 이메일로 발송 (Server Action).
+ *
+ * 흐름:
+ *   1) Supabase auth.getUser → 401
+ *   2) User 테이블 role / institutionId 조회 → role 검증 (admin/principal/expert) → 403
+ *   3) EvaluationResult + user.{email,institutionId} 조회 → 404 / R4 cross-institution 차단
+ *   4) parentEmail 결정 (override → admin only, 아니면 user.email)
+ *   5) sendCushionNoteEmail 호출 (graceful — 절대 throw 금지)
+ *
+ * 사용 시나리오:
+ *   - CushionNoteGenerator UI 의 "부모 이메일로 발송" 버튼
+ *
+ * @throws CushionAuthError (401 / 403 / 404)
+ */
+export async function sendCushionNoteToParent(
+  rawInput: unknown,
+): Promise<SendCushionNoteToParentResult> {
+  const parsed = SendInputSchema.parse(rawInput);
+
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    throw new CushionAuthError("UNAUTHORIZED", 401);
+  }
+
+  const { data: viewerRow, error: roleError } = await supabase
+    .from("User")
+    .select("role,institutionId")
+    .eq("id", user.id)
+    .maybeSingle<{ role: string | null; institutionId: string | null }>();
+  if (roleError) {
+    throw new Error(`role lookup failed: ${roleError.message}`);
+  }
+  const viewerRole = viewerRow?.role ?? null;
+  const viewerInstitutionId = viewerRow?.institutionId ?? null;
+  if (
+    !viewerRole ||
+    !(SEND_TO_PARENT_ALLOWED_ROLES as readonly string[]).includes(viewerRole)
+  ) {
+    throw new CushionAuthError("FORBIDDEN", 403);
+  }
+  const role = viewerRole as (typeof SEND_TO_PARENT_ALLOWED_ROLES)[number];
+
+  const evaluation = await prisma.evaluationResult.findUnique({
+    where: { id: parsed.evaluationResultId },
+    select: {
+      id: true,
+      userId: true,
+      user: {
+        select: {
+          email: true,
+          institutionId: true,
+          institution: { select: { name: true } },
+        },
+      },
+    },
+  });
+  if (!evaluation) {
+    throw new CushionAuthError("NOT_FOUND", 404);
+  }
+
+  const targetInstitutionId = evaluation.user?.institutionId ?? null;
+  const isSameInstitution =
+    !!viewerInstitutionId &&
+    !!targetInstitutionId &&
+    viewerInstitutionId === targetInstitutionId;
+
+  // R4 — admin 외 cross-institution 차단.
+  if (role !== "admin" && !isSameInstitution) {
+    throw new CushionAuthError("FORBIDDEN", 403);
+  }
+
+  // parentEmail 결정 — override 는 admin 만 허용 (운영 보강).
+  let parentEmail: string;
+  if (parsed.parentEmailOverride && role === "admin") {
+    parentEmail = parsed.parentEmailOverride.trim();
+  } else {
+    parentEmail = (evaluation.user?.email ?? "").trim();
+  }
+
+  const childName = parsed.childName?.trim() || "자녀";
+  const institutionName = evaluation.user?.institution?.name ?? undefined;
+
+  const out = await sendCushionNoteEmail({
+    evaluationResultId: evaluation.id,
+    parentEmail,
+    parentName: parsed.parentName?.trim() || undefined,
+    childName,
+    noteText: parsed.noteText,
+    senderName: parsed.senderName?.trim() || undefined,
+    institutionName,
+  });
+
+  return {
+    ...out,
     evaluationResultId: evaluation.id,
   };
 }

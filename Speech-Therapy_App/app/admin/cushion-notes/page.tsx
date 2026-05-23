@@ -42,6 +42,8 @@ interface CushionRow {
   acousticScore: number;
   createdAt: Date;
   institutionId: string | null;
+  /** FR-C-017+ — 부모 이메일 (Resend 발송 버튼 활성화 조건). null 이면 버튼 disabled. */
+  parentEmail: string | null;
 }
 
 function truncateId(id: string, head = 8): string {
@@ -111,7 +113,7 @@ async function fetchRecentEvaluations(): Promise<CushionRow[]> {
         linguisticScore: true,
         acousticScore: true,
         createdAt: true,
-        user: { select: { institutionId: true } },
+        user: { select: { institutionId: true, email: true } },
       },
     });
   } catch {
@@ -128,6 +130,7 @@ async function fetchRecentEvaluations(): Promise<CushionRow[]> {
     acousticScore: r.acousticScore,
     createdAt: r.createdAt,
     institutionId: r.user?.institutionId ?? null,
+    parentEmail: r.user?.email ?? null,
   }));
 }
 
@@ -188,7 +191,10 @@ export default async function CushionNotesAdminPage() {
                 </span>
                 <span>{formatDate(row.createdAt)}</span>
               </div>
-              <CushionNoteGenerator evaluationResultId={row.id} />
+              <CushionNoteGenerator
+                evaluationResultId={row.id}
+                parentEmail={row.parentEmail ?? undefined}
+              />
             </li>
           ))}
         </ul>

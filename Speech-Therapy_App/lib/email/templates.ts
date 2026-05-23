@@ -382,3 +382,119 @@ export function buildConsentExpiredEmail(
 
   return { subject, html, text };
 }
+
+/// FR-C-017+ — AI 쿠션어 알림장을 부모에게 직접 이메일로 발송할 때 사용.
+///
+/// 본문은 lib/cushion/generate.ts 의 noteText (CON-04 통과 보장된 본문) 를 그대로 감싸고,
+/// 부모용 인사 + 발신자 서명 + 의료 disclaimer 를 자동 부착한다.
+///
+/// CON-04 정책:
+///   - noteText 는 호출 측 책임으로 이미 검증된 본문 (template fallback / Gemini swap 통과).
+///   - 본 helper 가 만드는 추가 카피 (인사 / 서명 / disclaimer) 는 금칙어 0건.
+///   - sendEmail() 가 다시 한 번 detectBannedTerms() 로 차단 (defense in depth).
+///
+/// R4 정책:
+///   - 수신자 = 부모 → childName / parentName 본문 포함 OK.
+///   - 외부 로깅 / analytics 노출은 호출 측 책임.
+export interface CushionNoteEmailInput {
+  /// 자녀 이름 (R4 허용 — 수신자 = 부모).
+  childName: string;
+  /// 알림장 본문 (lib/cushion/generate.ts 의 CushionGenerateResult.text).
+  /// CON-04 통과 보장된 본문이어야 함 — 검증 책임 호출 측.
+  noteText: string;
+  /// (선택) 부모 호칭. 미설정 시 "부모님" 으로 표기.
+  parentName?: string;
+  /// (선택) 발신자 이름 (원장 / 선생님). 미설정 시 기관명 또는 "담당자" 만 표기.
+  senderName?: string;
+  /// (선택) 후속 가입 / 자녀 결과 페이지 링크. 미설정 시 link 섹션 생략.
+  signupLink?: string;
+  /// (선택) 발신 기관명. 미설정 시 "Speech-Therapy" 로 표기.
+  institutionName?: string;
+}
+
+export function buildCushionNoteEmail(input: CushionNoteEmailInput): EmailTemplate {
+  const child = escapeHtml(input.childName);
+  const note = escapeHtml(input.noteText);
+  const parent = input.parentName ? escapeHtml(input.parentName) : null;
+  const sender = input.senderName ? escapeHtml(input.senderName) : null;
+  const institution = input.institutionName ? escapeHtml(input.institutionName) : null;
+  const link = input.signupLink ? escapeHtml(input.signupLink) : null;
+
+  const greeting = parent
+    ? `${parent} 부모님께`
+    : `${child} 부모님께`;
+  const senderLine = sender && institution
+    ? `${institution} ${sender} 드림`
+    : sender
+      ? `${sender} 드림`
+      : institution
+        ? `${institution} 드림`
+        : "Speech-Therapy 드림";
+
+  const subject = `[Speech-Therapy] ${input.childName} 발음 발달 알림장`;
+
+  // noteText 안의 줄바꿈을 HTML <br> 로 보존.
+  const noteHtml = note.replace(/\n/g, "<br>");
+
+  const linkBlockHtml = link
+    ? `<p style="text-align: center; margin: 28px 0;">
+    <a href="${link}" style="display: inline-block; padding: 12px 24px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">
+      자녀 발음 발달 확인하기
+    </a>
+  </p>
+  <p style="font-size: 13px; color: #666; line-height: 1.5;">
+    링크가 동작하지 않으면 아래 주소를 브라우저에 복사하세요:<br>
+    <span style="word-break: break-all;">${link}</span>
+  </p>`
+    : "";
+
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 24px;">
+  <h1 style="font-size: 20px; margin-bottom: 16px;">${greeting}</h1>
+  <p style="font-size: 15px; line-height: 1.6;">
+    오늘 ${child} 의 발음 발달 확인 결과를 부드러운 알림장으로 전해 드려요.
+  </p>
+  <blockquote style="margin: 16px 0; padding: 16px; background: #f5f7fa; border-left: 4px solid #2563eb; font-size: 15px; line-height: 1.7; color: #1a1a1a;">
+    ${noteHtml}
+  </blockquote>
+  ${linkBlockHtml}
+  <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+  <p style="font-size: 13px; color: #666;">${senderLine}</p>
+  <p style="font-size: 11px; color: #999;">
+    본 메일은 발신 전용입니다. 문의는 기관 담당자에게 직접 연락주세요.<br>
+    Speech-Therapy 는 의료 서비스가 아닌 부모 정보 제공용 보조 도구입니다.
+  </p>
+</body>
+</html>`;
+
+  const textLines = [
+    greeting,
+    "",
+    `오늘 ${input.childName} 의 발음 발달 확인 결과를 부드러운 알림장으로 전해 드려요.`,
+    "",
+    input.noteText,
+    "",
+  ];
+  if (input.signupLink) {
+    textLines.push(`자녀 발음 발달 확인하기: ${input.signupLink}`, "");
+  }
+  textLines.push(
+    "---",
+    sender && institution
+      ? `${input.institutionName} ${input.senderName} 드림`
+      : sender
+        ? `${input.senderName} 드림`
+        : institution
+          ? `${input.institutionName} 드림`
+          : "Speech-Therapy 드림",
+    "본 메일은 발신 전용입니다. 문의는 기관 담당자에게 직접 연락주세요.",
+    "Speech-Therapy 는 의료 서비스가 아닌 부모 정보 제공용 보조 도구입니다.",
+  );
+
+  return { subject, html, text: textLines.join("\n") };
+}

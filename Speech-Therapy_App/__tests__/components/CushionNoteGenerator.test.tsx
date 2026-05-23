@@ -25,6 +25,12 @@ vi.mock("@/lib/share", () => ({
   shareOrCopy: (...args: unknown[]) => shareMock(...args),
 }));
 
+// FR-C-017+ — 컴포넌트가 "use server" 모듈을 import. happy-dom 에서는 prisma/supabase 가
+// 무겁고 DB 환경변수 없이 throw 할 수 있어 stub. 본 파일은 이메일 발송 경로 미검증 (별도 파일).
+vi.mock("@/app/actions/cushion-note", () => ({
+  sendCushionNoteToParent: vi.fn(),
+}));
+
 const fetchMock = vi.fn();
 
 /** 문자열 chunk 들을 ReadableStream<Uint8Array> 로 변환 (TextDecoder 가 소비). */

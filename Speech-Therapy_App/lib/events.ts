@@ -553,6 +553,19 @@ export type AnalyticsEvent =
         institutionId: string;
         daysFromSent: number;
       };
+    }
+  // === FR-C-017+ — 쿠션어 알림장 이메일 발송 (Resend 통합) ===
+  | {
+      // sendCushionNoteEmail() 직후 호출 측이 1회 발송.
+      // emailSkipped: NODE_ENV='test' / RESEND_API_KEY 미설정 / parentEmail 부재 등 graceful skip.
+      // hasError: Resend SDK 실패 / banned_term / timeout 등 ok=false 분기.
+      // R4 보호: parentEmail / 자녀 이름 / 본문 노출 금지 — evaluationResultId 만.
+      name: "cushion_note_emailed";
+      properties: {
+        evaluationResultId: string;
+        emailSkipped: boolean;
+        hasError: boolean;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
