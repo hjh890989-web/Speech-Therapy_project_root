@@ -382,6 +382,18 @@ export type AnalyticsEvent =
         offsetDb: number;
         measuredAvgDb: number;
       };
+    }
+  // === FR-Q-009 (#50) — 원장 Route Group 대시보드 첫 paint ===
+  | {
+      // /admin/principal 페이지 RSC mount 직후 1회 (서버 측 console.log telemetry — Vercel Logs).
+      // R4 보호: userId / 자녀 식별 정보 0 — institutionId + 집계 카운트만.
+      // classCount / studentCount 0건이면 신규 기관 (등록 미완료) 분기 — onboarding 분석에 사용.
+      name: "principal_dashboard_viewed";
+      properties: {
+        institutionId: string;
+        classCount: number;
+        studentCount: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
