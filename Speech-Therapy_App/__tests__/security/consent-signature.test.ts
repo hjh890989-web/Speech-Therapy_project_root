@@ -458,13 +458,15 @@ describe("SEC-003 — 동의서 전자서명 보안 검증 (XSS/length/replay/CS
       expect(status).toBe(400);
     });
 
-    it("정상 payload 는 500 / 501 (구현 미완) 반환 — schema 통과 확인", async () => {
-      // 현재 route.ts 는 NOT_IMPLEMENTED 501. schema 가 정상 payload 를 통과시키면
-      // 400 INVALID_INPUT 이 아닌 501 반환됨. 본 케이스 가 schema 회귀 (false-positive
-      // 거부) 즉시 노출.
+    it("정상 payload → schema 통과 (FR-C-018 실 구현 후 400 회귀 sentinel)", async () => {
+      // FR-C-018 (#41) 실 구현 후: 정상 payload 는 더 이상 501 NOT_IMPLEMENTED 가 아님.
+      // DB 미연결 환경 (vitest happy-dom) 에선 prisma.consentSignature 호출이 throw 되어
+      // 500 INTERNAL_ERROR 반환. 400 INVALID_INPUT 만 아니면 schema sentinel 통과.
       const { status, payload } = await postSign(makeValidCreatePayload());
-      expect(status).toBe(501);
-      expect((payload as { error: string }).error).toBe("NOT_IMPLEMENTED");
+      expect(status).not.toBe(400);
+      // payload 가 INVALID_INPUT 이 아니면 schema 통과 확인 OK.
+      const err = (payload as { error?: string }).error;
+      expect(err).not.toBe("INVALID_INPUT");
     });
 
     it("Confirm token 비 uuid → schema 거부", () => {

@@ -1,28 +1,31 @@
-// API-008 — POST /api/consent/sign (E2 일반 웹폼) stub.
-// 구현은 FR-C-018 책임. 별도 /confirm 경로는 추후.
+// API-008 + FR-C-018 (#41) — POST /api/consent/sign 실 구현.
 //
-// SEC-003 — 보안 4중 방어 (CSRF → Replay → Rate Limit → Schema):
+// SEC-003 4중 보안 layer 보존 (sentinel 보호):
 //   1) verifyOrigin (lib/csrf)        — Origin/Referer 화이트리스트 (403)
 //   2) verifyReplay (lib/replay)      — idempotency nonce (24h TTL, 409)
 //   3) checkRateLimit (lib/ratelimit) — SEC-004 글로벌 RPM + 사용자 일 50회 (429)
 //   4) ConsentCreateInputSchema parse — XSS sanitize + RFC 5321 email (400)
 //
-// 본 흐름의 _순서_ 는 의도적 (비용 ↑ 순):
-//   - CSRF: header 만 검사 (DoS 절약 최대)
-//   - Replay: in-memory Map lookup (저비용)
-//   - RateLimit: in-memory Map lookup (저비용)
-//   - Schema parse: body JSON 파싱 (메모리 ↑)
-//   - 실 처리: DB / 외부 API (가장 비용 ↑) — 본 stub 에선 placeholder 501
+// 실 처리 흐름 (501 placeholder 교체):
+//   5) lib/consent/repo.createOrReturnPendingConsent — 멱등 발급 (같은 부모/자녀/타입 pending 재사용)
+//   6) lib/email/resend.sendEmail(buildConsentSignatureEmail) — 이메일 발송, graceful (skip / error 둘 다 200)
+//   7) recordNonce — 처리 성공 후 같은 nonce 24h 차단
+//   8) 응답 201 + { id, token, signUrl, status: 'pending', expiresAt, emailSkipped }
 //
-// nonce 추출:
-//   클라이언트가 `X-Idempotency-Key` 헤더로 UUID 전달. 헤더 부재 시 _replay 검사 skip_
-//   (하위 호환). 본 stub 구현은 501 placeholder 라 실 record 안 함 — 정식 구현
-//   (FR-C-018) 시 처리 성공 후 `recordNonce(nonce)` 호출 필요.
+// graceful 정책 (DB 우선 / 이메일 재시도는 cron):
+//   - DB INSERT 실패 → 500 (서비스 핵심 실패)
+//   - 이메일 발송 실패 → 200 + emailSkipped=true (cron 이 D+3 리마인더로 자동 재시도)
 //
-// userId 추출:
-//   `anonymous_user_id` cookie 우선 (proxy.ts 가 발급 보장). cookie 부재 시 IP
-//   fallback (서버리스 환경에선 x-forwarded-for) — 사실상 unauthenticated user 의
-//   distinct 식별자 역할.
+// CON-04 / R4:
+//   - 응답에 childName / parentEmail 노출 X (token 만 — 부모 본인 메일 inbox 가 보증)
+//   - 로그에도 PII 0건 — consentId / token 만
+//
+// 멱등성:
+//   - 같은 부모/자녀/타입 pending row 가 이미 있으면 기존 token 재사용 (이메일은 재발송).
+//   - 같은 X-Idempotency-Key 헤더 24h 내 재전송은 409.
+//
+// BASE_URL:
+//   - NEXT_PUBLIC_BASE_URL 우선, 그 다음 VERCEL_URL 의 https 형태, 마지막 fallback 으로 localhost:4000.
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -34,8 +37,31 @@ import { verifyOrigin } from "@/lib/csrf";
 import { verifyReplay, recordNonce } from "@/lib/replay";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
+import {
+  createOrReturnPendingConsent,
+  CONSENT_EXPIRE_DAYS,
+} from "@/lib/consent/repo";
+import { sendEmail } from "@/lib/email/resend";
+import { buildConsentSignatureEmail } from "@/lib/email/templates";
 
 const IDEMPOTENCY_HEADER = "x-idempotency-key";
+
+/** 서명 페이지 base URL — env 우선 + safe fallback. */
+function resolveBaseUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_BASE_URL;
+  if (explicit && explicit.trim().length > 0) {
+    return explicit.replace(/\/$/, "");
+  }
+  const vercel = process.env.VERCEL_URL;
+  if (vercel && vercel.trim().length > 0) {
+    return `https://${vercel.replace(/\/$/, "")}`;
+  }
+  return "http://localhost:4000";
+}
+
+function buildSignUrl(token: string): string {
+  return `${resolveBaseUrl()}/consent/${token}`;
+}
 
 /** anonymous_user_id cookie → 부재 시 IP / "anonymous" fallback. RateLimit 키 용. */
 async function resolveUserId(request: Request): Promise<string> {
@@ -46,7 +72,6 @@ async function resolveUserId(request: Request): Promise<string> {
   } catch {
     // happy-dom / unit test 환경 — cookies() 실패는 fallback 으로 처리.
   }
-  // Fallback: x-forwarded-for (Vercel edge) → 클라이언트 IP.
   const xff = request.headers.get("x-forwarded-for");
   if (xff) {
     const firstIp = xff.split(",")[0]?.trim();
@@ -66,7 +91,6 @@ export async function POST(request: Request) {
   }
 
   // 2) SEC-003 (2차) — Replay 방어. X-Idempotency-Key 헤더가 있을 때만 검사.
-  //    헤더 부재 시 하위 호환 (legacy 클라이언트). 신규 클라이언트는 UUID 전달 권장.
   const nonce = request.headers.get(IDEMPOTENCY_HEADER);
   if (nonce) {
     const replay = verifyReplay(nonce);
@@ -98,7 +122,6 @@ export async function POST(request: Request) {
   }
 
   // 4) Schema parse — XSS sanitize + RFC 5321 email + UUID / regex 검증.
-  // TODO: API-010 — principal / admin 역할 검증.
   let parsed;
   try {
     const body = await request.json();
@@ -110,25 +133,84 @@ export async function POST(request: Request) {
     );
   }
 
-  // 5) 실 처리 — FR-C-018 구현 책임:
-  //    - DB-010 consent_signatures INSERT (token UUID v4)
-  //    - 7일 만료 expiresAt 계산
-  //    - Resend 이메일 발송 (서명 링크) — API-012 통합
-  void parsed;
+  // 5) DB-010 — 멱등 발급. 같은 (parentEmail + childName + 'data_usage') pending 이 있으면 기존 token 재사용.
+  //    childName 자리에 schema 가 sanitize 한 childNickname 사용 (자녀 본명 아닌 닉네임만 저장).
+  let consentResult;
+  try {
+    consentResult = await createOrReturnPendingConsent({
+      parentEmail: parsed.parentEmail,
+      // parentName 은 schema 에 별도 컬럼 없음 — childNickname 의 parent 컨텍스트.
+      // 본 PR 에선 parentEmail 의 local-part 를 fallback parentName 으로 사용 (R4 안전).
+      parentName: parsed.parentEmail.split("@")[0] ?? "부모",
+      childNickname: parsed.childNickname,
+      consentType: "data_usage",
+      institutionId: parsed.institutionId,
+    });
+  } catch (err) {
+    console.error("consent/sign: DB create 실패", err);
+    return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
+  }
 
-  // 처리 성공 후 nonce 기록 — 동일 nonce 재전송 차단 (24h TTL).
-  // placeholder 501 단계에서도 record 하는 이유: replay 시나리오 테스트 가능성 확보.
+  const row = consentResult.row;
+  const signUrl = buildSignUrl(row.token);
+  const expiresAtMs = row.sentAt.getTime() + CONSENT_EXPIRE_DAYS * 24 * 60 * 60 * 1000;
+  const expiresAt = new Date(expiresAtMs).toISOString();
+
+  // 6) 이메일 발송 — graceful (skip / 실패 모두 200 응답, cron 이 재시도).
+  let emailSkipped = true;
+  try {
+    const template = buildConsentSignatureEmail({
+      parentName: row.parentName,
+      // 이메일 본문은 부모용 컨텍스트 — R4 정책상 childNickname (별명) 노출 허용.
+      childName: row.childNickname,
+      signLink: signUrl,
+      consentType: row.consentType === "data_usage" ? "데이터 활용" : row.consentType,
+      expiresAt,
+    });
+    const result = await sendEmail({
+      to: row.parentEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+      tags: [{ name: "template", value: "consent_signature" }],
+    });
+    emailSkipped = !result.ok;
+    if (!result.ok && !result.skipped) {
+      console.warn(
+        `consent/sign: 이메일 발송 실패 — consentId=${row.id} reason=${result.error ?? "unknown"}`,
+      );
+    }
+  } catch (err) {
+    // sendEmail 은 throw 하지 않지만 방어적 catch.
+    console.error("consent/sign: 이메일 발송 예외", err);
+    emailSkipped = true;
+  }
+
+  // 7) 처리 성공 후 nonce 기록 — 동일 nonce 재전송 차단 (24h TTL).
   if (nonce) {
     recordNonce(nonce);
   }
 
-  const placeholder: ConsentCreateOutput = {
-    signatureToken: "00000000-0000-0000-0000-000000000000",
-    signUrl: "https://example.com/consent/placeholder",
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  // 8) 응답 — ConsentCreateOutput 스키마 정합 + 신규 필드 (id, status, emailSkipped).
+  const output: ConsentCreateOutput & {
+    id: string;
+    status: string;
+    emailSkipped: boolean;
+    created: boolean;
+  } = {
+    id: row.id,
+    signatureToken: row.token,
+    signUrl,
+    expiresAt,
+    status: row.status,
+    emailSkipped,
+    created: consentResult.created,
   };
-  return NextResponse.json(
-    { error: "NOT_IMPLEMENTED", placeholder },
-    { status: 501 },
+
+  // server-side telemetry — analytics SDK 없으므로 console.log (cron telemetry 패턴).
+  console.log(
+    `consent_sent consentId=${row.id} consentType=${row.consentType} emailSkipped=${emailSkipped} created=${consentResult.created}`,
   );
+
+  return NextResponse.json(output, { status: consentResult.created ? 201 : 200 });
 }

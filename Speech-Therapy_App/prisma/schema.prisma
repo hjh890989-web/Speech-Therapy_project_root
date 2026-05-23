@@ -280,6 +280,58 @@ enum HITLStatus {
   dismissed
 }
 
+// ============================================================================
+// DB-010 — ConsentSignature (FR-C-018 #41) — 동의서 발송 + D+3 리마인더 + 7일 만료
+// Refs: SRS §3.5, REQ-FUNC-059~061, REQ-NF-019 (감사 로그).
+// 법적 효력: IP / UserAgent / consentText 스냅샷 / 타임스탬프 보존 (서명 후).
+// R4 (자녀 보호): 자녀 식별 정보는 별명 (childNickname) 만 보관. 본명/생년월일/주소/연락처 미저장.
+// CON-04: 본 model 의 어떤 컬럼도 "치료/진단/장애" 금칙어 미포함 — Server Action 진입 시 검증.
+// ============================================================================
+//
+// 라이프사이클:
+//   pending → signed   (부모 서명 완료, signedAt 기록)
+//   pending → expired  (sentAt + 7d 경과, expired cron 이 마킹)
+//
+// D+3 리마인더:
+//   pending && sentAt < now - 3d && remindedAt IS NULL → reminder cron 이 발송 후 remindedAt 기록.
+//   이미 remindedAt 있는 row 는 skip (멱등).
+//
+// token:
+//   UUID v4 default. parent 가 서명 페이지 진입 시 URL 의 token 으로 단건 조회.
+//   token 노출은 본인 only (이메일 inbox) — R4 정책.
+//
+// 인덱스:
+//   - (status, sentAt) — cron 의 D+3 / 7d 스캔 효율.
+//   - (parentEmail) — 동일 부모/자녀 중복 발급 시 멱등 조회.
+//   - (token) — UNIQUE — 서명 페이지 단건 조회.
+
+model ConsentSignature {
+  id            String    @id @default(uuid())
+  parentEmail   String
+  parentName    String
+  childNickname String
+  consentType   String    @default("data_usage")
+  /// 'pending' | 'signed' | 'expired'.
+  status        String    @default("pending")
+  token         String    @unique
+  sentAt        DateTime  @default(now())
+  remindedAt    DateTime?
+  signedAt      DateTime?
+  expiredAt     DateTime?
+  /// 서명 완료 시 저장되는 IP (법적 효력 — 익명 부모도 IP 단서로 분쟁 대응).
+  signedIp      String?
+  /// 서명 완료 시 저장되는 UserAgent.
+  signedUa      String?
+  /// 기관 컨텍스트 (B2B). 일반 parent 직접 발급 시 null.
+  institutionId String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status, sentAt])
+  @@index([parentEmail])
+  @@index([token])
+}
+
 model HITLQueue {
   id               String     @id @default(uuid())
   /// EvaluationResult.sessionId 와 1:1.

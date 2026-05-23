@@ -479,6 +479,46 @@ export type AnalyticsEvent =
         offlineDurationMs: number;
       };
     }
+  // === FR-C-018 (#41) — 동의서 발송 + D+3 리마인더 + 7일 만료 (consent flow) ===
+  | {
+      // POST /api/consent/sign 정상 처리 후 1회. DB INSERT (또는 멱등 update) 완료 + 이메일 발송 시도 직후.
+      // emailSkipped: RESEND_API_KEY 미설정 / NODE_ENV='test' / 발송 실패 모두 true (DB record 우선 정책).
+      // R4 보호: parentEmail / childName / token 절대 노출 금지 — consentId + 라벨만.
+      name: "consent_sent";
+      properties: {
+        consentId: string;
+        consentType: string;
+        emailSkipped: boolean;
+      };
+    }
+  | {
+      // 부모가 /consent/[token] 페이지에서 서명 완료 후 1회 (submitConsentSignature Server Action).
+      // daysFromSent: 부모가 서명까지 걸린 일수 (sentAt → signedAt 차이, 반올림).
+      // R4 보호: token / parentEmail 노출 0건 — consentId + 메트릭만.
+      name: "consent_signed";
+      properties: {
+        consentId: string;
+        daysFromSent: number;
+      };
+    }
+  | {
+      // D+3 리마인더 cron 의 row 별 발송 성공 직후 1회.
+      // daysFromSent: cron 호출 시점의 sentAt 경과 일수 (대개 3 or 4 — graceful 윈도우).
+      // R4 보호: parentEmail / childName 0건.
+      name: "consent_reminded";
+      properties: {
+        consentId: string;
+        daysFromSent: number;
+      };
+    }
+  | {
+      // 7일 만료 cron 이 status='pending' → status='expired' 로 전환한 row 별 1회.
+      // R4 보호: parentEmail / childName 0건 — consentId 만.
+      name: "consent_expired";
+      properties: {
+        consentId: string;
+      };
+    }
   // === API-012 (#13) — Resend 이메일 어댑터 발송 텔레메트리 (Replace 67-D1 + D8) ===
   | {
       // lib/email/resend.ts sendEmail 직후 호출 측이 1회 발송.
