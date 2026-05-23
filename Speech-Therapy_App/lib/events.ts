@@ -431,6 +431,19 @@ export type AnalyticsEvent =
         evaluationResultId: string;
         method: "web_share" | "clipboard" | "unsupported";
       };
+    }
+  // === FR-Q-004 (#45) — 보상 도감 Card Grid 페이지 mount ===
+  | {
+      // /rewards/collection 페이지 RSC 결과를 client beacon 이 mount 시 1회 발송.
+      // 자녀가 본 시점의 누적 보상 분포를 KPI 화 (도감 진입 → 미션 CTA 클릭률 측정용).
+      // R4 보호: userId / 자녀 식별 정보 0 — 단순 카운트 메트릭만.
+      // aiArtsCount 는 현재 schema 부재로 항상 0 (Phase 1+ AiDrawing 모델 도입 후 양수 가능).
+      name: "reward_collection_viewed";
+      properties: {
+        stars: number;
+        trees: number;
+        aiArtsCount: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
