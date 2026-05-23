@@ -579,6 +579,18 @@ export type AnalyticsEvent =
         hasMissionData: boolean;
         hasDiagnoseData: boolean;
       };
+    }
+  // === FR-Q-007 (#48) — 센터 제출용 PDF 다운로드 (jsPDF 클라이언트 측, Replace) ===
+  | {
+      // /admin/centers/pdf/[userId] 의 CenterPdfDownloadClient 가 다운로드 트리거 직후 1회.
+      // PDF 자체는 클라이언트 브라우저에서 생성 — 서버 저장/업로드 없음.
+      // R4 보호: childName / parentEmail / 점수 raw 값 0건 — userId + institutionId 라벨만.
+      // institutionId 는 admin (institution 미소속) 호출 분기에서 undefined 가능.
+      name: "center_pdf_downloaded";
+      properties: {
+        userId: string;
+        institutionId?: string;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
