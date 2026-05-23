@@ -15,6 +15,11 @@
 //
 // Role enum (prisma/schema.prisma):
 //   parent | teacher | principal | expert | admin
+//
+// Teacher portal 확장 (FR-Q-TEACHER):
+//   /admin/teacher path 만 teacher 도 통과 — 본인 담당 반 한정 대시보드.
+//   다른 /admin/* (예: /admin/principal, /admin/hitl) 는 기존 RBAC (admin/principal/expert) 유지.
+//   helper: isTeacherPathAllowed(path, role) — proxy.ts 에서 isAdminAllowed 우선 검사 후 폴백.
 
 import type { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
@@ -22,6 +27,33 @@ import { createServerClient } from "@supabase/ssr";
 /** /admin 진입 허용 role — SEC-002 명세. */
 export const ADMIN_ALLOWED_ROLES = ["admin", "principal", "expert"] as const;
 export type AdminAllowedRole = (typeof ADMIN_ALLOWED_ROLES)[number];
+
+/**
+ * /admin/teacher path 만 추가로 허용되는 role — Teacher portal.
+ *
+ * 본 별도 helper 신설 결정 이유 (vs ADMIN_ALLOWED_ROLES 에 teacher 추가):
+ *  1) ADMIN_ALLOWED_ROLES 에 teacher 를 넣으면 /admin/principal / /admin/hitl 등
+ *     teacher 가 접근하면 안 되는 모든 admin path 가 열리는 회귀 발생.
+ *  2) Teacher 는 본인 담당 반만 보는 별도 권한 모델 — 기존 admin 권한 (전체 institution
+ *     운영) 과 의미가 다름. 별도 enum 으로 의미 분리.
+ *  3) 회귀 0건 보장: 기존 admin-rbac.test.ts 의 isAdminAllowed("teacher") === false
+ *     단언이 그대로 유지됨.
+ *
+ * proxy.ts 가 admin path 진입 시 다음 순서로 검사:
+ *   1) isAdminAllowed(role) → true 면 통과
+ *   2) isTeacherPathAllowed(pathname, role) → true 면 통과
+ *   3) 둘 다 false → 403 redirect
+ */
+export const TEACHER_PATH_PREFIX = "/admin/teacher";
+
+/** /admin/teacher path 에서 teacher 도 통과. */
+export function isTeacherPathAllowed(
+  pathname: string,
+  role: string | null | undefined,
+): boolean {
+  if (role !== "teacher") return false;
+  return pathname === TEACHER_PATH_PREFIX || pathname.startsWith(`${TEACHER_PATH_PREFIX}/`);
+}
 
 /** Role 조회 결과. */
 export type RoleLookup =

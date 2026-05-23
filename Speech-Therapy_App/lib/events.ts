@@ -395,6 +395,18 @@ export type AnalyticsEvent =
         studentCount: number;
       };
     }
+  // === FR-Q-TEACHER — 선생님 대시보드 첫 paint (/admin/teacher) ===
+  | {
+      // /admin/teacher 페이지 RSC mount 직후 1회 (서버 측 console.log telemetry — Vercel Logs).
+      // R4: teacherId 는 server-side telemetry 해시 가정 (PII 직접 노출 금지).
+      // classCount / studentCount 0건이면 신규 선생님 (반 미지정) 분기 — onboarding 분석에 사용.
+      name: "teacher_dashboard_viewed";
+      properties: {
+        teacherId: string;
+        classCount: number;
+        studentCount: number;
+      };
+    }
   // === FR-C-016 (#39) — 원아 일괄 등록 (CSV 업로드 후 Server Action 호출 완료) ===
   | {
       // submitBulkImport Server Action 응답 직후 클라이언트에서 1회 발송.

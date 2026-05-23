@@ -17,6 +17,11 @@
 //   비로그인 → /login redirect, 권한 없음 → / redirect (403 효과).
 //   lib/auth-role.ts 의 lookupUserRole + isAdminAllowed 사용.
 //
+// FR-Q-TEACHER 확장:
+//   /admin/teacher (정확히 또는 /admin/teacher/*) 진입 시 teacher 도 추가 통과.
+//   다른 /admin/* 경로는 기존 admin/principal/expert allow-list 유지 (회귀 0건).
+//   isTeacherPathAllowed(pathname, role) 가 path scope 제한 보장.
+//
 // Next.js 16 변경점:
 // - 파일명: middleware.ts → proxy.ts (root)
 // - 함수명: export function middleware → proxy
@@ -25,7 +30,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { ANONYMOUS_USER_COOKIE, COOKIE_MAX_AGE_SEC } from "@/lib/anonymous-user";
-import { isAdminAllowed, isAdminPath, lookupUserRole } from "@/lib/auth-role";
+import {
+  isAdminAllowed,
+  isAdminPath,
+  isTeacherPathAllowed,
+  lookupUserRole,
+} from "@/lib/auth-role";
 import {
   FORBIDDEN_WORDS_SANITIZED_HEADER,
   FORBIDDEN_WORDS_SCAN_HEADER,
@@ -112,13 +122,15 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(home, { status: 303 });
     }
 
-    if (!isAdminAllowed(lookup.role)) {
+    // FR-Q-TEACHER — /admin/teacher path 만 teacher 도 추가 통과.
+    // 다른 admin path (예: /admin/principal) 는 기존 RBAC (admin/principal/expert) 유지.
+    if (!isAdminAllowed(lookup.role) && !isTeacherPathAllowed(url.pathname, lookup.role)) {
       // 인증은 됐으나 권한 부족 → 홈 리다이렉트 + ?forbidden=admin (UI 메시지 분기 가능).
       const home = new URL("/", request.url);
       home.searchParams.set("forbidden", "admin");
       return NextResponse.redirect(home, { status: 303 });
     }
-    // 통과 — admin / principal / expert.
+    // 통과 — admin / principal / expert, 또는 teacher (path = /admin/teacher).
   }
 
   return response;
