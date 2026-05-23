@@ -408,6 +408,29 @@ export type AnalyticsEvent =
         successCount: number;
         errorCount: number;
       };
+    }
+  // === FR-C-017 (#40 Replace D8) — AI 쿠션어 알림장 생성 + 클립보드 복사 ===
+  | {
+      // streamCushionNote / generateCushionNote 완료 직후 (route handler 또는 server action).
+      // source 분기 — 'gemini': 실 AI 응답, 'template': forced/timeout/banned-term swap.
+      // charCount: 최종 텍스트 글자 수 (UI 가 30자 단위 페인트 진행률 표현용).
+      // R4: evaluationResultId 만 노출 (자녀 이름/email/transcript 0).
+      name: "cushion_note_generated";
+      properties: {
+        evaluationResultId: string;
+        source: "gemini" | "template";
+        charCount: number;
+      };
+    }
+  | {
+      // 클립보드 복사 버튼 클릭 직후 (shareOrCopy / navigator.clipboard.writeText 결과).
+      // method 분기 — share.ts 의 ShareMethod 와 정합 (web_share/clipboard/unsupported).
+      // R4: evaluationResultId 만 노출 (텍스트 본문 0).
+      name: "cushion_note_copied";
+      properties: {
+        evaluationResultId: string;
+        method: "web_share" | "clipboard" | "unsupported";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
