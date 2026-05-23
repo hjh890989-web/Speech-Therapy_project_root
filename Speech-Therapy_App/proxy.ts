@@ -1,5 +1,11 @@
 // Next.js 16 `proxy` convention (옛 middleware).
-// REQ-NF-019 RBAC + FR-C-005 금칙어 검사 + Sprint 2 §3 anonymousUserId cookie 권위.
+// REQ-NF-019 RBAC + FR-C-005 (#28) 금칙어 검사 + Sprint 2 §3 anonymousUserId cookie 권위.
+//
+// FR-C-005 (#28) 확장:
+//   - URL search params 금칙어 스캔 → sanitize 후 303 redirect (`?sanitized=1`).
+//   - dev 모드: 응답에 X-Forbidden-Words-Scan: enabled 헤더 부착 (e2e/dev console 마커).
+//   - 응답 본문 자체는 stream 이라 미들웨어 단계에서 스캔 불가능 → URL params + 헤더 layer.
+//   - 후속 작업: 빌드 타임 정적 스캔 (pre-commit), dev console 페이지 본문 스캔 도구.
 //
 // Sprint 2 §3 추가: cookie 부재 시 서버 측 Set-Cookie 응답 헤더로 발급.
 //   - iOS Safari ITP 의 JS-set cookie 7-day 캡 우회 (Set-Cookie 응답은 full TTL 존중)
@@ -20,6 +26,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { ANONYMOUS_USER_COOKIE, COOKIE_MAX_AGE_SEC } from "@/lib/anonymous-user";
 import { isAdminAllowed, isAdminPath, lookupUserRole } from "@/lib/auth-role";
+import {
+  FORBIDDEN_WORDS_SANITIZED_HEADER,
+  FORBIDDEN_WORDS_SCAN_HEADER,
+  scanSearchParams,
+} from "@/lib/forbidden-words";
 
 export async function proxy(request: NextRequest) {
   // API-010 §1 — Supabase signup confirmation 이메일은 Site URL 로 redirect 됨
@@ -34,7 +45,41 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(target);
   }
 
+  // FR-C-005 (#28) — URL search params 금칙어 스캔.
+  //
+  // 응답 본문 자체는 NextResponse stream 이라 미들웨어에서 스캔 불가능. 대신 사용자가
+  // 직접 입력한 search param value (`?q=치료` 등) 를 sanitize 후 rewrite 한다.
+  //   - 차단(redirect) 대신 sanitize → 사용자 흐름 유지 (graceful).
+  //   - 시스템 key (`code`, `next`, `forbidden`, `tab`) 는 SCANNED_SEARCH_PARAM_KEYS
+  //     allow-list 로 제외 → oauth callback / RBAC redirect 흐름 무영향.
+  //   - admin RBAC 분기보다 먼저 수행 — admin path 의 query string 도 정화 대상.
+  //
+  // sanitize 발생 시 redirect 가 아닌 rewrite (URL 표시는 유지) 를 고려했으나,
+  // SEO/북마크 시 금칙어가 남는 문제 + 사용자 안내 (`?sanitized=1`) 가 명확하므로
+  // 308 → 303 redirect 로 query 를 깨끗이 비운다.
+  if (url.search) {
+    const scan = scanSearchParams(url.searchParams);
+    if (scan.hits.length > 0) {
+      const sanitized = new URL(url.toString());
+      for (const key of scan.removedKeys) sanitized.searchParams.delete(key);
+      sanitized.searchParams.set("sanitized", "1");
+      const redirect = NextResponse.redirect(sanitized, { status: 303 });
+      // 디버깅용 — 어떤 key 가 정화됐는지 헤더로 노출 (값 자체는 비공개).
+      redirect.headers.set(
+        FORBIDDEN_WORDS_SANITIZED_HEADER,
+        scan.removedKeys.join(","),
+      );
+      return redirect;
+    }
+  }
+
   const response = NextResponse.next();
+
+  // FR-C-005 (#28) — 개발 모드 전용 응답 헤더. 후속 PR 에서 dev console / e2e 가
+  // 본 헤더를 보고 페이지 본문 스캔 트리거.
+  if (process.env.NODE_ENV !== "production") {
+    response.headers.set(FORBIDDEN_WORDS_SCAN_HEADER, "enabled");
+  }
 
   // Sprint 2 §3 — cookie 부재 시 서버 측 발급.
   if (!request.cookies.has(ANONYMOUS_USER_COOKIE)) {
@@ -76,7 +121,6 @@ export async function proxy(request: NextRequest) {
     // 통과 — admin / principal / expert.
   }
 
-  // P1 (FR-C-005): 응답 본문 정규식 스캔 + audit log INSERT.
   return response;
 }
 
