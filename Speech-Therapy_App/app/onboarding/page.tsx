@@ -3,12 +3,13 @@
 // 책임:
 //   1) Supabase auth 확인 — 비로그인 시 /login?next=/onboarding 으로 redirect.
 //   2) User row fetch — 이미 childAgeMonths 있는 사용자에게는 prefill.
-//   3) <OnboardingWizardClient> 렌더 — wizard 본체는 Client Component.
+//   3) onboardingCompletedAt 조회 → initialDbCompleted 로 전달 (다중 디바이스 동기화).
+//   4) <OnboardingWizardClient> 렌더 — wizard 본체는 Client Component.
 //
 // 라우트:
-//   - 본 PR 에선 (public)/onboarding 이 아닌 app/onboarding/page.tsx 로 직접 배치.
-//     이유: 로그인 필수 페이지 — (public) layout (AuthHeader) 와 별도 단순 layout 으로 분리.
-//   - layout 자동 redirect 통합은 후속 PR (본 PR 범위 외).
+//   - 본 페이지는 (public) layout 외부 — AuthHeader 없이 단순 노출.
+//   - follow-up: (public)/layout.tsx 의 OnboardingRedirectGate 가 미완료 user 를
+//     자동으로 /onboarding 으로 안내 (수동 URL 입력 불필요).
 //
 // metadata: SEO 보다 명확한 안내 우선 — 비공개 페이지지만 외부 검색 차단 효과 (noindex 헤더는 별도).
 //
@@ -20,6 +21,7 @@ import { prisma } from "@/lib/db";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { OnboardingWizardClient } from "@/components/onboarding/OnboardingWizardClient";
 import { getOnboardingStartStep } from "@/lib/onboarding/start-step";
+import { hasCompletedOnboardingServerSide } from "@/lib/onboarding/server-state";
 
 export const metadata = {
   title: "환영합니다 — Speech-Therapy",
@@ -58,6 +60,11 @@ export default async function OnboardingPage() {
     prefillChildAgeMonths = null;
   }
 
+  // 3) onboardingCompletedAt 조회 — wizard 가 이미 완료된 user 라면 client 측이 /missions
+  //    로 즉시 redirect. 본 페이지의 Server Component 단계에서 직접 redirect 하지 않는
+  //    이유는 localStorage 동기화 로직 (sync 가능 user 경험) 을 client 가 책임지기 때문.
+  const initialDbCompleted = await hasCompletedOnboardingServerSide();
+
   const initialStep = getOnboardingStartStep(prefillChildAgeMonths);
 
   return (
@@ -66,6 +73,7 @@ export default async function OnboardingPage() {
         initialStep={initialStep}
         prefillChildAgeMonths={prefillChildAgeMonths}
         hasExistingChildInfo={prefillChildAgeMonths !== null}
+        initialDbCompleted={initialDbCompleted}
       />
     </main>
   );

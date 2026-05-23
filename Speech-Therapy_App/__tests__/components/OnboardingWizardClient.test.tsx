@@ -22,13 +22,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-// useRouter mock — push 캡처.
+// useRouter mock — push / replace 캡처.
 const routerPushMock = vi.fn();
+const routerReplaceMock = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: routerPushMock }),
+  useRouter: () => ({ push: routerPushMock, replace: routerReplaceMock }),
 }));
 
-// Server Action mock.
+// Server Action mock — saveChildInfo.
 const saveChildInfoMock = vi.fn();
 vi.mock("@/app/actions/onboarding-save-child", async () => {
   // 실 모듈에서 상수만 재export — Server Action 함수는 mock 으로 swap.
@@ -40,6 +41,13 @@ vi.mock("@/app/actions/onboarding-save-child", async () => {
     saveChildInfo: (...args: unknown[]) => saveChildInfoMock(...args),
   };
 });
+
+// Server Action mock — markOnboardingCompletedInDb (follow-up PR).
+const markCompletedInDbMock = vi.fn();
+vi.mock("@/app/actions/mark-onboarding-completed", () => ({
+  markOnboardingCompletedInDb: (...args: unknown[]) =>
+    markCompletedInDbMock(...args),
+}));
 
 // trackEvent mock.
 const trackMock = vi.fn();
@@ -56,7 +64,9 @@ import {
 beforeEach(() => {
   window.localStorage.clear();
   routerPushMock.mockReset();
+  routerReplaceMock.mockReset();
   saveChildInfoMock.mockReset();
+  markCompletedInDbMock.mockReset();
   trackMock.mockReset();
   saveChildInfoMock.mockResolvedValue({
     success: true,
@@ -64,6 +74,7 @@ beforeEach(() => {
     childAgeMonths: 48,
     targetPhonemes: ["ㅅ"],
   });
+  markCompletedInDbMock.mockResolvedValue({ success: true });
 });
 
 afterEach(() => {
@@ -207,11 +218,13 @@ describe("OnboardingWizardClient — FR-C-PARENT-ONBOARDING", () => {
     expect(screen.getByTestId("onboarding-finish-btn")).toBeInTheDocument();
   });
 
-  it("Step4 finish → markOnboardingCompleted + onboarding_completed 이벤트 + 메인 이동", () => {
+  it("Step4 finish → markOnboardingCompleted + DB 동기화 + onboarding_completed 이벤트 + 메인 이동", () => {
     render(<OnboardingWizardClient initialStep={4} />);
     fireEvent.click(screen.getByTestId("onboarding-finish-btn"));
     // localStorage 마킹.
     expect(window.localStorage.getItem(STORAGE_KEY_COMPLETED)).toBe("true");
+    // DB 동기화 (Server Action) 호출.
+    expect(markCompletedInDbMock).toHaveBeenCalledTimes(1);
     // 분석 이벤트.
     const completed = trackCalls().filter(
       (c) => c.name === "onboarding_completed",
@@ -221,6 +234,34 @@ describe("OnboardingWizardClient — FR-C-PARENT-ONBOARDING", () => {
     expect(completed[0].props.skippedSteps).toBeGreaterThanOrEqual(0);
     // router push("/").
     expect(routerPushMock).toHaveBeenCalledWith("/");
+  });
+
+  it("initialDbCompleted=true → 마운트 시 즉시 /missions 로 router.replace", () => {
+    render(
+      <OnboardingWizardClient initialStep={1} initialDbCompleted={true} />,
+    );
+    expect(routerReplaceMock).toHaveBeenCalledWith("/missions");
+    // localStorage 마킹 보충 (DB 만 완료된 user 의 device 동기화).
+    expect(window.localStorage.getItem(STORAGE_KEY_COMPLETED)).toBe("true");
+  });
+
+  it("initialDbCompleted=false + localStorage completed → DB 동기화 + /missions replace", async () => {
+    window.localStorage.setItem(STORAGE_KEY_COMPLETED, "true");
+    render(
+      <OnboardingWizardClient initialStep={1} initialDbCompleted={false} />,
+    );
+    expect(routerReplaceMock).toHaveBeenCalledWith("/missions");
+    await waitFor(() => {
+      expect(markCompletedInDbMock).toHaveBeenCalled();
+    });
+  });
+
+  it("initialDbCompleted=null → 마운트 시 redirect 없음 (wizard 정상 노출)", () => {
+    render(
+      <OnboardingWizardClient initialStep={1} initialDbCompleted={null} />,
+    );
+    expect(routerReplaceMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId("onboarding-step-1")).toBeInTheDocument();
   });
 
   it("'이번엔 건너뛰기' → markOnboardingSkipped + onboarding_skipped 이벤트 + 메인 redirect", () => {

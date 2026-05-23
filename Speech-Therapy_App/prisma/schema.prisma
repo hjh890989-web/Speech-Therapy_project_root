@@ -39,6 +39,10 @@ model User {
   role             Role
   /// 부모의 자녀 월령 (만 2~7세 = 24~84). 부모 외 역할은 null.
   childAgeMonths   Int?
+  /// FR-C-PARENT-ONBOARDING (follow-up) — 신규 부모 first-time wizard 완료 시각.
+  /// localStorage 마킹과 동기화되는 canonical 서버 상태 — 다중 디바이스에서도
+  /// 동일한 wizard 노출 여부 결정에 사용. null = 미완료 / 미실행.
+  onboardingCompletedAt DateTime?
   /// 구독 등급. 기본 free.
   subscriptionTier SubscriptionTier @default(free)
   /// 가입 시각.

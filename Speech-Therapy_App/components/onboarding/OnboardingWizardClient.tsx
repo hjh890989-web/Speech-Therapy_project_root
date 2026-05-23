@@ -22,9 +22,10 @@
 //   - localStorage 외 외부 전송 0건 (분석 이벤트는 numeric/boolean 메트릭만).
 //   - 자녀 이름 / 식별 정보 0건 — 월령 + 음소만.
 //
-// 본 PR 범위 외:
-//   - layout 자동 redirect 미적용 (후속 PR 에서 (public)/layout.tsx 통합 검토).
-//   - DB User.onboardingCompletedAt 컬럼 미도입 (MVP 단순화 → localStorage 우선).
+// follow-up PR 적용:
+//   - layout 자동 redirect 통합 — app/(public)/layout.tsx + OnboardingRedirectGate.
+//   - DB User.onboardingCompletedAt 컬럼 동기화 — markOnboardingCompletedInDb Server Action.
+//   - localStorage 는 즉시 UX snapshot, DB 는 다중 디바이스 canonical 상태.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -46,6 +47,7 @@ import {
   saveChildInfo,
   type AllowedPhoneme,
 } from "@/app/actions/onboarding-save-child";
+import { markOnboardingCompletedInDb } from "@/app/actions/mark-onboarding-completed";
 
 /** 본 컴포넌트가 외부로부터 받는 props. */
 export interface OnboardingWizardClientProps {
@@ -57,6 +59,13 @@ export interface OnboardingWizardClientProps {
   hasExistingChildInfo?: boolean;
   /** UI 상 사용할 자녀 친화 이름 — 기본 "우리 아이". */
   childDisplayName?: string;
+  /**
+   * 서버 측 onboardingCompletedAt 기준 완료 여부.
+   *   - true  : DB 마킹 완료된 user — 본 페이지 진입 자체가 비정상 (sync 또는 redirect).
+   *   - false : DB 미완료 — 정상 wizard 흐름.
+   *   - null  : 비인증 또는 미확정 — wizard 정상 노출 (page 가 비인증 시 /login redirect 처리).
+   */
+  initialDbCompleted?: boolean | null;
 }
 
 type WizardStep = 1 | 2 | 3 | 4;
@@ -69,6 +78,7 @@ export function OnboardingWizardClient({
   prefillChildAgeMonths = null,
   hasExistingChildInfo = false,
   childDisplayName = "우리 아이",
+  initialDbCompleted = null,
 }: OnboardingWizardClientProps) {
   const router = useRouter();
 
@@ -99,7 +109,7 @@ export function OnboardingWizardClient({
   // mount-once 분석 이벤트 guard.
   const startedTrackedRef = useRef(false);
 
-  // mount 시 1회 — 분석 이벤트 + localStorage step 동기화.
+  // mount 시 1회 — 분석 이벤트 + localStorage step 동기화 + DB ↔ localStorage 정합성 보정.
   useEffect(() => {
     if (startedTrackedRef.current) return;
     startedTrackedRef.current = true;
@@ -107,8 +117,10 @@ export function OnboardingWizardClient({
     stepStartedAtRef.current = Date.now();
     trackEvent("onboarding_started", { hasExistingChildInfo });
     // hydration mismatch 회피 — localStorage 읽기는 effect 안에서 (외부 시스템 → React state 동기화).
+    let localCompleted = false;
     try {
       const state = getOnboardingState();
+      localCompleted = state.completed;
       // 이미 완료된 사용자라도 본 wizard 가 노출되었다면 다시 마지막 step 부터 시작.
       if (state.currentStep > step) {
         // 외부 시스템 (localStorage) → React state 의 일회성 동기화 — set-state-in-effect 룰의
@@ -118,6 +130,32 @@ export function OnboardingWizardClient({
       }
     } catch {
       // graceful — default step 유지.
+    }
+
+    // DB ↔ localStorage 정합성 동기화 (양방향):
+    //   - DB true  + localStorage false → 이미 완료 user. localStorage 마킹 + /missions 로 이동.
+    //   - DB false + localStorage true  → 저장 누락 복구 — DB 동기화 후 /missions 로 이동.
+    //   - DB true  + localStorage true  → 정상 완료 user. /missions 로 이동.
+    //   - DB null              → 비인증/미확정. wizard 그대로 노출 (page 가 비인증 시 redirect 처리).
+    //   - DB false + localStorage false → 신규 user. wizard 정상 노출.
+    if (initialDbCompleted === true || localCompleted) {
+      if (initialDbCompleted === true && !localCompleted) {
+        // DB 만 완료 — localStorage 마킹 보충.
+        try {
+          markOnboardingCompleted();
+        } catch {
+          // graceful.
+        }
+      }
+      if (initialDbCompleted === false && localCompleted) {
+        // localStorage 만 완료 — DB 동기화 (fire-and-forget, 결과 ignore).
+        void markOnboardingCompletedInDb().catch(() => {
+          // graceful — 다음 device 진입 시 다시 마킹 가능.
+        });
+      }
+      // 이미 완료된 user — wizard 가 노출돼선 안 됨. /missions 로 이동.
+      router.replace("/missions");
+      return;
     }
     // 의존성 의도적 비움 — mount 시 1회만.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,11 +183,18 @@ export function OnboardingWizardClient({
     [],
   );
 
-  /** wizard 완료 처리 — markCompleted + 분석 이벤트 + 메인 이동. */
+  /** wizard 완료 처리 — markCompleted (localStorage + DB) + 분석 이벤트. */
   const handleComplete = useCallback(() => {
     const startedAt = wizardStartedAtRef.current ?? Date.now();
     const totalDurationMs = Math.max(0, Date.now() - startedAt);
+    // 1) localStorage 즉시 마킹 — 동일 device 의 다음 진입 시 wizard 차단.
     markOnboardingCompleted();
+    // 2) DB 동기화 — 다중 디바이스에서도 wizard 재노출 차단. fire-and-forget — 실패해도
+    //    localStorage 마킹은 유효 (해당 device 한정 즉시 UX). 다음 device 진입 시 layout
+    //    redirect 가 wizard 다시 노출하면서 DB 마킹 재시도 가능.
+    void markOnboardingCompletedInDb().catch(() => {
+      // graceful — DB 실패는 사용자 흐름 차단 X.
+    });
     trackEvent("onboarding_completed", {
       totalDurationMs,
       skippedSteps: skippedStepsRef.current,
