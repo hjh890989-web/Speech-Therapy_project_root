@@ -26,6 +26,7 @@ import {
   type ImportErrorRow,
   type PrismaCreateManyArgs,
 } from "@/lib/admin/student-bulk-import";
+import { sendParentInvite } from "@/app/actions/parent-invite";
 
 /** Server Action 권한 분기 — 익명/권한부족 시 errorCount 만 보고. */
 const PRINCIPAL_ALLOWED_ROLES = ["admin", "principal"] as const;
@@ -39,21 +40,55 @@ const PRINCIPAL_ALLOWED_ROLES = ["admin", "principal"] as const;
  *   - status='forbidden'    → 권한 부족 안내 (원장/관리자만)
  *   - status='invalid_input' → 입력 자체 오류 (institutionId 불일치 등)
  */
+/**
+ * FR-Q-009 / FR-C-005 통합 — 등록 성공 행마다 부모 초대 메일 발송 결과.
+ *
+ * - attempted: parentEmail 이 있어서 sendParentInvite 호출이 시도된 행 수.
+ * - sent: 실 발송 (Resend ok) 성공한 행 수.
+ * - skipped: 권한 / env 미설정 / Resend 실패 등으로 skip 된 행 수.
+ *
+ * R4: 본 결과는 집계 카운트만 — parentEmail / studentId 노출 없음.
+ */
+export interface ParentInviteSummary {
+  attempted: number;
+  sent: number;
+  skipped: number;
+}
+
 export type SubmitBulkImportResult =
-  | { status: "ok"; result: BulkImportResult }
+  | {
+      status: "ok";
+      result: BulkImportResult;
+      parentInvites: ParentInviteSummary;
+    }
   | { status: "unauthorized"; message: string }
   | { status: "forbidden"; message: string }
   | { status: "invalid_input"; message: string };
+
+/**
+ * FR-Q-009 / FR-C-005 통합 — Server Action 호출 시 부모 초대 발송 옵션.
+ *
+ * - sendParentInvites: true 일 때만 행마다 parentEmail 기반 초대 메일 발송.
+ *   본 PR 은 helper 만 — UI 측 체크박스 통합은 후속 PR.
+ * - institutionName: 초대 메일 본문에 표시. 미설정 시 "어린이집/유치원" 폴백.
+ */
+export interface SubmitBulkImportOptions {
+  sendParentInvites?: boolean;
+  institutionName?: string;
+}
 
 /**
  * 원아 일괄 등록 Server Action.
  *
  * @param rows 클라이언트가 검증한 행 배열 (서버에서도 재검증).
  * @param institutionId 클라이언트가 주장하는 institutionId — 서버가 호출자 ctx 와 대조.
+ * @param options FR-Q-009 / FR-C-005 — 부모 초대 발송 옵션 (선택). 미설정 시
+ *   기본값 sendParentInvites=false (helper 만 제공, UI 통합은 후속 PR).
  */
 export async function submitBulkImport(
   rows: unknown[],
   institutionId: string,
+  options: SubmitBulkImportOptions = {},
 ): Promise<SubmitBulkImportResult> {
   // 1) Supabase auth.
   let supabase;
@@ -122,6 +157,7 @@ export async function submitBulkImport(
         errors: [],
         insertedStudentIds: [],
       },
+      parentInvites: { attempted: 0, sent: 0, skipped: 0 },
     };
   }
   if (rows.length > 1000) {
@@ -150,7 +186,16 @@ export async function submitBulkImport(
       successCount: result.successCount,
       errorCount: result.errorCount,
     });
-    return { status: "ok", result };
+
+    // 6) (옵션) 부모 초대 메일 발송 — sendParentInvites=true 인 경우만.
+    // R4: 본인 institution 검증은 sendParentInvite 가 다시 RBAC 통과 (depth-in-defense).
+    const parentInvites = await maybeSendParentInvites(
+      rows,
+      result,
+      options,
+    );
+
+    return { status: "ok", result, parentInvites };
   } catch (err) {
     // Prisma 실패 — 부분 성공 미보고 (트랜잭션 단일 호출). 검증 errors 만 노출.
     const fallback = validateStudentRows(rows, { institutionId, existingStudentIds });
@@ -164,6 +209,7 @@ export async function submitBulkImport(
         errors: appendDbFailureNote(fallback.errors, failureMessage),
         insertedStudentIds: [],
       },
+      parentInvites: { attempted: 0, sent: 0, skipped: 0 },
     };
   }
 }
@@ -255,4 +301,75 @@ function logSubmitTelemetry(properties: {
   } catch {
     // graceful — 텔레메트리 실패는 사용자 흐름 차단 X.
   }
+}
+
+/**
+ * FR-Q-009 / FR-C-005 통합 — 등록 성공 행 중 parentEmail 이 있는 행에 부모 초대 발송.
+ *
+ * 정책:
+ *   - options.sendParentInvites !== true → 발송 없음 (helper 만 제공).
+ *   - parentEmail 부재 행 → skip (attempted 카운트 미증가).
+ *   - insertedStudentIds 에 포함된 행만 발송 — 검증 실패 / 중복 제거된 행은 제외.
+ *   - childId 는 임시 placeholder (rowIdx) 사용 — User 모델에 studentId 컬럼 부재 →
+ *     실제 UserId 매핑은 후속 PR 에서 createManyAndReturn 도입 후 교체.
+ *   - sendParentInvite 가 graceful (throw 금지) — 본 helper 도 throw 금지.
+ *
+ * R4: parentEmail / studentId 는 결과에 노출 안 됨 — 집계만.
+ */
+async function maybeSendParentInvites(
+  rows: unknown[],
+  result: BulkImportResult,
+  options: SubmitBulkImportOptions,
+): Promise<{ attempted: number; sent: number; skipped: number }> {
+  if (!options.sendParentInvites) {
+    return { attempted: 0, sent: 0, skipped: 0 };
+  }
+
+  const institutionName =
+    options.institutionName && options.institutionName.trim().length > 0
+      ? options.institutionName.trim()
+      : "어린이집/유치원";
+
+  // 등록 성공한 studentId 의 set — Server Action 응답으로부터 정확한 매칭.
+  const insertedSet = new Set(result.insertedStudentIds);
+
+  let attempted = 0;
+  let sent = 0;
+  let skipped = 0;
+
+  for (const raw of rows) {
+    if (
+      !raw ||
+      typeof raw !== "object" ||
+      Array.isArray(raw)
+    ) {
+      continue;
+    }
+    const rec = raw as Record<string, unknown>;
+    const studentId = typeof rec["studentId"] === "string" ? rec["studentId"] : "";
+    const parentEmailRaw =
+      typeof rec["parentEmail"] === "string" ? rec["parentEmail"] : "";
+    const parentEmail = parentEmailRaw.trim().toLowerCase();
+    const childName = typeof rec["name"] === "string" ? rec["name"] : undefined;
+
+    // 등록 성공 + parentEmail 존재 행만 시도.
+    if (!parentEmail || !insertedSet.has(studentId)) continue;
+
+    attempted += 1;
+    // childId placeholder — schema 에 부모-자녀 연결 컬럼 부재 (CON-FR-C-016).
+    // studentId 를 임시 식별자로 활용. 후속 PR 에서 user.id (createManyAndReturn) 로 교체.
+    const inviteResult = await sendParentInvite({
+      parentEmail,
+      childId: studentId,
+      institutionName,
+      childName,
+    });
+    if (inviteResult.sent) {
+      sent += 1;
+    } else {
+      skipped += 1;
+    }
+  }
+
+  return { attempted, sent, skipped };
 }

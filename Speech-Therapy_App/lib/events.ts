@@ -532,6 +532,27 @@ export type AnalyticsEvent =
         skipped: boolean;
         hasError: boolean;
       };
+    }
+  // === FR-Q-009 / FR-C-005 — 부모 초대 (Resend + JWT signup link) ===
+  | {
+      // sendParentInvite Server Action 의 sendEmail 직후 1회 (server-side console.log).
+      // R4 보호: parentEmail / childId / token 절대 노출 금지 — institutionId + skip 분기만.
+      // emailSkipped: Resend env 미설정 / 5xx / 금칙어 / NODE_ENV='test' 모두 true.
+      name: "parent_invite_sent";
+      properties: {
+        institutionId: string;
+        emailSkipped: boolean;
+      };
+    }
+  | {
+      // ParentSignupForm 의 completeParentSignup 성공 직후 1회 (client trackEvent).
+      // daysFromSent: token iat 와 가입 완료 시각 차 (일 단위). 본 PR 단순화로 0 폴백 — 후속 PR 에서 정확한 산출.
+      // R4 보호: parentEmail / childId 0건 — institutionId + 일수 메트릭만.
+      name: "parent_invite_accepted";
+      properties: {
+        institutionId: string;
+        daysFromSent: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
