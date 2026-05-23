@@ -591,6 +591,46 @@ export type AnalyticsEvent =
         userId: string;
         institutionId?: string;
       };
+    }
+  // === FR-C-PARENT-ONBOARDING — 신규 부모 first-time wizard (4-step) ===
+  | {
+      // wizard mount 직후 1회 — 본 user 가 wizard 를 처음 (또는 다시) 시작한 시점.
+      // hasExistingChildInfo: User.childAgeMonths 가 이미 저장된 사용자인지 분기.
+      // R4 보호: userId / 자녀 식별 정보 0건 — 단순 boolean 메트릭만.
+      name: "onboarding_started";
+      properties: {
+        hasExistingChildInfo: boolean;
+      };
+    }
+  | {
+      // 각 step 완료 시 1회 — 4단계 funnel CVR 분석용.
+      // durationMs: 해당 step 진입 → 다음 버튼 클릭 사이 경과 시간 (≥ 0).
+      // R4 보호: userId / 자녀 정보 0건 — step 번호 + 경과 시간만.
+      name: "onboarding_step_completed";
+      properties: {
+        step: 1 | 2 | 3 | 4;
+        durationMs: number;
+      };
+    }
+  | {
+      // 4단계 모두 완주 후 1회 — markOnboardingCompleted 호출 직후.
+      // totalDurationMs: wizard 시작 → 완료까지 누적 시간.
+      // skippedSteps: 사용자가 "이번엔 건너뛰기" 로 skip 한 step 카운트 (0~3).
+      // R4 보호: userId / 자녀 정보 0건 — 누적 시간 + 카운트만.
+      name: "onboarding_completed";
+      properties: {
+        totalDurationMs: number;
+        skippedSteps: number;
+      };
+    }
+  | {
+      // 사용자가 "다시 보지 않기" 클릭 시 1회 — markOnboardingSkipped 호출 직후.
+      // atStep: skip 시점의 step 번호 (어느 단계 이탈이 가장 많은지 funnel 분석).
+      // R4 보호: userId / 자녀 정보 0건 — step 번호만.
+      name: "onboarding_skipped";
+      properties: {
+        atStep: 1 | 2 | 3 | 4;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
