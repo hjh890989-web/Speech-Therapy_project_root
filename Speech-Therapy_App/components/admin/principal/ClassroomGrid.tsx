@@ -11,9 +11,14 @@
 //   각 반 카드 안에 <details> disclosure 로 학생 목록(StudentRow) 노출.
 //   - 기본 닫힘 (정보 밀도 우선, 운영자 톤).
 //   - cls.studentCount 0건 → details 자체 미렌더 (펼칠 게 없음).
-//   - cursor 페이지네이션: aggregator 가 hasMoreStudents=true 일 때 안내 메시지 노출.
-//     본 PR 은 서버 side cursor 지원 + UI 안내만 — 실제 cursor 진입 UI (다음 페이지 버튼)
-//     는 후속 PR (search param Server Component 재 fetch).
+//
+// 9f204cd 후속 — cursor 페이지네이션 UI 진입 (본 PR):
+//   - aggregator 가 hasMoreStudents=true + nextStudentsCursor 를 반환 → "더 보기" Link 노출
+//     (URL search param `students_cursor` 갱신 → RSC 재 fetch).
+//   - 현재 backend 는 단일 cursor 가 모든 반에 동일 적용 — 본 UI 도 동일 (반별 cursor 분리는 후속 PR).
+//   - 페이지가 cursor 있는 상태로 진입 시 grid 상단에 "처음으로" Link 노출 (첫 페이지로 복귀).
+
+import Link from "next/link";
 
 import type { ClassroomSummary } from "@/lib/admin/principal-aggregator";
 
@@ -21,6 +26,13 @@ import { StudentRow } from "./StudentRow";
 
 export interface ClassroomGridProps {
   classrooms: ClassroomSummary[];
+  /**
+   * 현재 페이지 진입이 cursor 가 있는 "다음 페이지" 인가?
+   *   - true → 상단에 "처음으로" Link 노출 (cursor 없는 첫 페이지 복귀).
+   *   - false → 첫 페이지 진입, "처음으로" Link 미노출.
+   * 기본 false (cursor 없음).
+   */
+  hasCursor?: boolean;
 }
 
 function formatScore(value: number | null): string {
@@ -28,16 +40,35 @@ function formatScore(value: number | null): string {
   return value.toFixed(1);
 }
 
-export function ClassroomGrid({ classrooms }: ClassroomGridProps) {
+export function ClassroomGrid({ classrooms, hasCursor = false }: ClassroomGridProps) {
+  // 단일 cursor 정책 — 첫 번째로 발견된 nextStudentsCursor 를 "더 보기" Link href 에 사용.
+  // (현재 backend 도 단일 cursor 가 모든 반에 동일 적용 — 반별 분리는 후속 PR).
+  const nextCursorClass = classrooms.find(
+    (c) => c.hasMoreStudents && typeof c.nextStudentsCursor === "string",
+  );
+  const nextCursor = nextCursorClass?.nextStudentsCursor;
+  const hasNextPage = Boolean(nextCursor);
+
   return (
     <section
       data-testid="principal-classroom-grid"
       aria-labelledby="classrooms-heading"
       className="mb-8"
     >
-      <h2 id="classrooms-heading" className="mb-3 text-lg font-semibold text-slate-900">
-        반 단위 발달 현황
-      </h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 id="classrooms-heading" className="text-lg font-semibold text-slate-900">
+          반 단위 발달 현황
+        </h2>
+        {hasCursor ? (
+          <Link
+            href="/admin/principal"
+            data-testid="principal-students-cursor-reset"
+            className="inline-flex min-h-[36px] items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          >
+            처음으로
+          </Link>
+        ) : null}
+      </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {classrooms.map((cls) => {
           const hasStudents = cls.students.length > 0;
@@ -88,22 +119,23 @@ export function ClassroomGrid({ classrooms }: ClassroomGridProps) {
                       <StudentRow key={s.id} student={s} />
                     ))}
                   </ul>
-                  {cls.hasMoreStudents ? (
-                    <p
-                      data-testid={`classroom-students-more-${cls.id}`}
-                      className="px-2 pb-2 text-[11px] text-slate-500"
-                      role="note"
-                    >
-                      원아가 30명을 넘어서 일부만 표시되었어요. 더 많은 원아 보기는
-                      후속 업데이트에서 지원될 예정이에요.
-                    </p>
-                  ) : null}
                 </details>
               ) : null}
             </article>
           );
         })}
       </div>
+      {hasNextPage && nextCursor ? (
+        <div className="mt-4 flex justify-center">
+          <Link
+            href={{ pathname: "/admin/principal", query: { students_cursor: nextCursor } }}
+            data-testid="principal-students-cursor-next"
+            className="inline-flex min-h-[44px] items-center rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900"
+          >
+            더 보기
+          </Link>
+        </div>
+      ) : null}
     </section>
   );
 }

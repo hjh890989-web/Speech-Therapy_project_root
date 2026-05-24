@@ -151,7 +151,7 @@ describe("/admin/teacher — FR-Q-TEACHER 선생님 대시보드", () => {
     setUserRow("teacher");
     loadDashMock.mockResolvedValueOnce(fullDashboard(USER_TEACHER));
 
-    const ui = await TeacherDashboardPage();
+    const ui = await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     const main = container.querySelector("[data-testid='admin-teacher-page']");
@@ -186,13 +186,13 @@ describe("/admin/teacher — FR-Q-TEACHER 선생님 대시보드", () => {
     setUserRow("admin");
     loadDashMock.mockResolvedValueOnce(emptyDashboard(USER_ADMIN));
 
-    const ui = await TeacherDashboardPage();
+    const ui = await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     expect(container.querySelector("[data-testid='admin-teacher-page']")).not.toBeNull();
     expect(container.querySelector("[data-testid='teacher-forbidden']")).toBeNull();
     // admin 본인 user.id 가 loadTeacherDashboard 인자로 전달.
-    expect(loadDashMock).toHaveBeenCalledWith(USER_ADMIN);
+    expect(loadDashMock).toHaveBeenCalledWith(USER_ADMIN, { studentsCursor: undefined });
   });
 
   it("[3] principal role → 통과", async () => {
@@ -200,18 +200,18 @@ describe("/admin/teacher — FR-Q-TEACHER 선생님 대시보드", () => {
     setUserRow("principal");
     loadDashMock.mockResolvedValueOnce(emptyDashboard(USER_PRINCIPAL));
 
-    const ui = await TeacherDashboardPage();
+    const ui = await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     expect(container.querySelector("[data-testid='admin-teacher-page']")).not.toBeNull();
-    expect(loadDashMock).toHaveBeenCalledWith(USER_PRINCIPAL);
+    expect(loadDashMock).toHaveBeenCalledWith(USER_PRINCIPAL, { studentsCursor: undefined });
   });
 
   it("[4] parent role → 403 안내 (teacher-forbidden)", async () => {
     setAuthUser(USER_PARENT);
     setUserRow("parent");
 
-    const ui = await TeacherDashboardPage();
+    const ui = await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     expect(container.querySelector("[data-testid='teacher-forbidden']")).not.toBeNull();
@@ -223,7 +223,7 @@ describe("/admin/teacher — FR-Q-TEACHER 선생님 대시보드", () => {
     setAuthUser(USER_EXPERT);
     setUserRow("expert");
 
-    const ui = await TeacherDashboardPage();
+    const ui = await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     expect(container.querySelector("[data-testid='teacher-forbidden']")).not.toBeNull();
@@ -235,7 +235,7 @@ describe("/admin/teacher — FR-Q-TEACHER 선생님 대시보드", () => {
     setUserRow("teacher");
     loadDashMock.mockResolvedValueOnce(emptyDashboard(USER_TEACHER));
 
-    const ui = await TeacherDashboardPage();
+    const ui = await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     const empty = container.querySelector("[data-testid='teacher-classrooms-empty']");
@@ -260,10 +260,10 @@ describe("/admin/teacher — FR-Q-TEACHER 선생님 대시보드", () => {
     setUserRow("teacher");
     loadDashMock.mockResolvedValueOnce(fullDashboard(USER_TEACHER));
 
-    await TeacherDashboardPage();
+    await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
 
     expect(loadDashMock).toHaveBeenCalledTimes(1);
-    expect(loadDashMock).toHaveBeenCalledWith(USER_TEACHER);
+    expect(loadDashMock).toHaveBeenCalledWith(USER_TEACHER, { studentsCursor: undefined });
 
     const allCalls = JSON.stringify(loadDashMock.mock.calls);
     expect(allCalls).not.toContain(USER_TEACHER_OTHER);
@@ -274,33 +274,33 @@ describe("/admin/teacher — FR-Q-TEACHER 선생님 대시보드", () => {
     setAuthUser(USER_TEACHER);
     setUserRow("teacher");
     loadDashMock.mockResolvedValueOnce(fullDashboard(USER_TEACHER));
-    const { container: fullC } = render(await TeacherDashboardPage());
+    const { container: fullC } = render(await TeacherDashboardPage({ searchParams: Promise.resolve({}) }));
     assertNoMedicalTerms(fullC.textContent ?? "");
 
     // (b) empty
     setAuthUser(USER_TEACHER);
     setUserRow("teacher");
     loadDashMock.mockResolvedValueOnce(emptyDashboard(USER_TEACHER));
-    const { container: emptyC } = render(await TeacherDashboardPage());
+    const { container: emptyC } = render(await TeacherDashboardPage({ searchParams: Promise.resolve({}) }));
     assertNoMedicalTerms(emptyC.textContent ?? "");
 
     // (c) forbidden — parent
     setAuthUser(USER_PARENT);
     setUserRow("parent");
-    const { container: forbC } = render(await TeacherDashboardPage());
+    const { container: forbC } = render(await TeacherDashboardPage({ searchParams: Promise.resolve({}) }));
     assertNoMedicalTerms(forbC.textContent ?? "");
 
     // (d) forbidden — expert
     setAuthUser(USER_EXPERT);
     setUserRow("expert");
-    const { container: expC } = render(await TeacherDashboardPage());
+    const { container: expC } = render(await TeacherDashboardPage({ searchParams: Promise.resolve({}) }));
     assertNoMedicalTerms(expC.textContent ?? "");
   });
 
   it("[9] 비로그인 → redirect('/login?next=/admin/teacher')", async () => {
     setAnonymousAuth();
 
-    await expect(TeacherDashboardPage()).rejects.toThrow(/NEXT_REDIRECT/);
+    await expect(TeacherDashboardPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(/NEXT_REDIRECT/);
     expect(redirectMock).toHaveBeenCalledTimes(1);
     expect(redirectMock).toHaveBeenCalledWith("/login?next=/admin/teacher");
     expect(findUniqueMock).not.toHaveBeenCalled();
@@ -312,7 +312,7 @@ describe("/admin/teacher — FR-Q-TEACHER 선생님 대시보드", () => {
     setUserRow("teacher");
     loadDashMock.mockResolvedValueOnce(fullDashboard(USER_TEACHER));
 
-    const ui = await TeacherDashboardPage();
+    const ui = await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     const text = container.textContent ?? "";

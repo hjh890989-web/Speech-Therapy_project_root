@@ -165,7 +165,7 @@ describe("/admin/principal — FR-Q-009 원장 대시보드", () => {
     setUserRow("principal", INSTITUTION_A);
     loadDashMock.mockResolvedValueOnce(fullDashboard(INSTITUTION_A));
 
-    const ui = await PrincipalDashboardPage();
+    const ui = await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     const main = container.querySelector("[data-testid='admin-principal-page']");
@@ -198,7 +198,7 @@ describe("/admin/principal — FR-Q-009 원장 대시보드", () => {
     setUserRow("admin", INSTITUTION_A);
     loadDashMock.mockResolvedValueOnce(fullDashboard(INSTITUTION_A));
 
-    const ui = await PrincipalDashboardPage();
+    const ui = await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     expect(container.querySelector("[data-testid='admin-principal-page']")).not.toBeNull();
@@ -209,7 +209,7 @@ describe("/admin/principal — FR-Q-009 원장 대시보드", () => {
     setAuthUser(USER_PARENT);
     setUserRow("parent", INSTITUTION_A);
 
-    const ui = await PrincipalDashboardPage();
+    const ui = await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     expect(container.querySelector("[data-testid='principal-forbidden']")).not.toBeNull();
@@ -222,7 +222,7 @@ describe("/admin/principal — FR-Q-009 원장 대시보드", () => {
     setAuthUser(USER_EXPERT);
     setUserRow("expert", INSTITUTION_A);
 
-    const ui = await PrincipalDashboardPage();
+    const ui = await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     expect(container.querySelector("[data-testid='principal-forbidden']")).not.toBeNull();
@@ -233,7 +233,7 @@ describe("/admin/principal — FR-Q-009 원장 대시보드", () => {
     setAuthUser(USER_PRINCIPAL);
     setUserRow("principal", null);
 
-    const ui = await PrincipalDashboardPage();
+    const ui = await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     const banner = container.querySelector("[data-testid='principal-no-institution']");
@@ -247,7 +247,7 @@ describe("/admin/principal — FR-Q-009 원장 대시보드", () => {
     setUserRow("principal", INSTITUTION_A);
     loadDashMock.mockResolvedValueOnce(emptyDashboard(INSTITUTION_A));
 
-    const ui = await PrincipalDashboardPage();
+    const ui = await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     expect(
@@ -282,10 +282,10 @@ describe("/admin/principal — FR-Q-009 원장 대시보드", () => {
     setUserRow("principal", INSTITUTION_A);
     loadDashMock.mockResolvedValueOnce(fullDashboard(INSTITUTION_A));
 
-    await PrincipalDashboardPage();
+    await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
 
     expect(loadDashMock).toHaveBeenCalledTimes(1);
-    expect(loadDashMock).toHaveBeenCalledWith(INSTITUTION_A);
+    expect(loadDashMock).toHaveBeenCalledWith(INSTITUTION_A, { studentsCursor: undefined });
     // 다른 institutionId 가 호출 인자로 들어가지 않음 (R4).
     const allCalls = JSON.stringify(loadDashMock.mock.calls);
     expect(allCalls).not.toContain(INSTITUTION_B);
@@ -296,26 +296,26 @@ describe("/admin/principal — FR-Q-009 원장 대시보드", () => {
     setAuthUser(USER_PRINCIPAL);
     setUserRow("principal", INSTITUTION_A);
     loadDashMock.mockResolvedValueOnce(fullDashboard(INSTITUTION_A));
-    const { container: fullC } = render(await PrincipalDashboardPage());
+    const { container: fullC } = render(await PrincipalDashboardPage({ searchParams: Promise.resolve({}) }));
     assertNoMedicalTerms(fullC.textContent ?? "");
 
     // (b) empty
     setAuthUser(USER_PRINCIPAL);
     setUserRow("principal", INSTITUTION_A);
     loadDashMock.mockResolvedValueOnce(emptyDashboard(INSTITUTION_A));
-    const { container: emptyC } = render(await PrincipalDashboardPage());
+    const { container: emptyC } = render(await PrincipalDashboardPage({ searchParams: Promise.resolve({}) }));
     assertNoMedicalTerms(emptyC.textContent ?? "");
 
     // (c) forbidden
     setAuthUser(USER_PARENT);
     setUserRow("parent", INSTITUTION_A);
-    const { container: forbC } = render(await PrincipalDashboardPage());
+    const { container: forbC } = render(await PrincipalDashboardPage({ searchParams: Promise.resolve({}) }));
     assertNoMedicalTerms(forbC.textContent ?? "");
 
     // (d) no-institution
     setAuthUser(USER_PRINCIPAL);
     setUserRow("principal", null);
-    const { container: noInstC } = render(await PrincipalDashboardPage());
+    const { container: noInstC } = render(await PrincipalDashboardPage({ searchParams: Promise.resolve({}) }));
     assertNoMedicalTerms(noInstC.textContent ?? "");
   });
 
@@ -323,7 +323,7 @@ describe("/admin/principal — FR-Q-009 원장 대시보드", () => {
     setAnonymousAuth();
     // findUnique 는 호출되지 않아야 함.
 
-    await expect(PrincipalDashboardPage()).rejects.toThrow(/NEXT_REDIRECT/);
+    await expect(PrincipalDashboardPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(/NEXT_REDIRECT/);
     expect(redirectMock).toHaveBeenCalledTimes(1);
     expect(redirectMock).toHaveBeenCalledWith("/login?next=/admin/principal");
     expect(findUniqueMock).not.toHaveBeenCalled();
@@ -335,7 +335,7 @@ describe("/admin/principal — FR-Q-009 원장 대시보드", () => {
     setUserRow("principal", INSTITUTION_A);
     loadDashMock.mockResolvedValueOnce(fullDashboard(INSTITUTION_A));
 
-    const ui = await PrincipalDashboardPage();
+    const ui = await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
     const text = container.textContent ?? "";

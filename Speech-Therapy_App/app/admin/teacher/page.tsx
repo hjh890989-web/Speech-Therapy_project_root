@@ -3,9 +3,10 @@
 // 책임:
 //   1) Supabase auth.getUser() → User.role / User.id 단건 조회 (proxy.ts RBAC 이후 2차 가드)
 //   2) teacher/admin/principal 만 통과 — expert / parent 차단 (403 안내)
-//   3) loadTeacherDashboard(userId) — 본인 담당 반 만 fetch
+//   3) loadTeacherDashboard(userId, { studentsCursor }) — 본인 담당 반 만 fetch
 //      · admin/principal 도 본 페이지에서는 teacher 시점 view (본인 user.id 가 담당 teacherId 인 반)
 //        — 다른 teacher 의 반을 보려면 별도 admin 페이지 (후속 PR) 사용. R4 단순화.
+//      · searchParams.students_cursor 가 있으면 "다음 페이지" 진입 (9f204cd 후속 UI cursor).
 //   4) TeacherStatsCards + TeacherClassroomGrid 또는 빈 데이터 CTA 렌더.
 //   5) teacher_dashboard_viewed telemetry (server-side console.log — Vercel Logs).
 //
@@ -92,7 +93,25 @@ function logDashboardView(data: TeacherDashboardData) {
   }
 }
 
-export default async function TeacherDashboardPage() {
+/**
+ * Page props — Next.js 16 (15+) 부터 searchParams 는 Promise 로 변경됨.
+ *   students_cursor: 직전 페이지 마지막 학생 User.id (UUID). aggregator 가 본 값보다 큰 id 부터 fetch.
+ *     · 빈 값 / 미지정 → 첫 페이지 진입.
+ *     · cross-teacher 우회 차단: aggregator 의 where: { teacherId } scope 가 그대로 적용되어
+ *       다른 teacher 의 반은 절대 도달 못함 (teacher-aggregator.ts §해설).
+ */
+interface TeacherDashboardPageProps {
+  searchParams: Promise<{ students_cursor?: string }>;
+}
+
+export default async function TeacherDashboardPage({
+  searchParams,
+}: TeacherDashboardPageProps) {
+  const { students_cursor: rawCursor } = await searchParams;
+  const cursor =
+    typeof rawCursor === "string" && rawCursor.trim().length > 0 ? rawCursor.trim() : undefined;
+  const hasCursor = Boolean(cursor);
+
   const ctx = await loadCurrentUserContext();
 
   // L2 — 비로그인 fallback (proxy.ts 가 통상 차단하나, Supabase 일시 장애 대응).
@@ -127,8 +146,9 @@ export default async function TeacherDashboardPage() {
   }
 
   // L2 — cross-teacher 차단: loadTeacherDashboard 의 teacherId 는 본인 user.id 만 전달.
-  // (외부 query / URL param 으로 다른 teacherId 입력 경로 없음 — 본 페이지는 search param 미사용)
-  const data = await loadTeacherDashboard(ctx.userId);
+  // searchParams.students_cursor 는 학생 페이지네이션 cursor — aggregator 의 where: { teacherId }
+  // scope 가 상위에서 적용되므로 다른 teacher 의 반에는 절대 도달 못함 (teacher-aggregator.ts §해설).
+  const data = await loadTeacherDashboard(ctx.userId, { studentsCursor: cursor });
   logDashboardView(data);
 
   const hasAnyData =
@@ -171,7 +191,7 @@ export default async function TeacherDashboardPage() {
           </p>
         </section>
       ) : (
-        <TeacherClassroomGrid classrooms={data.classrooms} />
+        <TeacherClassroomGrid classrooms={data.classrooms} hasCursor={hasCursor} />
       )}
 
       {!hasAnyData ? (

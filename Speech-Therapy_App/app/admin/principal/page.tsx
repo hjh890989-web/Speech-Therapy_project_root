@@ -4,7 +4,8 @@
 //   1) Supabase auth.getUser() → User.role / User.institutionId 단건 조회 (proxy.ts RBAC 이후 2차 가드)
 //   2) principal/admin 만 통과 (expert 제외) — expert 는 HITL 큐 전용 사용자.
 //   3) institutionId 부재 → 안내 메시지 (원장 가입은 됐으나 운영자 매칭 전).
-//   4) loadPrincipalDashboard(institutionId) 1회 호출 — Promise.all fan-out.
+//   4) loadPrincipalDashboard(institutionId, { studentsCursor }) 1회 호출 — Promise.all fan-out.
+//      · searchParams.students_cursor 가 있으면 "다음 페이지" 진입 (9f204cd 후속 UI cursor).
 //   5) StatsCards + ClassroomGrid (또는 빈 데이터 CTA) 렌더.
 //   6) principal_dashboard_viewed telemetry (server-side console.log — Vercel Logs).
 //
@@ -94,7 +95,25 @@ function logDashboardView(data: PrincipalDashboardData) {
   }
 }
 
-export default async function PrincipalDashboardPage() {
+/**
+ * Page props — Next.js 16 (15+) 부터 searchParams 는 Promise 로 변경됨.
+ *   students_cursor: 직전 페이지 마지막 학생 User.id (UUID). aggregator 가 본 값보다 큰 id 부터 fetch.
+ *     · 빈 값 / 미지정 → 첫 페이지 진입.
+ *     · 외부에서 다른 institution 의 user id 를 입력해도 aggregator 의 where: institutionId scope
+ *       가 그대로 적용되어 본인 기관 users 안에서만 매칭됨 (cross-tenant 안전).
+ */
+interface PrincipalDashboardPageProps {
+  searchParams: Promise<{ students_cursor?: string }>;
+}
+
+export default async function PrincipalDashboardPage({
+  searchParams,
+}: PrincipalDashboardPageProps) {
+  const { students_cursor: rawCursor } = await searchParams;
+  const cursor =
+    typeof rawCursor === "string" && rawCursor.trim().length > 0 ? rawCursor.trim() : undefined;
+  const hasCursor = Boolean(cursor);
+
   const ctx = await loadCurrentUserContext();
 
   // L2 — 비로그인 fallback (proxy.ts 가 통상 차단하나, 직접 호출 / Supabase 일시 장애 대응).
@@ -149,8 +168,10 @@ export default async function PrincipalDashboardPage() {
   }
 
   // L2 — cross-tenant 차단 보장: 호출 institutionId 는 본인 user 의 institutionId 만 사용.
-  // (외부 query / URL param 으로 다른 institutionId 입력 경로 없음 — 본 페이지는 search param 미사용)
-  const data = await loadPrincipalDashboard(ctx.institutionId);
+  // searchParams.students_cursor 는 페이지네이션 cursor (User.id UUID) — aggregator 가
+  // where: { institutionId } scope 안에서 { id: { gt: cursor } } 로 필터링하므로 다른 기관
+  // user id 를 입력해도 본 기관 users 안에서만 매칭 (안전, principal-aggregator.ts §해설).
+  const data = await loadPrincipalDashboard(ctx.institutionId, { studentsCursor: cursor });
   logDashboardView(data);
 
   const hasAnyData =
@@ -198,7 +219,7 @@ export default async function PrincipalDashboardPage() {
           </Link>
         </section>
       ) : (
-        <ClassroomGrid classrooms={data.classrooms} />
+        <ClassroomGrid classrooms={data.classrooms} hasCursor={hasCursor} />
       )}
 
       {!hasAnyData ? (
