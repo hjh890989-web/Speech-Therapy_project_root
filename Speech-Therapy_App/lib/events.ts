@@ -683,6 +683,19 @@ export type AnalyticsEvent =
         wAurAchieved: boolean;
         weekNumber: number;
       };
+    }
+  // === FR-NAV — 메인 navigation 항목 클릭 텔레메트리 (role 별 동선 분석) ===
+  | {
+      // MainNavClient 에서 메뉴 항목 (Link) 클릭 직후 1회.
+      // destination: 이동 대상 pathname (예: "/weekly-review", "/admin/principal").
+      // role: 클릭 시점의 사용자 role — anonymous / parent / teacher / principal / expert / admin.
+      // R4 보호: userId / email / 자녀 식별 정보 0건 — destination + role label 만.
+      // KPI 활용: role 별 메뉴 클릭 분포 → 어떤 동선이 부족한지 / B2B 운영자 진입 동선 검증.
+      name: "nav_clicked";
+      properties: {
+        destination: string;
+        role: "anonymous" | "parent" | "teacher" | "principal" | "expert" | "admin";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

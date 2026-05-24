@@ -16,6 +16,7 @@ import { Suspense } from "react";
 import { AuthHeader } from "./AuthHeader";
 import { OnboardingRedirectGate } from "@/components/onboarding/OnboardingRedirectGate";
 import { hasCompletedOnboardingServerSide } from "@/lib/onboarding/server-state";
+import { MainNav } from "@/components/nav/MainNav";
 
 // Supabase auth + DB 상태는 매 요청 fresh — 정적 캐시 차단.
 export const dynamic = "force-dynamic";
@@ -35,10 +36,15 @@ export default function PublicLayout({
   return (
     <>
       <AuthHeader />
+      {/* FR-NAV — 부모/원장/선생님/expert role 별 메인 navigation. RSC 내부에서 Supabase + Prisma role
+          단건 조회 후 메뉴 항목을 산출. Suspense fallback (null) 으로 wrap 되어 page LCP 차단 0. */}
+      <Suspense fallback={null}>
+        <MainNav />
+      </Suspense>
       <Suspense fallback={null}>
         <OnboardingRedirectShim />
       </Suspense>
-      {children}
+      <main>{children}</main>
     </>
   );
 }
