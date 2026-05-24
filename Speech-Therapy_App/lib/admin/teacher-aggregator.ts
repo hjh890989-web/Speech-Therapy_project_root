@@ -26,8 +26,14 @@
 // 성능: 단일 teacher 당 담당 반 수는 운영상 1~5 → N+1 회 추가 쿼리도 acceptable.
 
 import { prisma } from "@/lib/db";
+import { kstDaysAgoStart } from "@/lib/timeline/tz";
 
-/** 최근 N일 윈도우 — principal 과 동일 정책 (7일). */
+/**
+ * 최근 N일 윈도우 — principal 과 동일 정책 (7일).
+ *
+ * TZ 통일 (9f204cd 후속): since 시각은 `kstDaysAgoStart(7)` 로 KST 자정 정렬.
+ *   principal-aggregator 와 동일 정책으로 dashboard 카운트 정합성 보장.
+ */
 export const TEACHER_RECENT_DAYS = 7;
 
 /**
@@ -128,7 +134,9 @@ export async function loadTeacherDashboard(
 ): Promise<TeacherDashboardData> {
   if (!teacherId) return emptyPayload("");
 
-  const since = new Date(Date.now() - TEACHER_RECENT_DAYS * 24 * 60 * 60 * 1000);
+  // TZ 통일: since = "오늘 KST 자정으로부터 7일 전 KST 자정" instant.
+  // principal-aggregator 와 동일 정책 (9f204cd 후속).
+  const since = kstDaysAgoStart(TEACHER_RECENT_DAYS);
   const cursor = options.studentsCursor && options.studentsCursor.length > 0
     ? options.studentsCursor
     : undefined;

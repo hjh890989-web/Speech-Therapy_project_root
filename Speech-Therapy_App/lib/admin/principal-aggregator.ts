@@ -26,10 +26,16 @@
 // Empty data graceful: institutionId 가 비어 있거나 데이터 0건이면 모든 카운트 0 + classrooms=[].
 
 import { prisma } from "@/lib/db";
+import { kstDaysAgoStart } from "@/lib/timeline/tz";
 
 /**
- * 1주 = 7일 (UTC 기준 now - 7d). FR-Q-009 §AC Scenario 4 의 "최근 1주" 정의.
+ * 1주 = 7일 (KST 자정 기준 now - 7d). FR-Q-009 §AC Scenario 4 의 "최근 1주" 정의.
  * 변경 시 본 상수만 갱신 — cron / 다른 리포트와는 독립.
+ *
+ * TZ 통일 (9f204cd 후속): since 시각은 `kstDaysAgoStart(7)` 로 KST 자정 정렬.
+ *   - UTC 어떤 시각에 RSC 가 호출되든 동일 결과 (KST 일자 boundary 안정성).
+ *   - 기존 `Date.now() - 7d` 는 instant 기반으로, KST 하루 안에서 호출 시점에 따라
+ *     포함되는 evaluationResult row 가 미세하게 달라짐.
  */
 export const PRINCIPAL_RECENT_DAYS = 7;
 
@@ -134,7 +140,9 @@ export async function loadPrincipalDashboard(
 ): Promise<PrincipalDashboardData> {
   if (!institutionId) return emptyPayload("");
 
-  const since = new Date(Date.now() - PRINCIPAL_RECENT_DAYS * 24 * 60 * 60 * 1000);
+  // TZ 통일: since = "오늘 KST 자정으로부터 7일 전 KST 자정" instant.
+  // 기존 `Date.now() - 7d` 의 KST 일자 boundary 불안정성 해소 (9f204cd 후속).
+  const since = kstDaysAgoStart(PRINCIPAL_RECENT_DAYS);
   const cursor = options.studentsCursor && options.studentsCursor.length > 0
     ? options.studentsCursor
     : undefined;

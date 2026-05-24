@@ -35,12 +35,16 @@
 // CON-04 금칙어 ("치료" / "진단" / "장애"):
 //   - 본 파일 내 변수 / 주석 / 상수 / 단계명 모두 "diagnose_" 영문만 사용 — 한글 금칙어 0건.
 //
-// 시간 처리:
-//   - 모든 일자 비교는 UTC 기준 (Vercel cron 의 schedule 도 UTC).
-//   - dateRange 의 from / to 는 inclusive 가 아닌 [from, to) — 명시적 half-open interval.
-//     호출 측이 day boundary 를 신경쓰기 쉬움 (toDayStartUtc / addUtcDays 사용).
+// 시간 처리 (TZ 통일 9f204cd 후속):
+//   - 일간 그루핑 boundary 는 KST 자정 기준 (사용자 인지 일자 = funnel 일자).
+//   - aggregateFunnelByDay 의 일자 라벨 (FunnelSummary.date) 은 KST 일자 YYYY-MM-DD.
+//   - dateRange 의 from / to 는 instant — 호출 측은 KST 자정 boundary 권장
+//     (toDayStartKst / addKstDays 헬퍼 제공).
+//   - 기존 toDayStartUtc / addUtcDays / formatUtcDate 는 backwards-compat 으로 유지
+//     (기존 호출자 / 단위 테스트 회귀 방지). 신규 호출자는 KST 변형 사용 권장.
 
 import { prisma } from "@/lib/db";
+import { kstStartOfDay, KST_OFFSET_MS } from "@/lib/timeline/tz";
 
 export type FunnelStepName =
   | "landing"
@@ -77,6 +81,7 @@ export const FUNNEL_STEP_ORDER: readonly FunnelStepName[] = [
 ] as const;
 
 /// YYYY-MM-DD (UTC) 포맷터. Intl.DateTimeFormat 의 UTC time zone 사용.
+/// Backwards-compat — 신규 호출자는 KST 그루핑이면 `formatKstDate` 사용.
 export function formatUtcDate(date: Date): string {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -84,16 +89,41 @@ export function formatUtcDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/// YYYY-MM-DD (KST) 포맷터 — 본 instant 의 KST 일자 wall-clock.
+/// TZ 통일 (9f204cd 후속): funnel 일간 그루핑의 표시 라벨 / 키.
+export function formatKstDate(date: Date): string {
+  // KST wall-clock 으로 +9h 후 UTC 메서드로 KST 일자 추출.
+  const shifted = new Date(date.getTime() + KST_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(shifted.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 /// UTC 자정 정렬 (date 부분만 보존).
+/// Backwards-compat — 신규 호출자는 KST 그루핑이면 `toDayStartKst` 사용.
 export function toDayStartUtc(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
+/// KST 자정 정렬 — `kstStartOfDay` 의 funnel 도메인 alias.
+/// 반환 Date 는 "KST 일자의 자정" instant (UTC 로는 전날 15:00).
+export function toDayStartKst(date: Date): Date {
+  return kstStartOfDay(date);
+}
+
 /// UTC 일 단위 가산.
+/// Backwards-compat — 신규 호출자는 KST 그루핑이면 `addKstDays` 사용.
 export function addUtcDays(date: Date, days: number): Date {
   const next = new Date(date.getTime());
   next.setUTCDate(next.getUTCDate() + days);
   return next;
+}
+
+/// KST 일 단위 가산 — Korea DST 없음으로 24h * days 단순 가산.
+/// 반환 instant 는 `date` 의 KST wall-clock 에서 `days` 만큼 더한 시각.
+export function addKstDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 interface RawCounts {
@@ -207,11 +237,12 @@ export function buildSteps(raw: RawCounts): FunnelStep[] {
 /// MON-001 핵심 export — 단일 기간 funnel 집계.
 ///
 /// dateRange:
-///   - from: inclusive (UTC). 일자 boundary 정렬 권장 (toDayStartUtc).
-///   - to:   exclusive (UTC). 7일 range 시 from + 7d.
+///   - from: inclusive (instant). 일자 boundary 정렬 권장 (toDayStartKst).
+///   - to:   exclusive (instant). 7일 range 시 from + 7d.
 ///
 /// 반환:
-///   - date: from 의 YYYY-MM-DD (UTC). 다일 range 시 첫 날짜만 표기 (UI 호출 측이 별도 라벨 책임).
+///   - date: from 의 KST 일자 YYYY-MM-DD (TZ 통일 9f204cd 후속).
+///           Korea 사용자 인지 일자와 일치 — UTC 라벨이 필요한 호출자는 `formatUtcDate` 별도 사용.
 ///   - steps: 6단계 FunnelStep 배열 (FUNNEL_STEP_ORDER 순서).
 ///   - totalUsers: landing 단계 count (편의용 alias).
 export async function aggregateFunnel(dateRange: {
@@ -222,26 +253,29 @@ export async function aggregateFunnel(dateRange: {
   const raw = await fetchRawCounts(from, to);
   const steps = buildSteps(raw);
   return {
-    date: formatUtcDate(from),
+    date: formatKstDate(from),
     steps,
     totalUsers: raw.landingDistinctUsers,
   };
 }
 
 /// 일자별 funnel 집계 — 일간 변동 비교 + 다일 dashboard 차트용.
-/// from~to (half-open) 사이의 모든 UTC 일자에 대해 aggregateFunnel 을 순차 호출.
+/// TZ 통일 (9f204cd 후속): from~to (half-open) 사이의 모든 **KST** 일자에 대해
+/// aggregateFunnel 을 순차 호출. 일별 boundary 는 KST 자정 = UTC 전날 15:00 instant.
+///   - 입력 dateRange.from/to 는 자유 instant — 함수가 KST 자정으로 정렬.
+///   - 출력 FunnelSummary[].date 는 KST 일자 라벨.
 export async function aggregateFunnelByDay(dateRange: {
   from: Date;
   to: Date;
 }): Promise<FunnelSummary[]> {
-  const startDay = toDayStartUtc(dateRange.from);
-  const endDay = toDayStartUtc(dateRange.to);
+  const startDay = toDayStartKst(dateRange.from);
+  const endDay = toDayStartKst(dateRange.to);
   const results: FunnelSummary[] = [];
   let cursor = startDay;
   // 최대 안전 가드 — 1년 (365일) 초과 시 즉시 중단 (DB 폭주 방어).
   let guard = 0;
   while (cursor.getTime() < endDay.getTime() && guard < 365) {
-    const next = addUtcDays(cursor, 1);
+    const next = addKstDays(cursor, 1);
     const summary = await aggregateFunnel({ from: cursor, to: next });
     results.push(summary);
     cursor = next;

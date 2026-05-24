@@ -241,7 +241,7 @@ describe("loadPrincipalDashboard — FR-Q-009 집계 helper", () => {
     expect(arg.select.users.select).toEqual({ id: true });
   });
 
-  it("[7] 최근 N일 since 윈도우 — createdAt.gte 가 (now - PRINCIPAL_RECENT_DAYS) 이내", async () => {
+  it("[7] 최근 N일 since 윈도우 — KST 자정 정렬 (TZ 통일 PR 후)", async () => {
     classCountMock.mockResolvedValueOnce(0);
     userCountMock.mockResolvedValueOnce(0);
     evalCountMock.mockResolvedValueOnce(0);
@@ -254,9 +254,17 @@ describe("loadPrincipalDashboard — FR-Q-009 집계 helper", () => {
     const evalCountArg = evalCountMock.mock.calls[0][0];
     const since: Date = evalCountArg.where.createdAt.gte;
     expect(since).toBeInstanceOf(Date);
-    const expected = beforeCall - PRINCIPAL_RECENT_DAYS * 24 * 60 * 60 * 1000;
-    // 함수 진입 시각과 본 시각 사이의 오차 (수십 ms) 허용.
-    expect(since.getTime()).toBeGreaterThanOrEqual(expected - 1000);
-    expect(since.getTime()).toBeLessThanOrEqual(expected + 1000);
+    // TZ 통일 (9f204cd 후속): since = kstDaysAgoStart(7) → "오늘 KST 자정으로부터 7일 전 KST 자정" instant.
+    // 따라서 since 는 항상 instant 로 7일 + (오늘 KST 자정까지 경과시간) 만큼 과거.
+    // 검증: since 는 호출 시점 기준 [now - 7d - 24h, now - 7d] 범위 안 (KST 자정 boundary 안전 폭).
+    const sevenDaysMs = PRINCIPAL_RECENT_DAYS * 24 * 60 * 60 * 1000;
+    const dayMs = 24 * 60 * 60 * 1000;
+    expect(since.getTime()).toBeGreaterThanOrEqual(beforeCall - sevenDaysMs - dayMs);
+    expect(since.getTime()).toBeLessThanOrEqual(beforeCall - sevenDaysMs + 1000);
+    // KST 자정 정렬 → UTC time-of-day = 15:00 (전날 15:00 = KST 다음날 00:00).
+    expect(since.getUTCHours()).toBe(15);
+    expect(since.getUTCMinutes()).toBe(0);
+    expect(since.getUTCSeconds()).toBe(0);
+    expect(since.getUTCMilliseconds()).toBe(0);
   });
 });

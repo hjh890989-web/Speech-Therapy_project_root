@@ -275,13 +275,15 @@ describe("pickAlertSteps — |Δpp| > 20 or |Δrel| > 20% 임계", () => {
 // [시나리오 11] aggregateFunnelByDay 일자 순회
 // =============================================================================
 describe("aggregateFunnelByDay — 다일 range", () => {
-  it("[시나리오 11] 3일 range → 3개 FunnelSummary + 각 일자 from~to UTC 정합", async () => {
+  it("[시나리오 11] 3일 range → 3개 FunnelSummary + 각 일자 KST boundary 정합 (TZ 통일 PR 후)", async () => {
     // 모든 prisma 호출 빈 결과 (집계 0)
     evalFindManyMock.mockResolvedValue([]);
     evalCountMock.mockResolvedValue(0);
     sessionLogCountMock.mockResolvedValue(0);
     rewardLogCountMock.mockResolvedValue(0);
 
+    // 본 테스트 입력 from/to (UTC 자정) 은 KST 09:00 instant — toDayStartKst 가 KST 5-19 00:00 으로 정렬.
+    // 따라서 3개 KST 일자 (5-19, 5-20, 5-21) 의 summary 가 생성됨.
     const from = new Date("2026-05-19T00:00:00Z");
     const to = new Date("2026-05-22T00:00:00Z");
     const summaries = await aggregateFunnelByDay({ from, to });
@@ -295,12 +297,12 @@ describe("aggregateFunnelByDay — 다일 range", () => {
     // 각 일자별로 findMany / count 호출이 발생했는지 보증 (3일 x 4 mocks).
     expect(evalFindManyMock).toHaveBeenCalledTimes(3);
 
-    // 첫 일자의 from / to 정합.
+    // 첫 일자의 from / to 정합 (KST 5-19 00:00 = UTC 5-18 15:00).
     const firstFindArg = evalFindManyMock.mock.calls[0][0] as {
       where: { createdAt: { gte: Date; lt: Date } };
     };
-    expect(firstFindArg.where.createdAt.gte.toISOString()).toBe("2026-05-19T00:00:00.000Z");
-    expect(firstFindArg.where.createdAt.lt.toISOString()).toBe("2026-05-20T00:00:00.000Z");
+    expect(firstFindArg.where.createdAt.gte.toISOString()).toBe("2026-05-18T15:00:00.000Z");
+    expect(firstFindArg.where.createdAt.lt.toISOString()).toBe("2026-05-19T15:00:00.000Z");
   });
 
   it("[시나리오 11b] 헬퍼 유틸 — formatUtcDate / toDayStartUtc / addUtcDays 정합", () => {

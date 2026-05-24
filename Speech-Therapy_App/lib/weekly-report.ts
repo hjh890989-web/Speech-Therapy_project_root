@@ -1,8 +1,15 @@
 // DB-007 §AC — 주간 리포트 집계 + ISO 주차 계산.
 // FR-C-010 (Vercel Cron 배치) + FR-Q-005 (그래프 UI) 가 본 모듈을 호출.
+//
+// TZ 통일 (9f204cd 후속):
+//   ISO 주차 계산 입력 Date 의 "달력 일자" 가 KST 기준으로 산출되도록 변환.
+//   기존: 입력 Date 의 UTC 일자 사용 → KST 일요일 00:00~08:59 구간에서
+//        UTC 로는 토요일 → 직전 주차로 잘못 분류 가능.
+//   변경 후: 입력 Date 를 KST wall-clock 으로 옮긴 후 그 일자 기반 ISO 주차 산출.
 
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { toKst } from "@/lib/timeline/tz";
 
 // ----- ScoreTrend JSON 스키마 (Zod) -----
 export const ScoreTrendEntrySchema = z.object({
@@ -17,11 +24,17 @@ export const ScoreTrendEntrySchema = z.object({
 export const ScoreTrendSchema = z.array(ScoreTrendEntrySchema);
 export type ScoreTrend = z.infer<typeof ScoreTrendSchema>;
 
-// ----- ISO 8601 주차 계산 -----
+// ----- ISO 8601 주차 계산 (KST 기준) -----
 /// 주어진 Date 의 ISO 8601 주차 번호를 반환 (1~53).
 /// ISO 8601: 월요일이 한 주의 시작, 1월 4일이 포함된 주가 1주차.
+///
+/// TZ: 입력 Date 의 "달력 일자" 는 KST 기준으로 산출 — Korea 사용자가 보는 주차와 동일.
+///   - 예: UTC 2026-05-23T22:00:00 = KST 2026-05-24T07:00 → KST 일요일 → 다음 주차.
+///   - 기존 (UTC 기준) 로는 토요일 → 직전 주차로 잘못 분류됨.
 export function getCurrentWeekNumber(date: Date = new Date()): { year: number; week: number } {
-  const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  // KST wall-clock 으로 변환 — toKst 반환 Date 의 UTC 메서드는 KST 시각을 반환.
+  const kst = toKst(date);
+  const target = new Date(Date.UTC(kst.getUTCFullYear(), kst.getUTCMonth(), kst.getUTCDate()));
   const dayOfWeek = target.getUTCDay() || 7;
   target.setUTCDate(target.getUTCDate() + 4 - dayOfWeek);
   const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
@@ -170,9 +183,17 @@ export function assessDataSufficiency(
   return { sufficiency: "insufficient", emptyVariant: "week_empty" };
 }
 
-// ----- 내부: ISO 주차의 UTC 시작/끝 시각 -----
+// ----- 내부: ISO 주차의 KST 기준 시작/끝 instant (UTC Date) -----
+//
+// TZ 통일 (9f204cd 후속):
+//   주차 boundary 는 KST 월요일 00:00 = UTC 일요일 15:00.
+//   기존 (UTC 월요일 00:00) 은 KST 사용자의 주차 인지와 9시간 어긋남.
+//   본 함수 호출 측 (aggregateWeeklyScores) 은 결과를 prisma.where.createdAt.gte/lt 로 사용 —
+//   `createdAt` 은 UTC instant 이므로 반환 Date 도 instant 단위로 -9h 보정.
 function weekBounds(year: number, week: number) {
-  // ISO 8601: 1월 4일이 1주차에 포함.
+  // ISO 8601: 1월 4일이 1주차에 포함 (year, week 의 "year" 는 KST 기준 ISO year).
+  // KST wall-clock 의 1월 4일 자정을 가리키는 instant = UTC 1월 3일 15:00.
+  // 단순화: UTC 1월 4일 자정 기준으로 주차 계산 후 마지막에 -9h.
   const jan4 = new Date(Date.UTC(year, 0, 4));
   const jan4Day = jan4.getUTCDay() || 7;
   const week1Monday = new Date(jan4);
@@ -182,5 +203,11 @@ function weekBounds(year: number, week: number) {
   start.setUTCDate(week1Monday.getUTCDate() + (week - 1) * 7);
   const end = new Date(start);
   end.setUTCDate(start.getUTCDate() + 7);
-  return { start, end };
+  // KST 기준 wall-clock 자정 → UTC instant 로는 -9h.
+  // 즉, start = "KST 월요일 00:00" = UTC 일요일 15:00.
+  const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+  return {
+    start: new Date(start.getTime() - KST_OFFSET_MS),
+    end: new Date(end.getTime() - KST_OFFSET_MS),
+  };
 }

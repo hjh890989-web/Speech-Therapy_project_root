@@ -204,7 +204,7 @@ describe("loadTeacherDashboard — FR-Q-TEACHER 집계 helper", () => {
     expect(arg.orderBy).toEqual({ createdAt: "asc" });
   });
 
-  it("[8] 최근 N일 since 윈도우 — createdAt.gte 가 (now - TEACHER_RECENT_DAYS) 이내", async () => {
+  it("[8] 최근 N일 since 윈도우 — KST 자정 정렬 (TZ 통일 PR 후)", async () => {
     classFindManyMock.mockResolvedValueOnce([
       { id: "class-1", name: "햇님반", users: [{ id: "u-1" }] },
     ]);
@@ -219,9 +219,14 @@ describe("loadTeacherDashboard — FR-Q-TEACHER 집계 helper", () => {
     const evalCountArg = evalCountMock.mock.calls[0][0];
     const since: Date = evalCountArg.where.createdAt.gte;
     expect(since).toBeInstanceOf(Date);
-    const expected = beforeCall - TEACHER_RECENT_DAYS * 24 * 60 * 60 * 1000;
-    expect(since.getTime()).toBeGreaterThanOrEqual(expected - 1000);
-    expect(since.getTime()).toBeLessThanOrEqual(expected + 1000);
+    // TZ 통일 (9f204cd 후속): since = kstDaysAgoStart(7).
+    // 호출 시점 KST 일자 기준 -7일 KST 자정 instant — 일자 안에서는 변동 없음.
+    const sevenDaysMs = TEACHER_RECENT_DAYS * 24 * 60 * 60 * 1000;
+    const dayMs = 24 * 60 * 60 * 1000;
+    expect(since.getTime()).toBeGreaterThanOrEqual(beforeCall - sevenDaysMs - dayMs);
+    expect(since.getTime()).toBeLessThanOrEqual(beforeCall - sevenDaysMs + 1000);
+    expect(since.getUTCHours()).toBe(15);
+    expect(since.getUTCMinutes()).toBe(0);
   });
 
   it("[9] 동일 원아가 여러 반에 속하지 않는다고 가정 — flat 중복 제거 검증 (Set)", async () => {
