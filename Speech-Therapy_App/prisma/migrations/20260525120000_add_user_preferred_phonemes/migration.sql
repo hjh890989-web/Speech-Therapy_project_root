@@ -1,0 +1,39 @@
+-- ============================================================================
+-- FR-C-PARENT-SETTINGS — User.preferredPhonemes TEXT[] 컬럼 추가.
+-- Refs: app/(public)/settings/child/page.tsx, app/actions/update-child-profile.ts.
+-- ============================================================================
+--
+-- 목적:
+--   - 부모가 /settings/child 에서 선택한 관심 음소 목록을 canonical 서버 상태로 보존.
+--   - Onboarding wizard Step2 의 targetPhonemes 는 echo 만 했고 (User 스키마 부재),
+--     본 컬럼으로 비로소 다중 디바이스 / 재방문 시 prefill 가능.
+--   - 미션 추천 (FR-Q-003) / 진단 추천 음소 (FR-Q-001) 의 향후 personalization
+--     입력으로 재사용 — 단, 본 PR 의 사용 범위는 settings 페이지 prefill 한정.
+--
+-- 정책:
+--   - 화이트리스트 ALLOWED_PHONEMES = ['ㄱ','ㄴ','ㅅ','ㅈ','ㄹ'] — Server Action Zod 가 강제.
+--   - 0~5개 — 빈 배열 = "시스템 자동 추천" 의미 (UI 가 안내).
+--   - 부모 외 role 도 empty array default — 별도 분기 없이 안전.
+--
+-- R4 (자녀 보호):
+--   - 음소 라벨 (한글 1자 5종) 만 — 자녀 식별 정보 0건.
+--
+-- CON-04: 본 컬럼 / 주석 / Server Action 카피에 "치료/진단/장애" 금칙어 0건.
+--
+-- nullable 정책:
+--   - NOT NULL + DEFAULT '{}' — 빈 배열이 의미를 가지므로 nullable 필요 X.
+--   - 기존 row 는 backfill 로 empty array 채워짐 (PG ALTER 가 자동 처리).
+--
+-- 운영 적용 절차 (사용자 수동, 본 PR 미실행):
+--   1. cd Speech-Therapy_App
+--   2. npx prisma migrate status   # 본 migration pending 확인
+--   3. npx prisma migrate deploy   # DIRECT_URL 사용
+--   4. Supabase Studio SQL Editor 검증:
+--        SELECT column_name, data_type, is_nullable, column_default
+--        FROM information_schema.columns
+--        WHERE table_name = 'User' AND column_name = 'preferredPhonemes';
+--      → 1 row (ARRAY, NO, '{}') 노출.
+-- ============================================================================
+
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "preferredPhonemes" TEXT[] NOT NULL DEFAULT '{}';

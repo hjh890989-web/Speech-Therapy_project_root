@@ -696,6 +696,18 @@ export type AnalyticsEvent =
         destination: string;
         role: "anonymous" | "parent" | "teacher" | "principal" | "expert" | "admin";
       };
+    }
+  // === FR-C-PARENT-SETTINGS — /settings/child 자녀 프로필 변경 저장 직후 ===
+  | {
+      // updateChildProfile Server Action 성공 직후 호출 측 (ChildProfileForm) 이 1회 발송.
+      // R4 보호: userId 는 분석 백엔드 자동 해시 가정 — 자녀 식별 정보 직접 노출 X.
+      //   raw childAgeMonths 값 / 음소 라벨 직접 노출 X — 변경된 필드 _이름_ 만 (boolean 분기).
+      // changedFields: 사용자가 실제로 변경한 필드 (no-op 호출은 빈 배열 가능 — 분석 측에서 분기).
+      name: "child_profile_updated";
+      properties: {
+        userId: string;
+        changedFields: ("childAgeMonths" | "preferredPhonemes")[];
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

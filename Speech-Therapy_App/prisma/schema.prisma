@@ -39,6 +39,10 @@ model User {
   role             Role
   /// 부모의 자녀 월령 (만 2~7세 = 24~84). 부모 외 역할은 null.
   childAgeMonths   Int?
+  /// FR-C-PARENT-SETTINGS — 부모가 /settings/child 에서 선택한 관심 음소 목록.
+  /// 화이트리스트: ALLOWED_PHONEMES (ㄱ/ㄴ/ㅅ/ㅈ/ㄹ), 0~5개 (빈 배열 허용 = 시스템 자동 선택).
+  /// R4: 자녀 식별 정보 0건 — 단순 음소 라벨만. 부모 외 역할은 빈 배열로 운용.
+  preferredPhonemes String[]         @default([])
   /// FR-C-PARENT-ONBOARDING (follow-up) — 신규 부모 first-time wizard 완료 시각.
   /// localStorage 마킹과 동기화되는 canonical 서버 상태 — 다중 디바이스에서도
   /// 동일한 wizard 노출 여부 결정에 사용. null = 미완료 / 미실행.
