@@ -669,6 +669,20 @@ export type AnalyticsEvent =
         sent: number;
         skipped: number;
       };
+    }
+  // === FR-Q-WEEKLY-REVIEW — 부모용 주간 리뷰 페이지 mount (retention surface) ===
+  | {
+      // /weekly-review 페이지 mount 직후 client beacon 이 1회 발송 (Strict Mode 가드).
+      // R4 보호: userId 는 분석 백엔드에서 자동 해시 가정 — 자녀 이름/email 절대 노출 금지.
+      // hasData=false 인 경우 (가입 직후/cron 미실행) 도 발송 — empty state CVR 측정용.
+      // wAurAchieved 는 hasData=false 시 항상 false (loader 정책).
+      name: "weekly_review_viewed";
+      properties: {
+        userId: string;
+        hasData: boolean;
+        wAurAchieved: boolean;
+        weekNumber: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
