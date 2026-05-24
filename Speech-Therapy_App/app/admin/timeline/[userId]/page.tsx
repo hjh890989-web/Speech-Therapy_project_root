@@ -15,9 +15,10 @@
 //   - L1: proxy.ts 가 /admin/* 의 RBAC 1차 통과 (admin / principal / expert).
 //   - L2: 본 페이지가 parent/null 차단 + institutionId 매칭 검증 + 자녀 존재 확인.
 //
-// 오프라인 활동 placeholder (본 PR 범위 외):
-//   - "센터 오프라인 활동" 영역은 별도 OfflineEntry 모델 + admin 입력 폼 도입 시 채워짐.
-//   - 후속 PR: OfflineEntry 모델 (raw SQL migration) + /admin/timeline/[userId]/offline-entry Server Action.
+// 오프라인 활동 통합 (FR-Q-013 후속):
+//   - loadUserTimeline 가 OfflineEntry 도 fetch + merge → TimelineList 가 "offline" kind
+//     entry 를 함께 렌더. 별도 placeholder section 제거.
+//   - 입력은 /admin/teacher/students/[userId]/offline-entry 페이지 (teacher portal).
 //
 // 금칙어 (CON-04): "치료" / "진단" / "장애" 사용 금지 — "발음 발달 확인" / "발음 가이드" 로 대체.
 
@@ -207,8 +208,8 @@ export default async function TimelinePage({ params }: PageProps) {
           자녀 활동 타임라인
         </h1>
         <p className="mt-2 text-sm text-slate-600 sm:text-base">
-          앱 발음 발달 확인 + 미션 활동을 시계열로 한눈에 확인해요. 센터에서 선생님이 수기로
-          기록한 활동도 곧 함께 표시될 예정이에요.
+          앱 발음 발달 확인 + 미션 활동과 센터에서 선생님이 수기로 기록한 활동을 시계열로
+          한눈에 확인해요.
         </p>
         <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-600">
           {target.childAgeMonths !== null ? (
@@ -254,19 +255,24 @@ export default async function TimelinePage({ params }: PageProps) {
       )}
 
       <section
-        data-testid="timeline-offline-placeholder"
-        aria-label="센터 오프라인 활동"
+        data-testid="timeline-offline-cta"
+        aria-label="센터 오프라인 활동 입력"
         className="mb-8 rounded-lg border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700"
       >
         <h2 className="mb-2 text-base font-semibold text-slate-900">
           센터에서 기록한 오프라인 활동
         </h2>
-        <p className="mb-1">
-          선생님이 수기로 기록한 활동은 곧 본 영역에 함께 표시될 예정이에요.
+        <p className="mb-3">
+          선생님이 수기로 기록한 활동은 위 타임라인에 함께 표시돼요. 새 활동을 기록하려면
+          아래 버튼을 눌러 입력 화면으로 이동해 주세요.
         </p>
-        <p className="text-xs text-slate-500">
-          오프라인 활동 입력 폼은 후속 업데이트에서 제공돼요 (운영자 화면).
-        </p>
+        <Link
+          href={`/admin/teacher/students/${target.targetUserId}/offline-entry`}
+          data-testid="timeline-offline-entry-cta"
+          className="inline-flex min-h-[44px] items-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+        >
+          오프라인 활동 기록하기
+        </Link>
       </section>
 
       <footer

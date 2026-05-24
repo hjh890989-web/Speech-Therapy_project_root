@@ -643,6 +643,19 @@ export type AnalyticsEvent =
       properties: {
         atStep: 1 | 2 | 3 | 4;
       };
+    }
+  // === FR-Q-013 후속 — 선생님 수기 오프라인 entry 입력 텔레메트리 ===
+  | {
+      // submitOfflineEntry Server Action 의 createOfflineEntry 성공 직후 1회.
+      // R4 보호: userId 는 server-side 텔레메트리 백엔드 자동 해시 가정 (자녀 식별 정보 직접 노출 X).
+      // noteLength: note 본문 글자 수 — 텍스트 자체 노출 0, 길이 메트릭만.
+      // kind: 'practice' | 'observation' | 'note' enum-like (Server Action Zod 강제).
+      name: "offline_entry_created";
+      properties: {
+        userId: string;
+        kind: string;
+        noteLength: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

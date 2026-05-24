@@ -20,6 +20,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // ============================================================================
 const evalFindManyMock = vi.fn();
 const sessionFindManyMock = vi.fn();
+const offlineListMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -30,6 +31,16 @@ vi.mock("@/lib/db", () => ({
       findMany: (...args: unknown[]) => sessionFindManyMock(...args),
     },
   },
+}));
+
+// FR-Q-013 후속 — aggregator 가 offline-entry repo 를 import 하므로 별도 mock.
+// 기존 회귀 0건 — listOfflineEntriesForUser 기본 반환은 빈 배열로 두어 본 파일의
+// hasOfflineData 분기는 false 가 default 가 되도록.
+vi.mock("@/lib/offline-entry/repo", () => ({
+  listOfflineEntriesForUser: (...args: unknown[]) => offlineListMock(...args),
+  OFFLINE_ENTRY_DEFAULT_LIMIT: 20,
+  OFFLINE_ENTRY_KINDS: ["practice", "observation", "note"] as const,
+  OFFLINE_ENTRY_NOTE_MAX_LENGTH: 500,
 }));
 
 import {
@@ -49,6 +60,9 @@ const USER_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 function resetAll() {
   evalFindManyMock.mockReset();
   sessionFindManyMock.mockReset();
+  offlineListMock.mockReset();
+  // default — offline 비활성 (기존 테스트 회귀 0건).
+  offlineListMock.mockResolvedValue([]);
 }
 
 beforeEach(() => {

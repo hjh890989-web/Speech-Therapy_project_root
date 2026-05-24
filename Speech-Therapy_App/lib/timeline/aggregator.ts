@@ -1,24 +1,28 @@
 // FR-Q-013 (#54) — 자녀 통합 타임라인 집계 helper (앱 세션 + 센터 오프라인 활동).
 //
 // 책임 (Server-side only):
-//   1) 단일 userId 대상 EvaluationResult (진단/발음 발달 확인) + SessionLog (미션) 을 fan-out 으로 조회.
-//   2) 두 source 를 timestamp (createdAt) 기준 desc 병합 → 단일 TimelineEntry[] 반환.
+//   1) 단일 userId 대상 EvaluationResult (진단/발음 발달 확인) + SessionLog (미션)
+//      + OfflineEntry (선생님 수기 기록) 을 fan-out 으로 조회.
+//   2) 세 source 를 timestamp (createdAt / observedAt) 기준 desc 병합 → 단일
+//      TimelineEntry[] 반환.
 //   3) 호출 측 (page.tsx) 이 RBAC + cross-tenant 차단을 이미 수행한 뒤 본 함수 호출.
 //
-// 단순화 정책 (본 PR 범위):
-//   - "센터 오프라인 활동" 은 placeholder. 별도 OfflineEntry 모델 도입은 후속 PR.
-//   - 즉 본 함수는 앱 세션 2종만 통합 — 오프라인 entry kind 는 미반환.
-//   - UI 측 (page.tsx) 가 오프라인 placeholder 섹션을 추가 렌더.
+// FR-Q-013 후속 (offline 통합):
+//   - OfflineEntry 모델 (lib/offline-entry/repo.ts) 의 entry 를 "offline" kind 로
+//     merge — observedAt 을 정렬 기준으로 사용 (입력자가 backdate 가능 → 실 활동 시각).
+//   - 호출 측 page.tsx 의 placeholder section 은 본 PR 에서 실 entries 로 교체.
 //
 // R4 (자녀 식별 정보 노출 금지):
 //   - 반환 shape 에 email / 이름 / transcript 등 식별 정보 미포함.
 //   - userId 는 input 으로만 사용, entry 본문엔 미노출 (호출 측이 헤더에서만 활용).
+//   - offline entry 의 note 본문은 그대로 반환 — UI sanitize 책임 (input 단계 검증 완료).
 //
 // CON-04 (의료 금칙어): 본 모듈은 카피 미생성 — DB 데이터 그대로 반환. UI sanitize 책임.
 //
-// 성능: limit 기본 50 — Prisma findMany 2회 + JS merge sort. RSC LCP < 3,000ms 보장.
+// 성능: limit 기본 50 — Prisma findMany 3회 + JS merge sort. RSC LCP < 3,000ms 보장.
 
 import { prisma } from "@/lib/db";
+import { listOfflineEntriesForUser } from "@/lib/offline-entry/repo";
 
 /** 1개 source 의 최대 limit 기본값 (각 source 당). UI 표시 한도. */
 export const TIMELINE_DEFAULT_LIMIT = 50;
@@ -40,6 +44,16 @@ export type TimelineEntry =
       createdAt: Date;
       missionId: string | null;
       durationSec: number;
+    }
+  | {
+      // FR-Q-013 후속 — 선생님 수기 기록 오프라인 활동.
+      // createdAt 은 정렬용 (실 활동 시각 = observedAt). UI 측은 두 시각 모두 노출.
+      kind: "offline";
+      id: string;
+      createdAt: Date;
+      authorId: string;
+      offlineKind: string;
+      note: string;
     };
 
 /** TimelineEntry 의 kind literal — 호출 측 분기 / 테스트 편의용. */
@@ -57,6 +71,8 @@ export interface TimelineData {
   hasDiagnoseData: boolean;
   /// 분기 telemetry 용 — mission entry 1건 이상 존재?
   hasMissionData: boolean;
+  /// FR-Q-013 후속 — offline entry 1건 이상 존재?
+  hasOfflineData: boolean;
 }
 
 /**
@@ -82,11 +98,12 @@ export async function loadUserTimeline(
       totalCount: 0,
       hasDiagnoseData: false,
       hasMissionData: false,
+      hasOfflineData: false,
     };
   }
 
   // 병렬 fan-out — RSC LCP < 3,000ms (REQ-NF-004) 보장.
-  const [diagnoseRows, missionRows] = await Promise.all([
+  const [diagnoseRows, missionRows, offlineRows] = await Promise.all([
     prisma.evaluationResult.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
@@ -111,6 +128,7 @@ export async function loadUserTimeline(
         createdAt: true,
       },
     }),
+    listOfflineEntriesForUser(userId, limit),
   ]);
 
   const diagnoseEntries: TimelineEntry[] = diagnoseRows.map((row) => ({
@@ -131,10 +149,23 @@ export async function loadUserTimeline(
     durationSec: row.durationSec,
   }));
 
+  // OfflineEntry → TimelineEntry.offline — createdAt 자리에 observedAt 사용
+  // (실 활동 시각이 정렬 기준, UI 가 의도하는 시계열).
+  const offlineEntries: TimelineEntry[] = offlineRows.map((row) => ({
+    kind: "offline" as const,
+    id: row.id,
+    createdAt: row.observedAt,
+    authorId: row.authorId,
+    offlineKind: row.kind,
+    note: row.note,
+  }));
+
   // merge + sort desc by createdAt.
-  const entries: TimelineEntry[] = [...diagnoseEntries, ...missionEntries].sort(
-    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-  );
+  const entries: TimelineEntry[] = [
+    ...diagnoseEntries,
+    ...missionEntries,
+    ...offlineEntries,
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return {
     userId,
@@ -142,6 +173,7 @@ export async function loadUserTimeline(
     totalCount: entries.length,
     hasDiagnoseData: diagnoseEntries.length > 0,
     hasMissionData: missionEntries.length > 0,
+    hasOfflineData: offlineEntries.length > 0,
   };
 }
 

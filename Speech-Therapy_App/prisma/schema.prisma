@@ -67,6 +67,10 @@ model User {
   hitlQueues        HITLQueue[]        @relation("HITLSubject")
   /// DB-009: expert 로 지정되어 검토 담당하는 HITL 큐.
   assignedHITLs     HITLQueue[]        @relation("AssignedExpert")
+  /// FR-Q-013 후속 — 본인이 대상인 (자녀) 오프라인 활동 기록.
+  offlineEntriesAsSubject OfflineEntry[] @relation("OfflineEntrySubject")
+  /// FR-Q-013 후속 — 본인이 입력한 (teacher) 오프라인 활동 기록.
+  offlineEntriesAsAuthor  OfflineEntry[] @relation("OfflineEntryAuthor")
 
   @@index([institutionId])
   @@index([classId])
@@ -370,4 +374,52 @@ model HITLQueue {
   createdAt        DateTime   @default(now())
 
   @@index([status, slaDueAt])
+}
+
+// ============================================================================
+// FR-Q-013 후속 — OfflineEntry (선생님이 수기 기록하는 자녀 오프라인 활동)
+// Refs: §6.1 ERD (확장), REQ-FUNC-058 (B2B 오프라인 활동 통합), REQ-NF-019.
+//
+// 책임:
+//   - 센터/유치원의 선생님이 자녀의 오프라인 발음 연습/관찰/메모를 수기 기록.
+//   - 통합 타임라인 (lib/timeline/aggregator.ts loadUserTimeline) 의
+//     "offline" kind entry source — 앱 세션(diagnose/mission) 과 merge 노출.
+//
+// R4 (자녀 보호):
+//   - note 본문은 짧은 메모 (max 500자) — 자녀 본명/주소/생년월일/연락처 입력 시
+//     입력자(teacher) 책임. 본 PR 은 자동 PII 검출 X — README/UI 안내로 처리.
+//   - userId/authorId 는 User UUID 만, 자녀 식별 정보 미저장.
+//
+// CON-04 (의료 금칙어):
+//   - kind 는 'practice' | 'observation' | 'note' enum-like — "치료/진단/장애" 미포함.
+//   - note 본문은 Server Action 진입 시 hasBannedTerm 검증 (reject).
+//
+// 라이프사이클:
+//   - INSERT: Server Action /app/actions/offline-entry.ts (teacher/principal/admin)
+//   - SELECT: 부모(본인 userId) + teacher/principal/admin/expert (RLS)
+//   - UPDATE: author 본인 or admin (수정 기록은 audit_trigger_fn 캡처)
+//   - DELETE: admin only
+// ============================================================================
+
+model OfflineEntry {
+  id            String   @id @default(uuid()) @db.Uuid
+  /// 자녀(보호자) User.id — 통합 타임라인 조회의 partition key.
+  userId        String
+  user          User     @relation("OfflineEntrySubject", fields: [userId], references: [id], onDelete: Cascade)
+  /// 입력 teacher/admin User.id — withActor 가 audit actor 와 동일 캡처.
+  authorId      String
+  author        User     @relation("OfflineEntryAuthor", fields: [authorId], references: [id])
+  /// 활동 유형 — 'practice' (연습) | 'observation' (관찰) | 'note' (메모).
+  kind          String
+  /// 짧은 메모 (max 500자 — Server Action Zod 검증). CON-04 금칙어 0건 보장.
+  note          String
+  /// 실 활동 발생 시각 (입력자가 backdate 가능, default now).
+  observedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  /// B2B 다중 테넌트 — author 의 institution scope. RLS cross-tenant 차단 hook.
+  institutionId String?
+
+  @@index([userId, observedAt])
+  @@index([authorId])
 }

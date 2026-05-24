@@ -140,6 +140,7 @@ function fullTimeline(userId: string) {
     totalCount: 3,
     hasDiagnoseData: true,
     hasMissionData: true,
+    hasOfflineData: false,
     entries: [
       {
         kind: "diagnose" as const,
@@ -176,6 +177,7 @@ function emptyTimeline(userId: string) {
     totalCount: 0,
     hasDiagnoseData: false,
     hasMissionData: false,
+    hasOfflineData: false,
     entries: [],
   };
 }
@@ -186,6 +188,7 @@ function diagnoseOnly(userId: string) {
     totalCount: 1,
     hasDiagnoseData: true,
     hasMissionData: false,
+    hasOfflineData: false,
     entries: [
       {
         kind: "diagnose" as const,
@@ -206,6 +209,7 @@ function missionOnly(userId: string) {
     totalCount: 1,
     hasDiagnoseData: false,
     hasMissionData: true,
+    hasOfflineData: false,
     entries: [
       {
         kind: "mission" as const,
@@ -349,9 +353,9 @@ describe("/admin/timeline/[userId] — FR-Q-013 통합 타임라인", () => {
     expect(cta?.getAttribute("href")).toBe("/diagnose");
     // timeline-list 미렌더.
     expect(container.querySelector("[data-testid='timeline-list']")).toBeNull();
-    // 오프라인 placeholder 는 항상 노출.
+    // 오프라인 entry CTA 는 항상 노출 (FR-Q-013 후속 — placeholder → CTA 교체).
     expect(
-      container.querySelector("[data-testid='timeline-offline-placeholder']"),
+      container.querySelector("[data-testid='timeline-offline-cta']"),
     ).not.toBeNull();
   });
 
@@ -443,7 +447,8 @@ describe("/admin/timeline/[userId] — FR-Q-013 통합 타임라인", () => {
     expect(allCalls).not.toContain(INSTITUTION_B);
   });
 
-  it("[12] 오프라인 placeholder 영역 항상 노출 (앱 데이터 있을 때 + 없을 때)", async () => {
+  it("[12] 오프라인 entry CTA 영역 항상 노출 (앱 데이터 있을 때 + 없을 때)", async () => {
+    // FR-Q-013 후속 — placeholder 가 입력 페이지로 이동 CTA 로 교체.
     // 있을 때
     setAuth(VIEWER_PRINCIPAL);
     mockUserFindUnique({
@@ -452,7 +457,13 @@ describe("/admin/timeline/[userId] — FR-Q-013 통합 타임라인", () => {
     });
     loadTimelineMock.mockResolvedValueOnce(fullTimeline(CHILD_A));
     const { container: c1 } = render(await TimelinePage(paramsOf(CHILD_A)));
-    expect(c1.querySelector("[data-testid='timeline-offline-placeholder']")).not.toBeNull();
+    expect(c1.querySelector("[data-testid='timeline-offline-cta']")).not.toBeNull();
+    // 입력 페이지 링크 정합.
+    const cta1 = c1.querySelector("[data-testid='timeline-offline-entry-cta']");
+    expect(cta1).not.toBeNull();
+    expect(cta1?.getAttribute("href")).toBe(
+      `/admin/teacher/students/${CHILD_A}/offline-entry`,
+    );
 
     // 없을 때 (empty)
     setAuth(VIEWER_PRINCIPAL);
@@ -462,7 +473,7 @@ describe("/admin/timeline/[userId] — FR-Q-013 통합 타임라인", () => {
     });
     loadTimelineMock.mockResolvedValueOnce(emptyTimeline(CHILD_A));
     const { container: c2 } = render(await TimelinePage(paramsOf(CHILD_A)));
-    expect(c2.querySelector("[data-testid='timeline-offline-placeholder']")).not.toBeNull();
+    expect(c2.querySelector("[data-testid='timeline-offline-cta']")).not.toBeNull();
   });
 
   it("[13] 비로그인 → forbidden(unauthenticated)", async () => {
