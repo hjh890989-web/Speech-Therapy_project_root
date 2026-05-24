@@ -656,6 +656,19 @@ export type AnalyticsEvent =
         kind: string;
         noteLength: number;
       };
+    }
+  // === FR-Q-TEACHER + FR-C-017+ — 학부모 알림장 일괄 발송 (반 단위 fan-out) ===
+  | {
+      // sendClassroomCushionNotes Server Action 종료 직후 1회 (Server-side console.log telemetry).
+      // R4 보호: parentEmail / userId / 자녀 이름 절대 노출 금지 — classId + 카운트만.
+      // attempted / sent / skipped 합계가 학생 fan-out 총 처리량 (errors 는 별도 — task 분기).
+      name: "classroom_cushion_batch_sent";
+      properties: {
+        classId: string;
+        attempted: number;
+        sent: number;
+        skipped: number;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

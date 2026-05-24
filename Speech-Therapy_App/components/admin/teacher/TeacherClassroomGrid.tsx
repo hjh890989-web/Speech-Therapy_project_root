@@ -10,6 +10,7 @@
 import type { TeacherClassroomSummary } from "@/lib/admin/teacher-aggregator";
 
 import { StudentRow } from "@/components/admin/principal/StudentRow";
+import { SendClassroomCushionButton } from "@/components/admin/teacher/SendClassroomCushionButton";
 
 export interface TeacherClassroomGridProps {
   classrooms: TeacherClassroomSummary[];
@@ -78,22 +79,29 @@ export function TeacherClassroomGrid({ classrooms }: TeacherClassroomGridProps) 
                 </div>
               </dl>
               {hasStudents ? (
-                <details
-                  data-testid={`teacher-classroom-students-disclosure-${cls.id}`}
-                  className="mt-3 rounded border border-slate-200 bg-white"
-                >
-                  <summary className="cursor-pointer select-none rounded px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
-                    원아 목록 펼치기 ({cls.students.length}명)
-                  </summary>
-                  <ul
-                    data-testid={`teacher-classroom-students-list-${cls.id}`}
-                    className="mt-2 flex flex-col gap-1 px-2 pb-2"
+                <>
+                  <details
+                    data-testid={`teacher-classroom-students-disclosure-${cls.id}`}
+                    className="mt-3 rounded border border-slate-200 bg-white"
                   >
-                    {cls.students.map((s) => (
-                      <StudentRow key={s.id} student={s} />
-                    ))}
-                  </ul>
-                </details>
+                    <summary className="cursor-pointer select-none rounded px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                      원아 목록 펼치기 ({cls.students.length}명)
+                    </summary>
+                    <ul
+                      data-testid={`teacher-classroom-students-list-${cls.id}`}
+                      className="mt-2 flex flex-col gap-1 px-2 pb-2"
+                    >
+                      {cls.students.map((s) => (
+                        <StudentRow key={s.id} student={s} />
+                      ))}
+                    </ul>
+                  </details>
+                  {/* FR-Q-TEACHER + FR-C-017+ — 반 단위 학부모 알림장 일괄 발송 (학생 0명 반 미노출). */}
+                  <SendClassroomCushionButton
+                    classId={cls.id}
+                    studentCount={cls.students.length}
+                  />
+                </>
               ) : null}
             </article>
           );
