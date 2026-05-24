@@ -11,7 +11,9 @@
 //   각 반 카드 안에 <details> disclosure 로 학생 목록(StudentRow) 노출.
 //   - 기본 닫힘 (정보 밀도 우선, 운영자 톤).
 //   - cls.studentCount 0건 → details 자체 미렌더 (펼칠 게 없음).
-//   - 본 PR 단순화: 페이지네이션 없이 최대 PRINCIPAL_STUDENTS_PER_CLASS (30) 명까지.
+//   - cursor 페이지네이션: aggregator 가 hasMoreStudents=true 일 때 안내 메시지 노출.
+//     본 PR 은 서버 side cursor 지원 + UI 안내만 — 실제 cursor 진입 UI (다음 페이지 버튼)
+//     는 후속 PR (search param Server Component 재 fetch).
 
 import type { ClassroomSummary } from "@/lib/admin/principal-aggregator";
 
@@ -86,6 +88,16 @@ export function ClassroomGrid({ classrooms }: ClassroomGridProps) {
                       <StudentRow key={s.id} student={s} />
                     ))}
                   </ul>
+                  {cls.hasMoreStudents ? (
+                    <p
+                      data-testid={`classroom-students-more-${cls.id}`}
+                      className="px-2 pb-2 text-[11px] text-slate-500"
+                      role="note"
+                    >
+                      원아가 30명을 넘어서 일부만 표시되었어요. 더 많은 원아 보기는
+                      후속 업데이트에서 지원될 예정이에요.
+                    </p>
+                  ) : null}
                 </details>
               ) : null}
             </article>

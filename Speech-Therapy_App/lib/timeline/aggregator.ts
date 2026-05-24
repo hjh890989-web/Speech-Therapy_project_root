@@ -23,6 +23,7 @@
 
 import { prisma } from "@/lib/db";
 import { listOfflineEntriesForUser } from "@/lib/offline-entry/repo";
+import { kstStartOfDay, kstDaysAgoStart } from "@/lib/timeline/tz";
 
 /** 1개 source 의 최대 limit 기본값 (각 source 당). UI 표시 한도. */
 export const TIMELINE_DEFAULT_LIMIT = 50;
@@ -181,9 +182,14 @@ export async function loadUserTimeline(
 // 날짜 그루핑 정책 — FR-Q-013 §AC.
 // today / yesterday / thisWeek / older
 //
-// 기준: 호출자가 전달한 `now` 의 로컬 자정 (00:00:00.000) — 서버 측은 Asia/Seoul TZ 가정.
-// "thisWeek" 은 그저께~지난 7일 전 (yesterday 보다 더 이전, 오늘 -7d 까지) 범위.
-// "older" 는 그 외 전부 (8일 전 이상).
+// 기준 (FR-Q-013 후속, TZ 통일 PR):
+//   호출자가 전달한 `now` 를 Asia/Seoul (KST) 의 자정으로 강제 변환 후 비교.
+//   서버가 UTC 인 Vercel 환경에서도 한국 사용자 기준 자정 경계가 일관 유지됨.
+//   "thisWeek" 은 yesterday 이전 ~ 오늘 -7d KST 자정 까지 범위.
+//   "older" 는 8일 전 이상.
+//
+// 시그니처 호환: 본 함수의 입력 / 반환 타입은 변경 없음 — 호출 측 (page.tsx /
+// TimelineList) 무수정. 내부 구현만 KST 변환 적용.
 // ============================================================================
 
 /** TimelineEntry 의 날짜 그룹 키. */
@@ -205,22 +211,24 @@ export const TIMELINE_GROUP_ORDER: TimelineDateGroup[] = [
   "older",
 ];
 
-/** entry.createdAt 가 now 기준 어느 그룹에 속하는지 분류. */
+/**
+ * entry.createdAt 가 now 기준 어느 그룹에 속하는지 분류.
+ *
+ * 비교 기준: KST 자정 (kstStartOfDay). 서버 TZ 무관 — Vercel UTC 환경에서도 한국
+ * 사용자 기준 자정 경계가 정확히 적용됨.
+ */
 export function classifyEntryGroup(
   createdAt: Date,
   now: Date = new Date(),
 ): TimelineDateGroup {
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
+  const todayStart = kstStartOfDay(now);
 
   if (createdAt.getTime() >= todayStart.getTime()) return "today";
 
-  const yesterdayStart = new Date(todayStart);
-  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  const yesterdayStart = kstDaysAgoStart(1, now);
   if (createdAt.getTime() >= yesterdayStart.getTime()) return "yesterday";
 
-  const weekStart = new Date(todayStart);
-  weekStart.setDate(weekStart.getDate() - 7);
+  const weekStart = kstDaysAgoStart(7, now);
   if (createdAt.getTime() >= weekStart.getTime()) return "thisWeek";
 
   return "older";
@@ -250,34 +258,62 @@ export function groupEntriesByDate(
 /**
  * 상대 시각 포맷 — "오늘 14:23" / "어제 09:10" / "3일 전" / "MM월 DD일".
  *
- * 본 함수는 UI 카피 — `Intl.DateTimeFormat` 사용. TZ 는 호출 측이
- * 서버 / 클라이언트 일관성 책임 (본 PR 은 SSR 단계에서 호출되므로 서버 TZ).
+ * KST 강제 (FR-Q-013 후속, TZ 통일 PR):
+ *   - HH:mm / MM월 DD일 모두 `Intl.DateTimeFormat({ timeZone: "Asia/Seoul" })` 사용
+ *     → 서버 TZ (Vercel UTC) 무관, 한국 사용자 기준 일관 표기.
+ *   - N일 전 차이 계산도 KST 자정 기준 (kstStartOfDay).
  */
+
+/** KST 강제 HH:mm 포맷터. 모듈 로드 1회 인스턴스 — Intl 생성 비용 최소화. */
+const KST_HHMM = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+/** KST 강제 "M월 D일" 포맷터. */
+const KST_MD = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
+  month: "numeric",
+  day: "numeric",
+});
+
+function formatHHmmKst(date: Date): string {
+  // ko-KR + 2-digit → "14:30" / "09:05" — 일부 환경 (node icu) 에서 "오후 02:30" 식으로
+  // 나오는 fallback 회피 위해 formatToParts 사용.
+  const parts = KST_HHMM.formatToParts(date);
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "00";
+  return `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+}
+
+function formatMonthDayKst(date: Date): string {
+  // "1월 23일" 식. ko-KR formatToParts → month/day 추출.
+  const parts = KST_MD.formatToParts(date);
+  const month = parts.find((p) => p.type === "month")?.value ?? "";
+  const day = parts.find((p) => p.type === "day")?.value ?? "";
+  return `${month}월 ${day}일`;
+}
+
 export function formatTimelineRelative(
   createdAt: Date,
   now: Date = new Date(),
 ): string {
   const group = classifyEntryGroup(createdAt, now);
-
-  const hh = String(createdAt.getHours()).padStart(2, "0");
-  const mm = String(createdAt.getMinutes()).padStart(2, "0");
-  const hhmm = `${hh}:${mm}`;
+  const hhmm = formatHHmmKst(createdAt);
 
   if (group === "today") return `오늘 ${hhmm}`;
   if (group === "yesterday") return `어제 ${hhmm}`;
 
-  // thisWeek / older 공통 — N일 전 (≤ 7) 또는 MM월 DD일.
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const entryStart = new Date(createdAt);
-  entryStart.setHours(0, 0, 0, 0);
+  // thisWeek / older 공통 — N일 전 (≤ 7) 또는 M월 D일. KST 자정 기준 차이.
+  const todayStart = kstStartOfDay(now);
+  const entryStart = kstStartOfDay(createdAt);
   const diffDays = Math.round(
     (todayStart.getTime() - entryStart.getTime()) / (24 * 60 * 60 * 1000),
   );
   if (group === "thisWeek" && diffDays <= 7) {
     return `${diffDays}일 전`;
   }
-  const month = createdAt.getMonth() + 1;
-  const day = createdAt.getDate();
-  return `${month}월 ${day}일`;
+  return formatMonthDayKst(createdAt);
 }

@@ -34,8 +34,9 @@ import { prisma } from "@/lib/db";
 export const PRINCIPAL_RECENT_DAYS = 7;
 
 /**
- * 반당 노출 학생(원아) 최대 수 — 본 PR 단순화 정책.
- * 30 명 = 어린이집/유치원 평균 학급 정원 상한. 초과 시 후속 PR 에서 페이지네이션 도입 예정.
+ * 반당 1 페이지 노출 학생(원아) 수 (cursor 페이지 사이즈).
+ * 30 명 = 어린이집/유치원 평균 학급 정원 상한.
+ * 초과 시 hasMoreStudents=true + nextStudentsCursor 반환 (FR-Q-009 후속 페이지네이션 PR).
  */
 export const PRINCIPAL_STUDENTS_PER_CLASS = 30;
 
@@ -62,8 +63,12 @@ export interface ClassroomSummary {
   /// 최근 PRINCIPAL_RECENT_DAYS 일 내 articulationScore 평균 (0~100). 데이터 0건이면 null.
   avgScore: number | null;
   /// 본 반에 속한 원아(보호자) 목록 — 최대 PRINCIPAL_STUDENTS_PER_CLASS 명.
-  /// 정렬: User.id 오름차순 (Prisma select order 안정성). 후속 PR 에서 createdAt 정렬 가능.
+  /// 정렬: User.id 오름차순 (Prisma select order 안정성, cursor 호환).
   students: ClassroomStudent[];
+  /// 본 반 students 페이지 이후 더 많은 학생이 존재? (take+1 trick — 31 번째 fetch 시 true).
+  hasMoreStudents: boolean;
+  /// 다음 페이지 cursor (다음 fetch 시 `studentsCursor` 로 전달). hasMoreStudents=true 일 때만 set.
+  nextStudentsCursor?: string;
 }
 
 /** 원장 대시보드 단일 집계 결과. */
@@ -96,6 +101,18 @@ function emptyPayload(institutionId: string): PrincipalDashboardData {
   };
 }
 
+/** loadPrincipalDashboard 옵션 — students cursor 페이지네이션 등. */
+export interface LoadPrincipalDashboardOptions {
+  /**
+   * Students cursor — User.id (UUID) 값. 본 값보다 큰 id 부터 fetch ({ id: { gt: cursor } }).
+   *   - 단일 cursor 가 모든 반에 동일 적용 (반별 cursor 분리는 후속 PR — UI 단순화).
+   *   - 빈 문자열 / undefined → 첫 페이지 (id asc 첫 PRINCIPAL_STUDENTS_PER_CLASS 명).
+   *   - cross-tenant 우회 차단: cursor 는 id 비교만 — institutionId where 조건은 그대로 유지되어
+   *     다른 기관 id 를 입력해도 본 기관 users 안에서만 매칭됨 (안전).
+   */
+  studentsCursor?: string;
+}
+
 /**
  * 원장 대시보드 핵심 집계 — Server-side only.
  *
@@ -104,13 +121,28 @@ function emptyPayload(institutionId: string): PrincipalDashboardData {
  * 호출 측 책임 (단일 책임 원칙).
  *
  * 빈 institutionId 입력 시 emptyPayload 반환 (호출 측이 분기 전에 호출해도 안전).
+ *
+ * Cursor 페이지네이션 (FR-Q-009 후속):
+ *   - options.studentsCursor 가 있으면 반별 users 를 { id: { gt: cursor } } 로 필터링 후 fetch.
+ *   - take+1 trick: PRINCIPAL_STUDENTS_PER_CLASS+1 개 fetch → 마지막 1 개를 잘라내고
+ *     hasMoreStudents=true + nextStudentsCursor=마지막 노출 학생 id 로 설정.
+ *   - 같은 cursor 가 모든 반에 적용됨 (반별 분리 cursor 는 후속 PR — UI 단순화).
  */
 export async function loadPrincipalDashboard(
   institutionId: string,
+  options: LoadPrincipalDashboardOptions = {},
 ): Promise<PrincipalDashboardData> {
   if (!institutionId) return emptyPayload("");
 
   const since = new Date(Date.now() - PRINCIPAL_RECENT_DAYS * 24 * 60 * 60 * 1000);
+  const cursor = options.studentsCursor && options.studentsCursor.length > 0
+    ? options.studentsCursor
+    : undefined;
+  // hasMore 판정용 take+1 — 31 개 fetch 시 31 번째 존재 = 다음 페이지 존재.
+  const studentsTake = PRINCIPAL_STUDENTS_PER_CLASS + 1;
+  // where 절: parent role + (cursor 있으면 id > cursor).
+  const studentsWhere: { role: "parent"; id?: { gt: string } } = { role: "parent" };
+  if (cursor) studentsWhere.id = { gt: cursor };
 
   // 병렬 fan-out — RSC LCP < 3,000ms (REQ-NF-004) 보장.
   const [classCount, studentCount, thisWeekDiagnoseCount, avgAgg, classrooms] =
@@ -137,10 +169,10 @@ export async function loadPrincipalDashboard(
           id: true,
           name: true,
           users: {
-            where: { role: "parent" },
+            where: studentsWhere,
             select: { id: true },
             orderBy: { id: "asc" },
-            take: PRINCIPAL_STUDENTS_PER_CLASS,
+            take: studentsTake,
           },
         },
       }),
@@ -153,8 +185,17 @@ export async function loadPrincipalDashboard(
   type ClassRow = { id: string; name: string; users: Array<{ id: string }> };
   const classroomSummaries: ClassroomSummary[] = await Promise.all(
     (classrooms as ClassRow[]).map(async (cls: ClassRow) => {
-      const userIds = cls.users.map((u: { id: string }) => u.id);
-      const students: ClassroomStudent[] = cls.users.map((u: { id: string }) => ({ id: u.id }));
+      // take+1 trick — fetched.length > PRINCIPAL_STUDENTS_PER_CLASS → hasMore=true 후 마지막 1개 절단.
+      const fetched = cls.users;
+      const hasMoreStudents = fetched.length > PRINCIPAL_STUDENTS_PER_CLASS;
+      const visible = hasMoreStudents
+        ? fetched.slice(0, PRINCIPAL_STUDENTS_PER_CLASS)
+        : fetched;
+      const userIds = visible.map((u: { id: string }) => u.id);
+      const students: ClassroomStudent[] = visible.map((u: { id: string }) => ({ id: u.id }));
+      const nextStudentsCursor = hasMoreStudents
+        ? visible[visible.length - 1]?.id
+        : undefined;
       if (userIds.length === 0) {
         return {
           id: cls.id,
@@ -163,6 +204,8 @@ export async function loadPrincipalDashboard(
           diagnoseCount: 0,
           avgScore: null,
           students,
+          hasMoreStudents,
+          ...(nextStudentsCursor ? { nextStudentsCursor } : {}),
         };
       }
       const [diagnoseCount, classAvg] = await Promise.all([
@@ -187,6 +230,8 @@ export async function loadPrincipalDashboard(
         diagnoseCount,
         avgScore: classAvg._avg.articulationScore ?? null,
         students,
+        hasMoreStudents,
+        ...(nextStudentsCursor ? { nextStudentsCursor } : {}),
       };
     }),
   );

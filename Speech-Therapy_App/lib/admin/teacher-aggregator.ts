@@ -30,7 +30,10 @@ import { prisma } from "@/lib/db";
 /** 최근 N일 윈도우 — principal 과 동일 정책 (7일). */
 export const TEACHER_RECENT_DAYS = 7;
 
-/** 반당 노출 학생(원아) 최대 수 — principal 과 동일 (30). */
+/**
+ * 반당 1 페이지 노출 학생(원아) 수 (cursor 페이지 사이즈) — principal 과 동일 정책.
+ * 초과 시 hasMoreStudents=true + nextStudentsCursor 반환.
+ */
 export const TEACHER_STUDENTS_PER_CLASS = 30;
 
 /**
@@ -56,8 +59,12 @@ export interface TeacherClassroomSummary {
   /// 최근 TEACHER_RECENT_DAYS 일 내 articulationScore 평균. 0건이면 null.
   avgScore: number | null;
   /// 본 반에 속한 원아(보호자) 목록 — 최대 TEACHER_STUDENTS_PER_CLASS 명.
-  /// 정렬: User.id 오름차순 (Prisma select order 안정성).
+  /// 정렬: User.id 오름차순 (Prisma select order 안정성, cursor 호환).
   students: TeacherClassroomStudent[];
+  /// 본 반 students 페이지 이후 더 많은 학생이 존재? (take+1 trick).
+  hasMoreStudents: boolean;
+  /// 다음 페이지 cursor (다음 fetch 시 `studentsCursor` 로 전달).
+  nextStudentsCursor?: string;
 }
 
 /** 선생님 대시보드 단일 집계 결과. */
@@ -89,6 +96,18 @@ function emptyPayload(teacherId: string): TeacherDashboardData {
   };
 }
 
+/** loadTeacherDashboard 옵션 — students cursor 페이지네이션. */
+export interface LoadTeacherDashboardOptions {
+  /**
+   * Students cursor — User.id (UUID) 값. 본 값보다 큰 id 부터 fetch ({ id: { gt: cursor } }).
+   *   - 단일 cursor 가 모든 반에 동일 적용 (반별 cursor 분리는 후속 PR).
+   *   - 빈 문자열 / undefined → 첫 페이지.
+   *   - cross-teacher 우회 차단: cursor 는 id 비교만 — where: { teacherId } scope 가
+   *     상위에서 적용되어 다른 teacher 의 반에는 절대 도달 못함 (안전).
+   */
+  studentsCursor?: string;
+}
+
 /**
  * 선생님 대시보드 핵심 집계 — Server-side only.
  *
@@ -98,13 +117,24 @@ function emptyPayload(teacherId: string): TeacherDashboardData {
  * 다른 teacher 의 Class 가 결과에 섞일 가능성은 SQL 레벨에서 차단.
  *
  * 빈 teacherId 입력 시 emptyPayload 반환.
+ *
+ * Cursor 페이지네이션 (FR-Q-009 후속, principal-aggregator 와 패턴 일치):
+ *   - options.studentsCursor 가 있으면 반별 users 를 { id: { gt: cursor } } 로 필터링.
+ *   - take+1 trick — TEACHER_STUDENTS_PER_CLASS+1 fetch 후 마지막 절단.
  */
 export async function loadTeacherDashboard(
   teacherId: string,
+  options: LoadTeacherDashboardOptions = {},
 ): Promise<TeacherDashboardData> {
   if (!teacherId) return emptyPayload("");
 
   const since = new Date(Date.now() - TEACHER_RECENT_DAYS * 24 * 60 * 60 * 1000);
+  const cursor = options.studentsCursor && options.studentsCursor.length > 0
+    ? options.studentsCursor
+    : undefined;
+  const studentsTake = TEACHER_STUDENTS_PER_CLASS + 1;
+  const studentsWhere: { role: "parent"; id?: { gt: string } } = { role: "parent" };
+  if (cursor) studentsWhere.id = { gt: cursor };
 
   // 1단계: 본인 담당 Class 와 소속 parent users 1회 fetch.
   // where: { teacherId } 가 cross-teacher 차단의 핵심 — 다른 teacherId 의 Class 는 절대 포함 X.
@@ -115,10 +145,10 @@ export async function loadTeacherDashboard(
       id: true,
       name: true,
       users: {
-        where: { role: "parent" },
+        where: studentsWhere,
         select: { id: true },
         orderBy: { id: "asc" },
-        take: TEACHER_STUDENTS_PER_CLASS,
+        take: studentsTake,
       },
     },
   });
@@ -126,8 +156,30 @@ export async function loadTeacherDashboard(
   type ClassRow = { id: string; name: string; users: Array<{ id: string }> };
   const rows = classrooms as ClassRow[];
 
-  // 본인 담당 반의 모든 parent userId 집합 (전체 집계 용).
-  const allUserIds = Array.from(new Set(rows.flatMap((r) => r.users.map((u) => u.id))));
+  // take+1 trick — 반별 hasMoreStudents 사전 계산 (전체 집계용 visible userIds 도 함께).
+  type ClassPaged = {
+    id: string;
+    name: string;
+    visible: Array<{ id: string }>;
+    hasMoreStudents: boolean;
+    nextStudentsCursor?: string;
+  };
+  const paged: ClassPaged[] = rows.map((r) => {
+    const hasMoreStudents = r.users.length > TEACHER_STUDENTS_PER_CLASS;
+    const visible = hasMoreStudents
+      ? r.users.slice(0, TEACHER_STUDENTS_PER_CLASS)
+      : r.users;
+    return {
+      id: r.id,
+      name: r.name,
+      visible,
+      hasMoreStudents,
+      nextStudentsCursor: hasMoreStudents ? visible[visible.length - 1]?.id : undefined,
+    };
+  });
+
+  // 본인 담당 반의 모든 visible parent userId 집합 (전체 집계 용).
+  const allUserIds = Array.from(new Set(paged.flatMap((p) => p.visible.map((u) => u.id))));
 
   // 2단계: 전체 집계 + 반별 집계 fan-out (반 N 회 추가 쿼리, N ≤ 5 운영 가정).
   const [thisWeekDiagnoseCount, avgAgg, perClassSummaries] = await Promise.all([
@@ -149,9 +201,9 @@ export async function loadTeacherDashboard(
           _avg: { articulationScore: true },
         }),
     Promise.all(
-      rows.map(async (cls): Promise<TeacherClassroomSummary> => {
-        const userIds = cls.users.map((u) => u.id);
-        const students: TeacherClassroomStudent[] = cls.users.map((u) => ({ id: u.id }));
+      paged.map(async (cls): Promise<TeacherClassroomSummary> => {
+        const userIds = cls.visible.map((u) => u.id);
+        const students: TeacherClassroomStudent[] = cls.visible.map((u) => ({ id: u.id }));
         if (userIds.length === 0) {
           return {
             id: cls.id,
@@ -160,6 +212,8 @@ export async function loadTeacherDashboard(
             diagnoseCount: 0,
             avgScore: null,
             students,
+            hasMoreStudents: cls.hasMoreStudents,
+            ...(cls.nextStudentsCursor ? { nextStudentsCursor: cls.nextStudentsCursor } : {}),
           };
         }
         const [diagnoseCount, classAvg] = await Promise.all([
@@ -184,6 +238,8 @@ export async function loadTeacherDashboard(
           diagnoseCount,
           avgScore: classAvg._avg.articulationScore ?? null,
           students,
+          hasMoreStudents: cls.hasMoreStudents,
+          ...(cls.nextStudentsCursor ? { nextStudentsCursor: cls.nextStudentsCursor } : {}),
         };
       }),
     ),

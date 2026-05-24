@@ -125,6 +125,7 @@ describe("ClassroomGrid — students 통합 disclosure 렌더", () => {
       diagnoseCount: 5,
       avgScore: 70,
       students: studentIds.map((id) => ({ id })),
+      hasMoreStudents: false,
     };
   }
 
@@ -168,6 +169,7 @@ describe("ClassroomGrid — students 통합 disclosure 렌더", () => {
         diagnoseCount: 0,
         avgScore: null,
         students: [],
+        hasMoreStudents: false,
       },
     ];
     const { container } = render(<ClassroomGrid classrooms={classrooms} />);

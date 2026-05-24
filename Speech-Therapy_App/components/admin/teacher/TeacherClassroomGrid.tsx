@@ -95,6 +95,16 @@ export function TeacherClassroomGrid({ classrooms }: TeacherClassroomGridProps) 
                         <StudentRow key={s.id} student={s} />
                       ))}
                     </ul>
+                    {cls.hasMoreStudents ? (
+                      <p
+                        data-testid={`teacher-classroom-students-more-${cls.id}`}
+                        className="px-2 pb-2 text-[11px] text-slate-500"
+                        role="note"
+                      >
+                        원아가 30명을 넘어서 일부만 표시되었어요. 더 많은 원아
+                        보기는 후속 업데이트에서 지원될 예정이에요.
+                      </p>
+                    ) : null}
                   </details>
                   {/* FR-Q-TEACHER + FR-C-017+ — 반 단위 학부모 알림장 일괄 발송 (학생 0명 반 미노출). */}
                   <SendClassroomCushionButton

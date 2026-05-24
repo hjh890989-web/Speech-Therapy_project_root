@@ -100,6 +100,7 @@ describe("loadPrincipalDashboard — FR-Q-009 집계 helper", () => {
       diagnoseCount: 40,
       avgScore: 75,
       students: [{ id: "u-1" }, { id: "u-2" }],
+      hasMoreStudents: false,
     });
     expect(data.classrooms[1]).toEqual({
       id: "class-2",
@@ -108,6 +109,7 @@ describe("loadPrincipalDashboard — FR-Q-009 집계 helper", () => {
       diagnoseCount: 10,
       avgScore: 60,
       students: [{ id: "u-3" }],
+      hasMoreStudents: false,
     });
   });
 
@@ -217,11 +219,12 @@ describe("loadPrincipalDashboard — FR-Q-009 집계 helper", () => {
       diagnoseCount: 0,
       avgScore: null,
       students: [],
+      hasMoreStudents: false,
     });
     expect(data.classroomsEmpty).toBe(false);
   });
 
-  it("[7b] class.findMany.users select — take=PRINCIPAL_STUDENTS_PER_CLASS + orderBy id asc (navigation list)", async () => {
+  it("[7b] class.findMany.users select — take=PRINCIPAL_STUDENTS_PER_CLASS+1 (take+1 trick) + orderBy id asc (navigation list)", async () => {
     classCountMock.mockResolvedValueOnce(0);
     userCountMock.mockResolvedValueOnce(0);
     evalCountMock.mockResolvedValueOnce(0);
@@ -231,7 +234,8 @@ describe("loadPrincipalDashboard — FR-Q-009 집계 helper", () => {
     await loadPrincipalDashboard(INSTITUTION_A);
 
     const arg = classFindManyMock.mock.calls[0][0];
-    expect(arg.select.users.take).toBe(PRINCIPAL_STUDENTS_PER_CLASS);
+    // take+1 trick — hasMore 판정용으로 31 개 fetch.
+    expect(arg.select.users.take).toBe(PRINCIPAL_STUDENTS_PER_CLASS + 1);
     expect(arg.select.users.orderBy).toEqual({ id: "asc" });
     expect(arg.select.users.where).toEqual({ role: "parent" });
     expect(arg.select.users.select).toEqual({ id: true });
