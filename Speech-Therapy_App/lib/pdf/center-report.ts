@@ -12,9 +12,14 @@
 // Replace 정책 (서버 사이드 → 클라이언트):
 //   - 원안: Puppeteer / Chrome-headless 서버 렌더 → Vercel Hobby 제약 / cold start cost
 //   - 변경안: jsPDF 클라이언트 측 → 무료 / serverless 비용 0 / 사용자 다운로드 즉시 발생
-//   - 차이: 한글 폰트 embed 필요 — 본 PR 은 영문 + 기본 라틴 텍스트 우선 (한글 음소는 그대로
-//     ㄱ/ㄴ/ㅅ/ㅈ/ㄹ 등 jsPDF 기본 helvetica 가 일부 폰트 영역에서 깨질 수 있음 → 음소는 별도
-//     ASCII 라벨 + 한글 원문 병기, 영문 fallback 모드 제공).
+//
+// FR-Q-007 후속 — 한글 폰트 embed (lazy fetch):
+//   - 기존: jsPDF 기본 helvetica 가 한글 미지원 → 한글 음소 ("ㅅ") 에 영문 alias 병기 ("ㅅ (s)").
+//   - 변경: 런타임에 `/fonts/NotoSansKR-Regular.ttf` 를 fetch → base64 변환 → addFileToVFS +
+//     addFont 등록 → setFont("NotoSansKR") 활성화. 본문 한글 음소 alias 병기 제거 (`ㅅ` 만 사용).
+//   - 번들 영향 0 — 폰트 파일은 정적 자산 (public/fonts/), 첫 PDF 생성 시점에만 lazy fetch.
+//   - 폰트 로드 실패 / fetch 미지원 환경 → 기존 helvetica + alias 병기 fallback 유지 (회귀 0).
+//   - 라이센스: NotoSansKR — SIL Open Font License v1.1 (public/fonts/LICENSE-NotoSansKR.txt).
 //
 // CON-04 (금칙어 회피) — 본 모듈이 생성하는 모든 문자열은 다음 단어 미포함:
 //   "치료" / "진단" / "장애" / "환자" / "병" / "증상" / "처방" / "병원" (lib/forbidden-words 정의)
@@ -127,13 +132,25 @@ const PHONEME_EN_LABEL: Record<string, string> = {
   ㅎ: "h",
 };
 
-function describePhonemes(phonemes: string[], mode: "ko" | "en"): string {
+/// 음소 라벨 — 한국어 폰트 사용 가능 여부에 따라 alias 병기 분기.
+///   - mode=ko + hasKoreanFont=true  → 한글 음소만 ("ㅅ")
+///   - mode=ko + hasKoreanFont=false → 한글 + 영문 alias 병기 ("ㅅ (s)") [기존 helvetica fallback]
+///   - mode=en                       → alias 만 (없으면 원문)
+function describePhonemes(
+  phonemes: string[],
+  mode: "ko" | "en",
+  hasKoreanFont = false,
+): string {
   if (!Array.isArray(phonemes) || phonemes.length === 0) {
     return mode === "ko" ? "최근 음소 없음" : "No recent phonemes";
   }
   const max = phonemes.slice(0, 5);
   if (mode === "ko") {
-    // 한글 음소 그대로 + 영문 alias 병기 — helvetica 폴백 친화.
+    if (hasKoreanFont) {
+      // 한글 폰트 embed 성공 — 음소 원문만 표기.
+      return max.join(", ");
+    }
+    // 한글 폰트 미지원 환경 — 영문 alias 병기 (legacy helvetica fallback).
     return max
       .map((p) => {
         const alias = PHONEME_EN_LABEL[p];
@@ -213,11 +230,16 @@ const LABELS_EN: LabelPack = {
 
 /// PDF 본문 — jsPDF 인스턴스 에 직접 그린다. 외부에서 mock 가능하도록 doc 주입 패턴.
 /// helpers/types 만 export — 본 함수는 모듈 내부 전용.
+///
+/// hasKoreanFont:
+///   - true  : doc 에 "NotoSansKR" 폰트 등록 완료 — 본문 한글 텍스트 사용 가능 (alias 병기 제거).
+///   - false : helvetica 만 사용 — 한글 음소는 alias 병기 ("ㅅ (s)") + 영문 모드는 alias 만.
 function renderBody(
   doc: jsPDF,
   input: CenterReportInput,
   labels: LabelPack,
   mode: "ko" | "en",
+  hasKoreanFont = false,
 ): void {
   const safeChild = sanitizeLabel(input.childName, labels.childLabel);
   const safeInstitution = sanitizeLabel(
@@ -229,15 +251,41 @@ function renderBody(
   const marginX = 15;
   let cursorY = 20;
 
+  // 폰트 선택 — 한글 폰트 등록 성공 시 본문 전체 NotoSansKR, 실패 시 helvetica (legacy).
+  // jsPDF 의 NotoSansKR 는 단일 weight (normal) — bold 강조는 setFontSize 로 대체.
+  const koreanFontFamily = "NotoSansKR";
+  const setRegular = () => {
+    if (hasKoreanFont) {
+      doc.setFont(koreanFontFamily, "normal");
+    } else {
+      doc.setFont("helvetica", "normal");
+    }
+  };
+  const setHeading = () => {
+    if (hasKoreanFont) {
+      // NotoSansKR 단일 weight — 크기 가중치 ↑ 로 시각적 강조.
+      doc.setFont(koreanFontFamily, "normal");
+    } else {
+      doc.setFont("helvetica", "bold");
+    }
+  };
+  const setItalic = () => {
+    if (hasKoreanFont) {
+      doc.setFont(koreanFontFamily, "normal");
+    } else {
+      doc.setFont("helvetica", "italic");
+    }
+  };
+
   // --- 타이틀 ---
   doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
+  setHeading();
   doc.text(labels.title, marginX, cursorY);
   cursorY += 10;
 
   // --- 헤더 메타 ---
   doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
+  setRegular();
   doc.text(`${labels.childLabel}: ${safeChild}`, marginX, cursorY);
   cursorY += 6;
   doc.text(
@@ -257,7 +305,7 @@ function renderBody(
 
   // --- 3축 점수 ---
   doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
+  setHeading();
   doc.text(labels.scoresHeading, marginX, cursorY);
   cursorY += 8;
 
@@ -269,7 +317,7 @@ function renderBody(
     [labels.acousticLabel, input.stats.acousticAvg],
   ];
   doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
+  setRegular();
   for (const [label, value] of scores) {
     doc.text(label, marginX, cursorY);
     doc.text(formatScore(value), marginX + 130, cursorY);
@@ -290,21 +338,25 @@ function renderBody(
 
   // --- 음소 ---
   doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
+  setHeading();
   doc.text(labels.phonemesHeading, marginX, cursorY);
   cursorY += 7;
   doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
-  doc.text(describePhonemes(input.stats.recentTargetPhonemes, mode), marginX, cursorY);
+  setRegular();
+  doc.text(
+    describePhonemes(input.stats.recentTargetPhonemes, mode, hasKoreanFont),
+    marginX,
+    cursorY,
+  );
   cursorY += 12;
 
   // --- 활동 ---
   doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
+  setHeading();
   doc.text(labels.activityHeading, marginX, cursorY);
   cursorY += 7;
   doc.setFontSize(11);
-  doc.setFont("helvetica", "normal");
+  setRegular();
   doc.text(
     `${labels.diagnoseCountLabel}: ${input.stats.totalDiagnoseCount}`,
     marginX,
@@ -323,7 +375,7 @@ function renderBody(
   doc.setLineWidth(0.3);
   doc.line(marginX, cursorY - 4, marginX + barAreaWidth + 50, cursorY - 4);
   doc.setFontSize(10);
-  doc.setFont("helvetica", "italic");
+  setItalic();
   doc.text(labels.disclaimer, marginX, cursorY);
 }
 
@@ -333,11 +385,68 @@ function pickMode(opts?: GenerateCenterReportPdfOptions): "ko" | "en" {
   return "ko";
 }
 
+/// 한글 폰트 (NotoSansKR Regular) 다운로드 경로 — public/fonts/ 정적 자산.
+/// 절대 URL 이 아닌 root-relative — Next.js dev/prod 동일 동작 (basePath 미사용 가정).
+export const KOREAN_FONT_PATH = "/fonts/NotoSansKR-Regular.ttf";
+const KOREAN_FONT_VFS_NAME = "NotoSansKR-Regular.ttf";
+const KOREAN_FONT_FAMILY = "NotoSansKR";
+
+/// ArrayBuffer → base64 (브라우저 환경, btoa 기반 chunked 변환).
+/// jsPDF addFileToVFS 가 base64 인코딩된 폰트 페이로드를 요구함.
+function arrayBufferToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  // chunked — btoa 가 너무 큰 string 에서 stack overflow 위험.
+  const CHUNK = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    const chunk = bytes.subarray(i, Math.min(i + CHUNK, bytes.length));
+    binary += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  if (typeof btoa === "function") {
+    return btoa(binary);
+  }
+  // Node fallback (테스트 환경 jsdom 도 btoa 제공) — 이 분기는 일반 경로에서 미사용.
+  return Buffer.from(binary, "binary").toString("base64");
+}
+
+/// 한글 폰트 lazy fetch.
+///   - 성공: base64 문자열 반환 → jsPDF 등록에 사용.
+///   - 실패 (네트워크 / 404 / fetch 미지원): null 반환 → 호출 측이 helvetica fallback.
+async function loadKoreanFontBase64(): Promise<string | null> {
+  try {
+    // SSR / 테스트 환경에서 fetch 미정의 → fallback.
+    if (typeof fetch !== "function") return null;
+    const res = await fetch(KOREAN_FONT_PATH);
+    if (!res || !res.ok) return null;
+    const buf = await res.arrayBuffer();
+    if (!buf || buf.byteLength === 0) return null;
+    return arrayBufferToBase64(buf);
+  } catch {
+    // 네트워크 오류 / CORS / 기타 — graceful: helvetica fallback.
+    return null;
+  }
+}
+
+/// jsPDF doc 에 NotoSansKR 폰트 등록. 실패 시 false 반환 (fallback 유도).
+/// addFileToVFS / addFont 가 jsPDF 내부 오류로 throw 할 가능성을 모두 흡수.
+function registerKoreanFont(doc: jsPDF, base64: string): boolean {
+  try {
+    doc.addFileToVFS(KOREAN_FONT_VFS_NAME, base64);
+    doc.addFont(KOREAN_FONT_VFS_NAME, KOREAN_FONT_FAMILY, "normal");
+    return true;
+  } catch (err) {
+    console.warn("[center-report] NotoSansKR 폰트 등록 실패 — helvetica fallback", err);
+    return false;
+  }
+}
+
 /// 메인 helper. 호출 측 Client Component 가 await 후 Blob 사용.
 ///
-/// 실패 시나리오:
-///   1) jsPDF 인스턴스 생성 실패 → 영문 fallback 으로 재시도 → 그래도 실패 시 placeholder Blob 반환.
-///   2) renderBody 내부 throw → 영문 fallback 재시도.
+/// 실행 흐름:
+///   1) mode=ko 인 경우 한글 폰트 lazy fetch → 성공 시 jsPDF 에 등록 후 본문 한글 직접 표기.
+///      실패 시 helvetica fallback 유지 (음소 alias 병기).
+///   2) jsPDF 인스턴스 생성 / 본문 render 실행.
+///   3) ko 모드 실패 → en fallback 으로 재시도 → 그래도 실패 시 placeholder Blob 반환.
 /// 결코 throw 하지 않음 — graceful: 호출 측이 UI 분기 단순화.
 export async function generateCenterReportPdf(
   input: CenterReportInput,
@@ -346,10 +455,20 @@ export async function generateCenterReportPdf(
   let mode = pickMode(opts);
   let labels = mode === "ko" ? LABELS_KO : LABELS_EN;
 
+  // 한글 폰트 — mode=ko 일 때만 fetch. en 모드에서는 helvetica 만으로 충분.
+  let koreanFontBase64: string | null = null;
+  if (mode === "ko") {
+    koreanFontBase64 = await loadKoreanFontBase64();
+  }
+
   // 1차 시도 — 사용자 모드.
   try {
     const doc = new jsPDF({ unit: "mm", format: "a4" });
-    renderBody(doc, input, labels, mode);
+    let hasKoreanFont = false;
+    if (mode === "ko" && koreanFontBase64) {
+      hasKoreanFont = registerKoreanFont(doc, koreanFontBase64);
+    }
+    renderBody(doc, input, labels, mode, hasKoreanFont);
     const blob = doc.output("blob");
     return { blob, mode, bytes: blob.size, disclaimer: labels.disclaimer };
   } catch (err) {
@@ -363,7 +482,7 @@ export async function generateCenterReportPdf(
       labels = LABELS_EN;
       try {
         const doc = new jsPDF({ unit: "mm", format: "a4" });
-        renderBody(doc, input, labels, mode);
+        renderBody(doc, input, labels, mode, false);
         const blob = doc.output("blob");
         return { blob, mode, bytes: blob.size, disclaimer: labels.disclaimer };
       } catch (err2) {
@@ -386,14 +505,23 @@ export async function generateCenterReportPdf(
   };
 }
 
+/// previewCenterReportText 추가 옵션 — 호출 측 (테스트 / 미리보기 UI) 가 한글 폰트 로드 여부를
+/// 명시 가능. 기본값 false — 기존 helvetica fallback (alias 병기) 와 호환 (회귀 0).
+export interface PreviewCenterReportTextOptions
+  extends GenerateCenterReportPdfOptions {
+  /// true 면 한글 폰트 embed 환경 가정 — 음소 alias 병기 제거.
+  hasKoreanFont?: boolean;
+}
+
 /// 단위 테스트 / 검증 helper export — PDF 본문 텍스트가 아닌 사전 검증용 (텍스트 그대로).
 /// 호출 측이 "이 텍스트가 PDF 본문에 나갈 것이다" 확인하고 싶을 때 사용.
 export function previewCenterReportText(
   input: CenterReportInput,
-  opts?: GenerateCenterReportPdfOptions,
+  opts?: PreviewCenterReportTextOptions,
 ): string[] {
   const mode = pickMode(opts);
   const labels = mode === "ko" ? LABELS_KO : LABELS_EN;
+  const hasKoreanFont = opts?.hasKoreanFont === true;
   const safeChild = sanitizeLabel(input.childName, labels.childLabel);
   const safeInstitution = sanitizeLabel(
     input.institutionName,
@@ -410,7 +538,7 @@ export function previewCenterReportText(
     `${labels.linguisticLabel}: ${formatScore(input.stats.linguisticAvg)}`,
     `${labels.acousticLabel}: ${formatScore(input.stats.acousticAvg)}`,
     labels.phonemesHeading,
-    describePhonemes(input.stats.recentTargetPhonemes, mode),
+    describePhonemes(input.stats.recentTargetPhonemes, mode, hasKoreanFont),
     labels.activityHeading,
     `${labels.diagnoseCountLabel}: ${input.stats.totalDiagnoseCount}`,
     `${labels.missionCountLabel}: ${input.stats.missionCount}`,
