@@ -11,11 +11,17 @@
 //
 // 메뉴 매트릭스 (role 별 항목):
 //   anonymous  : 발음 발달 확인(/diagnose) + 로그인(/login)
-//   parent     : 주간 리뷰(/weekly-review) + 미션(/missions) + 보상 도감(/rewards/collection) + 예측(/predictions)
-//   teacher    : 위 일부 (주간 리뷰/미션/보상) + 선생님 대시보드(/admin/teacher)
-//   principal  : 부모 메뉴 + 원장 대시보드(/admin/principal) + 선생님 대시보드(/admin/teacher)
-//   admin      : principal 메뉴 + HITL 큐(/admin/hitl)
-//   expert     : 부모 메뉴 일부 + HITL 큐(/admin/hitl)
+//   parent     : 주간 리뷰(/weekly-review) + 미션(/missions) + 보상 도감(/rewards/collection)
+//                + 예측(/predictions) + 설정(/settings)
+//   teacher    : 위 일부 (주간 리뷰/미션/보상) + 선생님 대시보드(/admin/teacher) + 설정(/settings)
+//   principal  : 부모 메뉴 + 원장 대시보드(/admin/principal) + 선생님 대시보드(/admin/teacher) + 설정(/settings)
+//   admin      : principal 메뉴 + HITL 큐(/admin/hitl) + 설정(/settings)
+//   expert     : 부모 메뉴 일부 + HITL 큐(/admin/hitl) + 설정(/settings)
+//
+// "설정" 메뉴 정책:
+//   - anonymous 제외, 모든 인증 role 에 /settings 진입 노출.
+//   - 마이크 캘리브레이션 등 user 단위 설정이 자녀 유무와 무관 → teacher/principal/admin/expert 도 노출.
+//   - active path 매칭은 isPathActive 의 prefix 매칭으로 /settings/calibration / /settings/child 등 sub-route 도 강조됨.
 //
 // CON-04 금칙어 정책:
 //   - 메뉴 라벨에 의료 단정 표현 ("진단" / "치료" / "장애" 등) 사용 금지.
@@ -57,6 +63,13 @@ export function buildNavItemsForRole(role: MainNavRole): MainNavItem[] {
     label: "HITL 큐",
     emoji: "🧭",
   };
+  // 설정 — 모든 인증 role 공통. anonymous 만 제외.
+  // active path 강조는 isPathActive prefix 매칭으로 /settings/calibration / /settings/child 등 sub-route 포함.
+  const SETTINGS: MainNavItem = {
+    href: "/settings",
+    label: "설정",
+    emoji: "⚙️",
+  };
 
   switch (role) {
     case "anonymous":
@@ -64,7 +77,7 @@ export function buildNavItemsForRole(role: MainNavRole): MainNavItem[] {
         { href: "/diagnose", label: "발음 발달 확인", emoji: "🎤" },
       ];
     case "parent":
-      return PARENT_BASE;
+      return [...PARENT_BASE, SETTINGS];
     case "teacher":
       return [
         // 선생님도 부모 화면 일부는 접근 가능 (자녀 본인 계정과 별개 — 데모 / 가이드 목적).
@@ -72,13 +85,14 @@ export function buildNavItemsForRole(role: MainNavRole): MainNavItem[] {
         PARENT_BASE[1]!,
         PARENT_BASE[2]!,
         TEACHER_DASHBOARD,
+        SETTINGS,
       ];
     case "principal":
-      return [...PARENT_BASE, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD];
+      return [...PARENT_BASE, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, SETTINGS];
     case "admin":
-      return [...PARENT_BASE, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, HITL_QUEUE];
+      return [...PARENT_BASE, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, HITL_QUEUE, SETTINGS];
     case "expert":
-      return [PARENT_BASE[0]!, PARENT_BASE[1]!, PARENT_BASE[2]!, HITL_QUEUE];
+      return [PARENT_BASE[0]!, PARENT_BASE[1]!, PARENT_BASE[2]!, HITL_QUEUE, SETTINGS];
     default: {
       // exhaustiveness — 새 role 추가 시 type error.
       const _exhaustive: never = role;

@@ -7,18 +7,18 @@
 //   - @/lib/analytics.trackEvent mock (nav_clicked 발송 검증)
 //   - next/navigation usePathname mock (active path 강조)
 //
-// 검증 시나리오 (총 14건):
+// 검증 시나리오 (총 14건 + "설정" 추가 4건):
 //   pure helpers:
 //     1) buildNavItemsForRole("anonymous") → diagnose 1개
-//     2) buildNavItemsForRole("parent") → 4개 (weekly-review / missions / rewards/collection / predictions)
-//     3) buildNavItemsForRole("teacher") → 부모 3개 + /admin/teacher
-//     4) buildNavItemsForRole("principal") → 부모 4개 + admin/principal + admin/teacher
-//     5) buildNavItemsForRole("admin") → 부모 4개 + principal + teacher + hitl
-//     6) buildNavItemsForRole("expert") → 부모 3개 + /admin/hitl
+//     2) buildNavItemsForRole("parent") → 5개 (weekly-review / missions / rewards/collection / predictions / settings)
+//     3) buildNavItemsForRole("teacher") → 부모 3개 + /admin/teacher + /settings
+//     4) buildNavItemsForRole("principal") → 부모 4개 + admin/principal + admin/teacher + /settings
+//     5) buildNavItemsForRole("admin") → 부모 4개 + principal + teacher + hitl + /settings
+//     6) buildNavItemsForRole("expert") → 부모 3개 + /admin/hitl + /settings
 //     7) isPathActive — 정확 매치 + prefix 매치 + null 분기
 //   client component:
-//     8) anonymous → 로그인 링크 + diagnose 노출
-//     9) parent → 부모 메뉴 4개 + 로그아웃 form 노출
+//     8) anonymous → 로그인 링크 + diagnose 노출 (/settings 미노출)
+//     9) parent → 부모 메뉴 4개 + /settings + 로그아웃 form 노출
 //    10) active path (/weekly-review) → aria-current="page" + data-active="true"
 //    11) admin → admin/principal + admin/teacher + admin/hitl 동시 노출
 //    12) expert → admin/hitl 노출, principal/teacher 미노출
@@ -27,6 +27,11 @@
 //    14) MainNav fetch — Supabase 에러 → anonymous fallback
 //   CON-04:
 //    15) 모든 role 의 메뉴 라벨 + aria-label 에 금칙어 (진단/치료/장애/환자/병/증상) 0건
+//   "설정" 메뉴 (신규 4건):
+//    16) buildNavItemsForRole — anonymous 제외 모든 인증 role 에 /settings 포함
+//    17) MainNavClient — parent 데스크탑 nav 에 "설정" 링크 (href=/settings, emoji=⚙️) 노출
+//    18) MainNavClient — 모바일 hamburger 안에도 "설정" 노출 + teacher role 검증
+//    19) isPathActive — /settings/calibration / /settings/child sub-route 진입 시 "설정" 강조
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -97,30 +102,32 @@ describe("buildNavItemsForRole — role 별 메뉴 매트릭스", () => {
     expect(items.map((i) => i.href)).toEqual(["/diagnose"]);
   });
 
-  it("시나리오 2: parent → 4개 (weekly-review / missions / rewards/collection / predictions)", () => {
+  it("시나리오 2: parent → 5개 (weekly-review / missions / rewards/collection / predictions / settings)", () => {
     const items = buildNavItemsForRole("parent");
     expect(items.map((i) => i.href)).toEqual([
       "/weekly-review",
       "/missions",
       "/rewards/collection",
       "/predictions",
+      "/settings",
     ]);
   });
 
-  it("시나리오 3: teacher → 부모 일부 (3개) + /admin/teacher", () => {
+  it("시나리오 3: teacher → 부모 일부 (3개) + /admin/teacher + /settings", () => {
     const items = buildNavItemsForRole("teacher");
     const hrefs = items.map((i) => i.href);
     expect(hrefs).toContain("/weekly-review");
     expect(hrefs).toContain("/missions");
     expect(hrefs).toContain("/rewards/collection");
     expect(hrefs).toContain("/admin/teacher");
+    expect(hrefs).toContain("/settings");
     // teacher 는 /predictions / /admin/principal / /admin/hitl 접근 안 함.
     expect(hrefs).not.toContain("/predictions");
     expect(hrefs).not.toContain("/admin/principal");
     expect(hrefs).not.toContain("/admin/hitl");
   });
 
-  it("시나리오 4: principal → 부모 4개 + /admin/principal + /admin/teacher", () => {
+  it("시나리오 4: principal → 부모 4개 + /admin/principal + /admin/teacher + /settings", () => {
     const items = buildNavItemsForRole("principal");
     const hrefs = items.map((i) => i.href);
     expect(hrefs).toContain("/weekly-review");
@@ -129,25 +136,64 @@ describe("buildNavItemsForRole — role 별 메뉴 매트릭스", () => {
     expect(hrefs).toContain("/predictions");
     expect(hrefs).toContain("/admin/principal");
     expect(hrefs).toContain("/admin/teacher");
+    expect(hrefs).toContain("/settings");
     expect(hrefs).not.toContain("/admin/hitl");
   });
 
-  it("시나리오 5: admin → principal 메뉴 + HITL", () => {
+  it("시나리오 5: admin → principal 메뉴 + HITL + /settings", () => {
     const items = buildNavItemsForRole("admin");
     const hrefs = items.map((i) => i.href);
     expect(hrefs).toContain("/admin/principal");
     expect(hrefs).toContain("/admin/teacher");
     expect(hrefs).toContain("/admin/hitl");
     expect(hrefs).toContain("/weekly-review");
+    expect(hrefs).toContain("/settings");
   });
 
-  it("시나리오 6: expert → 부모 일부 + /admin/hitl (principal/teacher 미포함)", () => {
+  it("시나리오 6: expert → 부모 일부 + /admin/hitl + /settings (principal/teacher 미포함)", () => {
     const items = buildNavItemsForRole("expert");
     const hrefs = items.map((i) => i.href);
     expect(hrefs).toContain("/admin/hitl");
     expect(hrefs).not.toContain("/admin/principal");
     expect(hrefs).not.toContain("/admin/teacher");
     expect(hrefs).toContain("/weekly-review");
+    expect(hrefs).toContain("/settings");
+  });
+
+  it("시나리오 16: anonymous 제외 모든 인증 role 에 /settings 노출 (parent/teacher/principal/admin/expert)", () => {
+    const authedRoles: MainNavRole[] = [
+      "parent",
+      "teacher",
+      "principal",
+      "admin",
+      "expert",
+    ];
+    for (const role of authedRoles) {
+      const hrefs = buildNavItemsForRole(role).map((i) => i.href);
+      expect(hrefs, `role=${role} 에 /settings 미포함`).toContain("/settings");
+    }
+    // anonymous 는 /settings 미노출 — 로그인 우선.
+    expect(buildNavItemsForRole("anonymous").map((i) => i.href)).not.toContain(
+      "/settings",
+    );
+  });
+
+  it("'설정' 메뉴 메타 — label='설정', emoji='⚙️' (모든 인증 role 일관)", () => {
+    const authedRoles: MainNavRole[] = [
+      "parent",
+      "teacher",
+      "principal",
+      "admin",
+      "expert",
+    ];
+    for (const role of authedRoles) {
+      const settingsItem = buildNavItemsForRole(role).find(
+        (i) => i.href === "/settings",
+      );
+      expect(settingsItem, `role=${role} settings 항목 누락`).toBeTruthy();
+      expect(settingsItem!.label).toBe("설정");
+      expect(settingsItem!.emoji).toBe("⚙️");
+    }
   });
 });
 
@@ -192,7 +238,7 @@ describe("MainNavClient — role 별 렌더 + active 강조 + 로그아웃 + nav
     expect(screen.queryByRole("button", { name: "로그아웃" })).toBeNull();
   });
 
-  it("시나리오 9: parent → 부모 메뉴 4개 + 로그아웃 form 노출", () => {
+  it("시나리오 9: parent → 부모 메뉴 4개 + 설정 + 로그아웃 form 노출", () => {
     renderClient("parent", "/", "parent@example.com");
     const desktop = screen.getByTestId("main-nav-desktop");
     const text = desktop.textContent ?? "";
@@ -200,9 +246,56 @@ describe("MainNavClient — role 별 렌더 + active 강조 + 로그아웃 + nav
     expect(text).toContain("미션 도전");
     expect(text).toContain("보상 도감");
     expect(text).toContain("예측 보기");
+    expect(text).toContain("설정");
     // 로그아웃 버튼 존재.
     const logoutButtons = screen.getAllByRole("button", { name: "로그아웃" });
     expect(logoutButtons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("시나리오 17: parent 데스크탑 nav 에 '설정' 링크 (href=/settings) 노출", () => {
+    renderClient("parent", "/");
+    const desktop = screen.getByTestId("main-nav-desktop");
+    const links = Array.from(desktop.querySelectorAll("a"));
+    const settingsLink = links.find((a) => a.getAttribute("href") === "/settings");
+    expect(settingsLink).toBeTruthy();
+    expect(settingsLink!.textContent ?? "").toContain("설정");
+  });
+
+  it("시나리오 18: teacher 모바일 hamburger 안에도 '설정' 노출 (vertical list)", () => {
+    renderClient("teacher", "/");
+    const mobileList = screen.getByTestId("main-nav-mobile-list");
+    const hrefs = Array.from(mobileList.querySelectorAll("a")).map((a) =>
+      a.getAttribute("href"),
+    );
+    expect(hrefs).toContain("/settings");
+    // 동시에 teacher 의 다른 메뉴도 hamburger 안에 노출 (회귀 0건).
+    expect(hrefs).toContain("/admin/teacher");
+    expect(hrefs).toContain("/weekly-review");
+  });
+
+  it("시나리오 19: /settings/calibration sub-route 진입 시 '설정' 메뉴 강조 (aria-current=page)", () => {
+    renderClient("parent", "/settings/calibration");
+    const desktop = screen.getByTestId("main-nav-desktop");
+    const settingsLink = Array.from(desktop.querySelectorAll("a")).find(
+      (a) => a.getAttribute("href") === "/settings",
+    );
+    expect(settingsLink).toBeTruthy();
+    expect(settingsLink!.getAttribute("aria-current")).toBe("page");
+    expect(settingsLink!.getAttribute("data-active")).toBe("true");
+    // 다른 링크 (예: /missions) 는 active 가 아님.
+    const missionsLink = Array.from(desktop.querySelectorAll("a")).find(
+      (a) => a.getAttribute("href") === "/missions",
+    );
+    expect(missionsLink?.getAttribute("data-active")).toBe("false");
+  });
+
+  it("시나리오 19b: /settings 정확 진입 시에도 강조", () => {
+    renderClient("parent", "/settings");
+    const desktop = screen.getByTestId("main-nav-desktop");
+    const settingsLink = Array.from(desktop.querySelectorAll("a")).find(
+      (a) => a.getAttribute("href") === "/settings",
+    );
+    expect(settingsLink!.getAttribute("aria-current")).toBe("page");
   });
 
   it("시나리오 10: active path (/weekly-review) → aria-current=page + data-active=true", () => {
