@@ -285,7 +285,7 @@ describe("/admin/principal — FR-Q-009 원장 대시보드", () => {
     await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
 
     expect(loadDashMock).toHaveBeenCalledTimes(1);
-    expect(loadDashMock).toHaveBeenCalledWith(INSTITUTION_A, { studentsCursor: undefined });
+    expect(loadDashMock).toHaveBeenCalledWith(INSTITUTION_A, { studentsCursors: {} });
     // 다른 institutionId 가 호출 인자로 들어가지 않음 (R4).
     const allCalls = JSON.stringify(loadDashMock.mock.calls);
     expect(allCalls).not.toContain(INSTITUTION_B);

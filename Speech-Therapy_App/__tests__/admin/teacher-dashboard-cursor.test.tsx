@@ -1,25 +1,12 @@
-// 9f204cd 후속 — /admin/teacher cursor 페이지네이션 UI 진입 통합 테스트.
-//
-// 책임: searchParams.students_cursor 처리 + TeacherClassroomGrid 의 "더 보기" / "처음으로" Link.
-// teacher-dashboard.test.tsx 와는 독립 — cursor 전용 시나리오만 검증.
+// FR-DASH-CURSOR-PER-CLASSROOM — /admin/teacher 반별 cursor UI 통합 테스트.
 //
 // 격리 (principal-dashboard-cursor.test.tsx 와 동일 패턴):
 //   - @/lib/db Prisma mock
 //   - @/lib/supabase/server mock
 //   - @/lib/admin/teacher-aggregator mock
 //   - @/components/admin/teacher/SendClassroomCushionButton mock (Client Component 격리)
+//   - @/components/admin/DashboardPaginationBeacon mock
 //   - next/link mock — UrlObject 직렬화
-//
-// 검증 시나리오 (≥ 6):
-//   [1] 첫 페이지 (searchParams 비어 있음) → loadTeacherDashboard { studentsCursor: undefined } 호출
-//                                          → "처음으로"/"더 보기" 미노출
-//   [2] hasMoreStudents=true + nextStudentsCursor → "더 보기" Link 노출 (href 검증)
-//   [3] hasMoreStudents=false → "더 보기" 미노출
-//   [4] cursor 있는 페이지 → "처음으로" Link 노출 (href=/admin/teacher)
-//   [5] cross-teacher 차단 — page 는 본인 user.id 만 aggregator 에 전달
-//   [6] searchParams.students_cursor → loadTeacherDashboard 의 studentsCursor 로 전달
-//   [7] CON-04 — 금칙어 0건 (cursor 분기 UI 포함)
-//   [8] 빈 문자열 cursor → undefined 정규화
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
@@ -54,12 +41,28 @@ vi.mock("next/navigation", () => ({
   redirect: (target: string) => redirectMock(target),
 }));
 
-// SendClassroomCushionButton 는 Client Component — server-side render 시 단순 placeholder 로 격리.
 vi.mock("@/components/admin/teacher/SendClassroomCushionButton", () => ({
   SendClassroomCushionButton: ({ classId }: { classId: string; studentCount: number }) => (
     <button data-testid={`send-cushion-${classId}`} type="button">
       알림장 보내기
     </button>
+  ),
+}));
+
+vi.mock("@/components/admin/DashboardPaginationBeacon", () => ({
+  DashboardPaginationBeacon: ({
+    role,
+    cursors,
+  }: {
+    role: "principal" | "teacher";
+    institutionId: string | null;
+    cursors: Record<string, string>;
+  }) => (
+    <div
+      data-testid="dashboard-pagination-beacon"
+      data-role={role}
+      data-cursor-keys={Object.keys(cursors).join(",")}
+    />
   ),
 }));
 
@@ -100,6 +103,8 @@ const USER_TEACHER = "11111111-1111-4111-8111-111111111111";
 const USER_TEACHER_OTHER = "99999999-9999-4999-8999-999999999999";
 const STUDENT_LAST = "ffffffff-ffff-4fff-8fff-fffffffffff0";
 const STUDENT_OTHER = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee0";
+const STUDENT_NEXT_A = "cccccccc-cccc-4ccc-8ccc-cccccccccc01";
+const STUDENT_NEXT_B = "dddddddd-dddd-4ddd-8ddd-dddddddddd01";
 
 const FORBIDDEN_MEDICAL_WORDS = ["치료", "진단", "장애"];
 function assertNoMedicalTerms(text: string) {
@@ -116,26 +121,41 @@ function setUserRow(role: string | null) {
   findUniqueMock.mockResolvedValue({ role });
 }
 
-function dashboardWithMore(
+function twoClassDashboard(
   teacherId: string,
-  opts: { hasMore: boolean; nextCursor?: string } = { hasMore: false },
+  opts: {
+    classA?: { hasMore: boolean; nextCursor?: string };
+    classB?: { hasMore: boolean; nextCursor?: string };
+  } = {},
 ) {
+  const a = opts.classA ?? { hasMore: false };
+  const b = opts.classB ?? { hasMore: false };
   return {
     teacherId,
-    classCount: 1,
-    studentCount: 30,
+    classCount: 2,
+    studentCount: 35,
     thisWeekDiagnoseCount: 50,
     articulationAvg: 75,
     classrooms: [
       {
-        id: "class-1",
+        id: "class-A",
         name: "햇님반",
         studentCount: 30,
         diagnoseCount: 50,
         avgScore: 78,
         students: [{ id: STUDENT_OTHER }],
-        hasMoreStudents: opts.hasMore,
-        ...(opts.hasMore && opts.nextCursor ? { nextStudentsCursor: opts.nextCursor } : {}),
+        hasMoreStudents: a.hasMore,
+        ...(a.hasMore && a.nextCursor ? { nextStudentsCursor: a.nextCursor } : {}),
+      },
+      {
+        id: "class-B",
+        name: "달님반",
+        studentCount: 5,
+        diagnoseCount: 10,
+        avgScore: 72,
+        students: [{ id: STUDENT_LAST }],
+        hasMoreStudents: b.hasMore,
+        ...(b.hasMore && b.nextCursor ? { nextStudentsCursor: b.nextCursor } : {}),
       },
     ],
     classroomsEmpty: false,
@@ -149,81 +169,129 @@ beforeEach(() => {
   redirectMock.mockClear();
 });
 
-describe("/admin/teacher cursor 페이지네이션 UI (9f204cd 후속)", () => {
-  it("[1] 첫 페이지 (searchParams 비어 있음) → cursor undefined + '처음으로'/'더 보기' 모두 미노출", async () => {
+describe("/admin/teacher 반별 cursor 페이지네이션 UI (FR-DASH-CURSOR-PER-CLASSROOM)", () => {
+  it("[1] 첫 페이지 (searchParams 비어 있음) → studentsCursors={} + 모든 cursor Link 미노출", async () => {
     setAuthUser(USER_TEACHER);
     setUserRow("teacher");
-    loadDashMock.mockResolvedValueOnce(dashboardWithMore(USER_TEACHER, { hasMore: false }));
+    loadDashMock.mockResolvedValueOnce(twoClassDashboard(USER_TEACHER));
 
     const ui = await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
-    expect(loadDashMock).toHaveBeenCalledWith(USER_TEACHER, { studentsCursor: undefined });
+    expect(loadDashMock).toHaveBeenCalledWith(USER_TEACHER, { studentsCursors: {} });
 
     expect(
       container.querySelector("[data-testid='teacher-students-cursor-reset']"),
     ).toBeNull();
     expect(
-      container.querySelector("[data-testid='teacher-students-cursor-next']"),
+      container.querySelector("[data-testid='teacher-students-cursor-next-class-A']"),
     ).toBeNull();
+    expect(container.querySelector("[data-testid='dashboard-pagination-beacon']")).toBeNull();
   });
 
-  it("[2] hasMoreStudents=true + nextStudentsCursor → '더 보기' Link 노출 (href 검증)", async () => {
+  it("[2] hasMoreStudents=true → 반별 '더 보기' Link 노출 (href 검증)", async () => {
     setAuthUser(USER_TEACHER);
     setUserRow("teacher");
     loadDashMock.mockResolvedValueOnce(
-      dashboardWithMore(USER_TEACHER, { hasMore: true, nextCursor: STUDENT_LAST }),
+      twoClassDashboard(USER_TEACHER, {
+        classA: { hasMore: true, nextCursor: STUDENT_NEXT_A },
+      }),
     );
 
     const ui = await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
-    const more = container.querySelector("[data-testid='teacher-students-cursor-next']");
-    expect(more).not.toBeNull();
-    const href = more?.getAttribute("href") ?? "";
+    const moreA = container.querySelector(
+      "[data-testid='teacher-students-cursor-next-class-A']",
+    );
+    expect(moreA).not.toBeNull();
+    const href = moreA?.getAttribute("href") ?? "";
     expect(href).toContain("/admin/teacher");
-    expect(href).toContain(`students_cursor=${encodeURIComponent(STUDENT_LAST)}`);
-    expect(more?.textContent).toBe("더 보기");
+    expect(href).toContain(
+      `students_cursor_class-A=${encodeURIComponent(STUDENT_NEXT_A)}`,
+    );
+    expect(moreA?.textContent).toBe("더 보기");
   });
 
-  it("[3] hasMoreStudents=false → '더 보기' 미노출", async () => {
+  it("[3] 반 A 에만 cursor — 'A 처음으로' + '전체 처음으로' 노출, B 는 reset 미노출", async () => {
     setAuthUser(USER_TEACHER);
     setUserRow("teacher");
-    loadDashMock.mockResolvedValueOnce(dashboardWithMore(USER_TEACHER, { hasMore: false }));
-
-    const ui = await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
-    const { container } = render(ui);
-
-    expect(
-      container.querySelector("[data-testid='teacher-students-cursor-next']"),
-    ).toBeNull();
-  });
-
-  it("[4] cursor 있는 페이지 → '처음으로' Link 노출 (href=/admin/teacher)", async () => {
-    setAuthUser(USER_TEACHER);
-    setUserRow("teacher");
-    loadDashMock.mockResolvedValueOnce(dashboardWithMore(USER_TEACHER, { hasMore: false }));
+    loadDashMock.mockResolvedValueOnce(twoClassDashboard(USER_TEACHER));
 
     const ui = await TeacherDashboardPage({
-      searchParams: Promise.resolve({ students_cursor: STUDENT_LAST }),
+      searchParams: Promise.resolve({ "students_cursor_class-A": STUDENT_LAST }),
     });
     const { container } = render(ui);
 
-    const reset = container.querySelector("[data-testid='teacher-students-cursor-reset']");
-    expect(reset).not.toBeNull();
-    expect(reset?.getAttribute("href")).toBe("/admin/teacher");
-    expect(reset?.textContent).toBe("처음으로");
+    const allReset = container.querySelector(
+      "[data-testid='teacher-students-cursor-reset']",
+    );
+    expect(allReset).not.toBeNull();
+    expect(allReset?.getAttribute("href")).toBe("/admin/teacher");
+    expect(allReset?.textContent).toBe("전체 처음으로");
+
+    const aReset = container.querySelector(
+      "[data-testid='teacher-students-cursor-reset-class-A']",
+    );
+    expect(aReset).not.toBeNull();
+    expect(aReset?.getAttribute("href")).toBe("/admin/teacher");
+
+    expect(
+      container.querySelector("[data-testid='teacher-students-cursor-reset-class-B']"),
+    ).toBeNull();
+  });
+
+  it("[4] 반 A + B 둘 다 cursor → '더 보기' href 가 OTHER 반 cursor 보존", async () => {
+    setAuthUser(USER_TEACHER);
+    setUserRow("teacher");
+    loadDashMock.mockResolvedValueOnce(
+      twoClassDashboard(USER_TEACHER, {
+        classA: { hasMore: true, nextCursor: STUDENT_NEXT_A },
+        classB: { hasMore: true, nextCursor: STUDENT_NEXT_B },
+      }),
+    );
+
+    const ui = await TeacherDashboardPage({
+      searchParams: Promise.resolve({
+        "students_cursor_class-A": STUDENT_OTHER,
+        "students_cursor_class-B": STUDENT_LAST,
+      }),
+    });
+    const { container } = render(ui);
+
+    const moreA = container.querySelector(
+      "[data-testid='teacher-students-cursor-next-class-A']",
+    );
+    const moreAHref = moreA?.getAttribute("href") ?? "";
+    expect(moreAHref).toContain(`students_cursor_class-A=${encodeURIComponent(STUDENT_NEXT_A)}`);
+    expect(moreAHref).toContain(`students_cursor_class-B=${encodeURIComponent(STUDENT_LAST)}`);
+
+    const moreB = container.querySelector(
+      "[data-testid='teacher-students-cursor-next-class-B']",
+    );
+    const moreBHref = moreB?.getAttribute("href") ?? "";
+    expect(moreBHref).toContain(`students_cursor_class-B=${encodeURIComponent(STUDENT_NEXT_B)}`);
+    expect(moreBHref).toContain(`students_cursor_class-A=${encodeURIComponent(STUDENT_OTHER)}`);
+
+    const resetA = container.querySelector(
+      "[data-testid='teacher-students-cursor-reset-class-A']",
+    );
+    const resetAHref = resetA?.getAttribute("href") ?? "";
+    expect(resetAHref).toContain(`students_cursor_class-B=${encodeURIComponent(STUDENT_LAST)}`);
+    expect(resetAHref).not.toContain("students_cursor_class-A=");
   });
 
   it("[5] cross-teacher 차단 — page 는 본인 user.id 만 aggregator 에 전달", async () => {
     setAuthUser(USER_TEACHER);
     setUserRow("teacher");
     loadDashMock.mockResolvedValueOnce(
-      dashboardWithMore(USER_TEACHER, { hasMore: true, nextCursor: STUDENT_LAST }),
+      twoClassDashboard(USER_TEACHER, {
+        classA: { hasMore: true, nextCursor: STUDENT_NEXT_A },
+      }),
     );
 
     await TeacherDashboardPage({
-      searchParams: Promise.resolve({ students_cursor: STUDENT_LAST }),
+      searchParams: Promise.resolve({ "students_cursor_class-A": STUDENT_LAST }),
     });
 
     expect(loadDashMock).toHaveBeenCalledTimes(1);
@@ -233,29 +301,38 @@ describe("/admin/teacher cursor 페이지네이션 UI (9f204cd 후속)", () => {
     expect(argsJson).not.toContain(USER_TEACHER_OTHER);
   });
 
-  it("[6] searchParams.students_cursor → loadTeacherDashboard 의 studentsCursor 로 전달", async () => {
+  it("[6] searchParams 의 cursor 들이 모두 studentsCursors map 으로 전달", async () => {
     setAuthUser(USER_TEACHER);
     setUserRow("teacher");
-    loadDashMock.mockResolvedValueOnce(dashboardWithMore(USER_TEACHER, { hasMore: false }));
+    loadDashMock.mockResolvedValueOnce(twoClassDashboard(USER_TEACHER));
 
     await TeacherDashboardPage({
-      searchParams: Promise.resolve({ students_cursor: STUDENT_LAST }),
+      searchParams: Promise.resolve({
+        "students_cursor_class-A": STUDENT_LAST,
+        "students_cursor_class-B": STUDENT_OTHER,
+        unrelated: "x",
+      }),
     });
 
     expect(loadDashMock).toHaveBeenCalledWith(USER_TEACHER, {
-      studentsCursor: STUDENT_LAST,
+      studentsCursors: {
+        "class-A": STUDENT_LAST,
+        "class-B": STUDENT_OTHER,
+      },
     });
   });
 
-  it("[7] CON-04 — cursor 분기 UI (더 보기 / 처음으로 모두 노출) 금칙어 0건", async () => {
+  it("[7] CON-04 — cursor 분기 UI 포함 금칙어 0건", async () => {
     setAuthUser(USER_TEACHER);
     setUserRow("teacher");
     loadDashMock.mockResolvedValueOnce(
-      dashboardWithMore(USER_TEACHER, { hasMore: true, nextCursor: STUDENT_LAST }),
+      twoClassDashboard(USER_TEACHER, {
+        classA: { hasMore: true, nextCursor: STUDENT_NEXT_A },
+      }),
     );
 
     const ui = await TeacherDashboardPage({
-      searchParams: Promise.resolve({ students_cursor: STUDENT_OTHER }),
+      searchParams: Promise.resolve({ "students_cursor_class-A": STUDENT_OTHER }),
     });
     const { container } = render(ui);
 
@@ -263,21 +340,44 @@ describe("/admin/teacher cursor 페이지네이션 UI (9f204cd 후속)", () => {
       container.querySelector("[data-testid='teacher-students-cursor-reset']"),
     ).not.toBeNull();
     expect(
-      container.querySelector("[data-testid='teacher-students-cursor-next']"),
+      container.querySelector("[data-testid='teacher-students-cursor-next-class-A']"),
     ).not.toBeNull();
 
     assertNoMedicalTerms(container.textContent ?? "");
   });
 
-  it("[8] 빈 문자열 cursor → undefined 로 정규화", async () => {
+  it("[8] 빈 문자열 cursor → 해당 반 cursor 제외", async () => {
     setAuthUser(USER_TEACHER);
     setUserRow("teacher");
-    loadDashMock.mockResolvedValueOnce(dashboardWithMore(USER_TEACHER, { hasMore: false }));
+    loadDashMock.mockResolvedValueOnce(twoClassDashboard(USER_TEACHER));
 
     await TeacherDashboardPage({
-      searchParams: Promise.resolve({ students_cursor: "   " }),
+      searchParams: Promise.resolve({
+        "students_cursor_class-A": "   ",
+        "students_cursor_class-B": STUDENT_LAST,
+      }),
     });
 
-    expect(loadDashMock).toHaveBeenCalledWith(USER_TEACHER, { studentsCursor: undefined });
+    expect(loadDashMock).toHaveBeenCalledWith(USER_TEACHER, {
+      studentsCursors: { "class-B": STUDENT_LAST },
+    });
+  });
+
+  it("[9] DashboardPaginationBeacon — cursor 있는 페이지에서만 렌더 + role=teacher", async () => {
+    setAuthUser(USER_TEACHER);
+    setUserRow("teacher");
+    loadDashMock.mockResolvedValueOnce(twoClassDashboard(USER_TEACHER));
+
+    const ui = await TeacherDashboardPage({
+      searchParams: Promise.resolve({
+        "students_cursor_class-A": STUDENT_LAST,
+      }),
+    });
+    const { container } = render(ui);
+
+    const beacon = container.querySelector("[data-testid='dashboard-pagination-beacon']");
+    expect(beacon).not.toBeNull();
+    expect(beacon?.getAttribute("data-role")).toBe("teacher");
+    expect(beacon?.getAttribute("data-cursor-keys")).toBe("class-A");
   });
 });

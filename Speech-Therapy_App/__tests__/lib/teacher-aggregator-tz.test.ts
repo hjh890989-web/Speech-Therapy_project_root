@@ -12,6 +12,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const classFindManyMock = vi.fn();
+const userFindManyMock = vi.fn();
 const evalCountMock = vi.fn();
 const evalAggregateMock = vi.fn();
 
@@ -19,6 +20,9 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     class: {
       findMany: (...args: unknown[]) => classFindManyMock(...args),
+    },
+    user: {
+      findMany: (...args: unknown[]) => userFindManyMock(...args),
     },
     evaluationResult: {
       count: (...args: unknown[]) => evalCountMock(...args),
@@ -36,9 +40,9 @@ import { kstDaysAgoStart } from "@/lib/timeline/tz";
 const TEACHER_ID = "tt-1111-1111-1111-tttttttttttt";
 
 function setupBaseMocks() {
-  classFindManyMock.mockResolvedValue([
-    { id: "class-1", name: "햇님반", users: [{ id: "u-1" }] },
-  ]);
+  // FR-DASH-CURSOR-PER-CLASSROOM 후속 — class.findMany 는 id/name 만, user.findMany 가 반별 fan-out.
+  classFindManyMock.mockResolvedValue([{ id: "class-1", name: "햇님반" }]);
+  userFindManyMock.mockResolvedValue([{ id: "u-1" }]);
   // 전체 집계 + 반별 집계 = 총 2회씩 (evalCount, evalAggregate).
   evalCountMock.mockResolvedValue(0);
   evalAggregateMock.mockResolvedValue({ _avg: { articulationScore: null } });
@@ -46,6 +50,7 @@ function setupBaseMocks() {
 
 function resetAll() {
   classFindManyMock.mockReset();
+  userFindManyMock.mockReset();
   evalCountMock.mockReset();
   evalAggregateMock.mockReset();
 }

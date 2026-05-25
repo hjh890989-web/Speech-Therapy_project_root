@@ -879,6 +879,24 @@ export type AnalyticsEvent =
         resultCount: number;
         role: string;
       };
+    }
+  // === FR-DASH-CURSOR-PER-CLASSROOM — principal/teacher 대시보드 반별 페이지네이션 진입 ===
+  | {
+      // /admin/principal 또는 /admin/teacher 가 `students_cursor_<classroomId>` searchParam 을
+      // 갖고 진입된 시점, 해당 반 별로 1회씩 발송 (DashboardPaginationBeacon — Strict Mode 가드).
+      // 동일 페이지 진입에서 cursor 가 N 개 (N 반) 있으면 N 회 발송 (반별 KPI 분리).
+      // R4 보호: classroomId 만 노출 (학생 UUID / 이메일 / 이름 절대 노출 금지).
+      //   cursor (User.id UUID) 는 분석 백엔드에서 자동 해시 가정 — 식별자이므로 server-side
+      //   telemetry sink 가 처리. null = 첫 페이지 (현재 spec 상 cursor 있는 진입만 발송하므로
+      //   실 운영상 null 은 미발생, type 만 허용).
+      // institutionId: principal 진입 시 본인 institutionId, teacher 진입 시 null.
+      name: "dashboard_students_paginated";
+      properties: {
+        classroomId: string;
+        cursor: string | null;
+        institutionId: string | null;
+        role: "principal" | "teacher";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

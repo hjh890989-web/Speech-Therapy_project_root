@@ -4,8 +4,9 @@
 //   1) Supabase auth.getUser() → User.role / User.institutionId 단건 조회 (proxy.ts RBAC 이후 2차 가드)
 //   2) principal/admin 만 통과 (expert 제외) — expert 는 HITL 큐 전용 사용자.
 //   3) institutionId 부재 → 안내 메시지 (원장 가입은 됐으나 운영자 매칭 전).
-//   4) loadPrincipalDashboard(institutionId, { studentsCursor }) 1회 호출 — Promise.all fan-out.
-//      · searchParams.students_cursor 가 있으면 "다음 페이지" 진입 (9f204cd 후속 UI cursor).
+//   4) loadPrincipalDashboard(institutionId, { studentsCursors }) 1회 호출 — Promise.all fan-out.
+//      · searchParams 의 `students_cursor_<classroomId>` 들을 Record 로 모아 전달
+//        (FR-DASH-CURSOR-PER-CLASSROOM — 반별 cursor 분리).
 //   5) StatsCards + ClassroomGrid (또는 빈 데이터 CTA) 렌더.
 //   6) principal_dashboard_viewed telemetry (server-side console.log — Vercel Logs).
 //
@@ -32,6 +33,7 @@ import {
 } from "@/lib/admin/principal-aggregator";
 import { StatsCards } from "@/components/admin/principal/StatsCards";
 import { ClassroomGrid } from "@/components/admin/principal/ClassroomGrid";
+import { DashboardPaginationBeacon } from "@/components/admin/DashboardPaginationBeacon";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +46,11 @@ export const metadata = {
 /// 본 페이지 진입 허용 role — proxy.ts allow-list 의 subset (expert 제외).
 /// expert 는 HITL 검토 전용 — 운영상 institutionId 없을 가능성 높아 별도 가드.
 const PAGE_ALLOWED_ROLES = new Set(["admin", "principal"]);
+
+/// searchParams 안에서 반별 cursor 를 식별하는 prefix.
+/// 형식: `students_cursor_<classroomId>` — classroomId 는 UUID 이므로 URL-safe.
+/// FR-DASH-CURSOR-PER-CLASSROOM (본 PR 신규) — 기존 단일 `students_cursor` 제거.
+const CURSOR_PARAM_PREFIX = "students_cursor_";
 
 interface CurrentUserContext {
   userId: string;
@@ -96,23 +103,47 @@ function logDashboardView(data: PrincipalDashboardData) {
 }
 
 /**
+ * searchParams 의 `students_cursor_<classroomId>` 들을 Record<classroomId, cursor> 로 변환.
+ *   - 빈 문자열 / 공백 cursor 는 제외 (해당 반은 첫 페이지로 해석).
+ *   - 동일 key 가 string[] 으로 전달되면 첫 값만 사용 (Next.js 표준 동작 정합).
+ *   - prefix 매칭만 — 다른 query 는 무시.
+ */
+function parseStudentsCursors(
+  sp: Record<string, string | string[] | undefined>,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(sp)) {
+    if (!key.startsWith(CURSOR_PARAM_PREFIX)) continue;
+    const classroomId = key.slice(CURSOR_PARAM_PREFIX.length);
+    if (classroomId.length === 0) continue;
+    const raw = Array.isArray(value) ? value[0] : value;
+    if (typeof raw !== "string") continue;
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) continue;
+    result[classroomId] = trimmed;
+  }
+  return result;
+}
+
+/**
  * Page props — Next.js 16 (15+) 부터 searchParams 는 Promise 로 변경됨.
- *   students_cursor: 직전 페이지 마지막 학생 User.id (UUID). aggregator 가 본 값보다 큰 id 부터 fetch.
- *     · 빈 값 / 미지정 → 첫 페이지 진입.
- *     · 외부에서 다른 institution 의 user id 를 입력해도 aggregator 의 where: institutionId scope
- *       가 그대로 적용되어 본인 기관 users 안에서만 매칭됨 (cross-tenant 안전).
+ *   students_cursor_<classroomId>: 해당 반의 직전 페이지 마지막 학생 User.id (UUID).
+ *     · 빈 값 / 미지정 → 해당 반은 첫 페이지 진입.
+ *     · 외부에서 다른 institution 의 user id 를 입력해도 aggregator 의 where: { classId, institutionId }
+ *       scope 가 그대로 적용되어 본인 기관 users 안에서만 매칭됨 (cross-tenant 안전).
+ *     · 반별 독립 (FR-DASH-CURSOR-PER-CLASSROOM) — 한 반의 페이지네이션이 다른 반에 영향 0건.
  */
 interface PrincipalDashboardPageProps {
-  searchParams: Promise<{ students_cursor?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function PrincipalDashboardPage({
   searchParams,
 }: PrincipalDashboardPageProps) {
-  const { students_cursor: rawCursor } = await searchParams;
-  const cursor =
-    typeof rawCursor === "string" && rawCursor.trim().length > 0 ? rawCursor.trim() : undefined;
-  const hasCursor = Boolean(cursor);
+  const sp = await searchParams;
+  const studentsCursors = parseStudentsCursors(sp);
+  const cursorKeys = Object.keys(studentsCursors);
+  const hasAnyCursor = cursorKeys.length > 0;
 
   const ctx = await loadCurrentUserContext();
 
@@ -168,10 +199,10 @@ export default async function PrincipalDashboardPage({
   }
 
   // L2 — cross-tenant 차단 보장: 호출 institutionId 는 본인 user 의 institutionId 만 사용.
-  // searchParams.students_cursor 는 페이지네이션 cursor (User.id UUID) — aggregator 가
-  // where: { institutionId } scope 안에서 { id: { gt: cursor } } 로 필터링하므로 다른 기관
-  // user id 를 입력해도 본 기관 users 안에서만 매칭 (안전, principal-aggregator.ts §해설).
-  const data = await loadPrincipalDashboard(ctx.institutionId, { studentsCursor: cursor });
+  // searchParams 의 반별 cursor 는 aggregator 가 where: { classId, institutionId scope } 안에서
+  // { id: { gt: cursor } } 로 필터링하므로 다른 기관 user id 를 입력해도 본 기관 users 안에서만
+  // 매칭 (안전, principal-aggregator.ts §해설).
+  const data = await loadPrincipalDashboard(ctx.institutionId, { studentsCursors });
   logDashboardView(data);
 
   const hasAnyData =
@@ -219,8 +250,21 @@ export default async function PrincipalDashboardPage({
           </Link>
         </section>
       ) : (
-        <ClassroomGrid classrooms={data.classrooms} hasCursor={hasCursor} />
+        <ClassroomGrid
+          classrooms={data.classrooms}
+          studentsCursors={studentsCursors}
+          hasAnyCursor={hasAnyCursor}
+        />
       )}
+
+      {/* FR-DASH-CURSOR-PER-CLASSROOM — 반별 cursor 가 있는 페이지 진입 시 1회씩 fire. */}
+      {hasAnyCursor ? (
+        <DashboardPaginationBeacon
+          role="principal"
+          institutionId={ctx.institutionId}
+          cursors={studentsCursors}
+        />
+      ) : null}
 
       {!hasAnyData ? (
         <section

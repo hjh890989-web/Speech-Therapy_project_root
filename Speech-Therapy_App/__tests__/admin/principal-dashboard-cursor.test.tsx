@@ -1,24 +1,26 @@
-// 9f204cd 후속 — /admin/principal cursor 페이지네이션 UI 진입 통합 테스트.
+// FR-DASH-CURSOR-PER-CLASSROOM — /admin/principal 반별 cursor UI 통합 테스트.
 //
-// 책임: searchParams.students_cursor 처리 + ClassroomGrid 의 "더 보기" / "처음으로" Link 노출.
-// principal-dashboard.test.tsx 와는 독립 — cursor 전용 시나리오만 검증.
+// 책임: searchParams 의 `students_cursor_<classroomId>` 파싱 + ClassroomGrid 의
+//   반별 "더 보기" / "이 반 처음으로" + grid 상단 "전체 처음으로" Link 검증.
 //
 // 격리:
 //   - @/lib/db Prisma mock (user.findUnique)
 //   - @/lib/supabase/server mock (auth.getUser)
 //   - @/lib/admin/principal-aggregator mock (loadPrincipalDashboard)
-//   - next/link mock — 단순 <a> + href object 직렬화 (Next.js LinkProps href: string | UrlObject)
+//   - @/components/admin/DashboardPaginationBeacon Client Component mock
+//   - next/link mock — UrlObject 직렬화
 //
-// 검증 시나리오 (≥ 6):
-//   [1] 첫 페이지 (searchParams 비어 있음) → loadPrincipalDashboard 가 { studentsCursor: undefined } 호출
-//                                          → "처음으로" Link 미노출 + "더 보기" 미노출 (hasMoreStudents=false)
-//   [2] hasMoreStudents=true + nextStudentsCursor → "더 보기" Link 노출 (href = ?students_cursor=...)
-//   [3] hasMoreStudents=false (모든 반) → "더 보기" Link 미노출
-//   [4] cursor 있는 페이지 → "처음으로" Link 노출 (href=/admin/principal)
-//   [5] cross-tenant 차단 — page 는 본인 institutionId 만 aggregator 에 전달 (cursor 영향 없음)
-//   [6] searchParams.students_cursor 가 loadPrincipalDashboard 에 그대로 전달
-//   [7] CON-04 — 금칙어 (치료/진단/장애) 0건 (cursor 분기 UI 포함)
-//   [8] 빈 문자열 cursor → undefined 로 정규화 (trim 후 길이 0)
+// 검증 시나리오:
+//   [1] 첫 페이지 (searchParams 비어 있음) → aggregator { studentsCursors: {} } 호출
+//                                          → 어떤 reset/next Link 도 미노출
+//   [2] hasMoreStudents=true + nextStudentsCursor → 반별 "더 보기" Link 노출 (href 검증)
+//   [3] 반 A 에만 cursor — "이 반 처음으로" + "전체 처음으로" 노출 (반 B 는 reset 미노출)
+//   [4] 반 A + 반 B 모두 cursor 있음 — "더 보기" Link href 가 OTHER 반 cursor 보존
+//   [5] cross-tenant 차단 — page 는 본인 institutionId 만 aggregator 에 전달
+//   [6] searchParams 의 cursor 들이 모두 studentsCursors map 으로 전달
+//   [7] CON-04 — 금칙어 0건 (cursor 분기 UI 포함)
+//   [8] 빈 문자열 cursor → 해당 반 cursor 제외 (parse 단계)
+//   [9] DashboardPaginationBeacon 이 cursor 있는 페이지에서만 렌더
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
@@ -46,6 +48,24 @@ vi.mock("@/lib/admin/principal-aggregator", () => ({
   loadPrincipalDashboard: (...args: unknown[]) => loadDashMock(...args),
 }));
 
+// DashboardPaginationBeacon 은 Client Component — server-side render 시 placeholder.
+vi.mock("@/components/admin/DashboardPaginationBeacon", () => ({
+  DashboardPaginationBeacon: ({
+    role,
+    cursors,
+  }: {
+    role: "principal" | "teacher";
+    institutionId: string | null;
+    cursors: Record<string, string>;
+  }) => (
+    <div
+      data-testid="dashboard-pagination-beacon"
+      data-role={role}
+      data-cursor-keys={Object.keys(cursors).join(",")}
+    />
+  ),
+}));
+
 const redirectMock = vi.fn((target: string) => {
   throw new Error(`NEXT_REDIRECT:${target}`);
 });
@@ -53,7 +73,6 @@ vi.mock("next/navigation", () => ({
   redirect: (target: string) => redirectMock(target),
 }));
 
-// next/link mock — href 가 string 또는 UrlObject. UrlObject 시 ?key=value 직렬화.
 vi.mock("next/link", () => ({
   default: ({
     children,
@@ -92,6 +111,8 @@ const INSTITUTION_B = "22222222-2222-4222-8222-222222222222";
 const USER_PRINCIPAL = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const STUDENT_LAST = "ffffffff-ffff-4fff-8fff-fffffffffff0";
 const STUDENT_OTHER = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee0";
+const STUDENT_NEXT_A = "cccccccc-cccc-4ccc-8ccc-cccccccccc01";
+const STUDENT_NEXT_B = "dddddddd-dddd-4ddd-8ddd-dddddddddd01";
 
 const FORBIDDEN_MEDICAL_WORDS = ["치료", "진단", "장애"];
 function assertNoMedicalTerms(text: string) {
@@ -108,10 +129,15 @@ function setUserRow(role: string | null, institutionId: string | null) {
   findUniqueMock.mockResolvedValue({ role, institutionId });
 }
 
-function dashboardWithMore(
+function twoClassDashboard(
   institutionId: string,
-  opts: { hasMore: boolean; nextCursor?: string } = { hasMore: false },
+  opts: {
+    classA?: { hasMore: boolean; nextCursor?: string };
+    classB?: { hasMore: boolean; nextCursor?: string };
+  } = {},
 ) {
+  const a = opts.classA ?? { hasMore: false };
+  const b = opts.classB ?? { hasMore: false };
   return {
     institutionId,
     classCount: 2,
@@ -120,23 +146,24 @@ function dashboardWithMore(
     articulationAvg: 72,
     classrooms: [
       {
-        id: "class-1",
+        id: "class-A",
         name: "햇님반",
         studentCount: 30,
         diagnoseCount: 50,
         avgScore: 78,
         students: [{ id: STUDENT_OTHER }],
-        hasMoreStudents: opts.hasMore,
-        ...(opts.hasMore && opts.nextCursor ? { nextStudentsCursor: opts.nextCursor } : {}),
+        hasMoreStudents: a.hasMore,
+        ...(a.hasMore && a.nextCursor ? { nextStudentsCursor: a.nextCursor } : {}),
       },
       {
-        id: "class-2",
+        id: "class-B",
         name: "달님반",
         studentCount: 5,
         diagnoseCount: 10,
         avgScore: 70,
-        students: [],
-        hasMoreStudents: false,
+        students: [{ id: STUDENT_LAST }],
+        hasMoreStudents: b.hasMore,
+        ...(b.hasMore && b.nextCursor ? { nextStudentsCursor: b.nextCursor } : {}),
       },
     ],
     classroomsEmpty: false,
@@ -150,144 +177,233 @@ beforeEach(() => {
   redirectMock.mockClear();
 });
 
-describe("/admin/principal cursor 페이지네이션 UI (9f204cd 후속)", () => {
-  it("[1] 첫 페이지 (searchParams 비어 있음) → cursor undefined + '처음으로'/'더 보기' 모두 미노출", async () => {
+describe("/admin/principal 반별 cursor 페이지네이션 UI (FR-DASH-CURSOR-PER-CLASSROOM)", () => {
+  it("[1] 첫 페이지 (searchParams 비어 있음) → studentsCursors={} + 모든 cursor Link 미노출", async () => {
     setAuthUser(USER_PRINCIPAL);
     setUserRow("principal", INSTITUTION_A);
-    loadDashMock.mockResolvedValueOnce(dashboardWithMore(INSTITUTION_A, { hasMore: false }));
+    loadDashMock.mockResolvedValueOnce(twoClassDashboard(INSTITUTION_A));
 
     const ui = await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
-    // aggregator 호출 시 cursor = undefined.
-    expect(loadDashMock).toHaveBeenCalledWith(INSTITUTION_A, { studentsCursor: undefined });
+    expect(loadDashMock).toHaveBeenCalledWith(INSTITUTION_A, { studentsCursors: {} });
 
-    // 첫 페이지 → "처음으로" 미노출.
     expect(
       container.querySelector("[data-testid='principal-students-cursor-reset']"),
     ).toBeNull();
-    // hasMoreStudents=false → "더 보기" 미노출.
     expect(
-      container.querySelector("[data-testid='principal-students-cursor-next']"),
+      container.querySelector("[data-testid='principal-students-cursor-next-class-A']"),
     ).toBeNull();
+    expect(
+      container.querySelector("[data-testid='principal-students-cursor-next-class-B']"),
+    ).toBeNull();
+    expect(container.querySelector("[data-testid='dashboard-pagination-beacon']")).toBeNull();
   });
 
-  it("[2] hasMoreStudents=true + nextStudentsCursor → '더 보기' Link 노출 (href 검증)", async () => {
+  it("[2] hasMoreStudents=true → 반별 '더 보기' Link 노출 (href = ?students_cursor_<id>=...)", async () => {
     setAuthUser(USER_PRINCIPAL);
     setUserRow("principal", INSTITUTION_A);
     loadDashMock.mockResolvedValueOnce(
-      dashboardWithMore(INSTITUTION_A, { hasMore: true, nextCursor: STUDENT_LAST }),
+      twoClassDashboard(INSTITUTION_A, {
+        classA: { hasMore: true, nextCursor: STUDENT_NEXT_A },
+      }),
     );
 
     const ui = await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
     const { container } = render(ui);
 
-    const more = container.querySelector(
-      "[data-testid='principal-students-cursor-next']",
+    const moreA = container.querySelector(
+      "[data-testid='principal-students-cursor-next-class-A']",
     );
-    expect(more).not.toBeNull();
-    const href = more?.getAttribute("href") ?? "";
+    expect(moreA).not.toBeNull();
+    const href = moreA?.getAttribute("href") ?? "";
     expect(href).toContain("/admin/principal");
-    expect(href).toContain(`students_cursor=${encodeURIComponent(STUDENT_LAST)}`);
-    expect(more?.textContent).toBe("더 보기");
-  });
-
-  it("[3] hasMoreStudents=false (모든 반) → '더 보기' 미노출", async () => {
-    setAuthUser(USER_PRINCIPAL);
-    setUserRow("principal", INSTITUTION_A);
-    loadDashMock.mockResolvedValueOnce(dashboardWithMore(INSTITUTION_A, { hasMore: false }));
-
-    const ui = await PrincipalDashboardPage({ searchParams: Promise.resolve({}) });
-    const { container } = render(ui);
-
+    expect(href).toContain(
+      `students_cursor_class-A=${encodeURIComponent(STUDENT_NEXT_A)}`,
+    );
+    expect(moreA?.textContent).toBe("더 보기");
+    // 반 B 는 hasMore false → 더 보기 미노출.
     expect(
-      container.querySelector("[data-testid='principal-students-cursor-next']"),
+      container.querySelector("[data-testid='principal-students-cursor-next-class-B']"),
     ).toBeNull();
   });
 
-  it("[4] cursor 있는 페이지 → '처음으로' Link 노출 (href=/admin/principal)", async () => {
+  it("[3] 반 A 에만 cursor — 'A 처음으로' + '전체 처음으로' 노출, B 는 reset 미노출", async () => {
     setAuthUser(USER_PRINCIPAL);
     setUserRow("principal", INSTITUTION_A);
-    loadDashMock.mockResolvedValueOnce(dashboardWithMore(INSTITUTION_A, { hasMore: false }));
+    loadDashMock.mockResolvedValueOnce(twoClassDashboard(INSTITUTION_A));
 
     const ui = await PrincipalDashboardPage({
-      searchParams: Promise.resolve({ students_cursor: STUDENT_LAST }),
+      searchParams: Promise.resolve({ "students_cursor_class-A": STUDENT_LAST }),
     });
     const { container } = render(ui);
 
-    const reset = container.querySelector(
+    // 전체 처음으로
+    const allReset = container.querySelector(
       "[data-testid='principal-students-cursor-reset']",
     );
-    expect(reset).not.toBeNull();
-    expect(reset?.getAttribute("href")).toBe("/admin/principal");
-    expect(reset?.textContent).toBe("처음으로");
+    expect(allReset).not.toBeNull();
+    expect(allReset?.getAttribute("href")).toBe("/admin/principal");
+    expect(allReset?.textContent).toBe("전체 처음으로");
+
+    // 반 A 처음으로 (cursor 적용된 반).
+    const aReset = container.querySelector(
+      "[data-testid='principal-students-cursor-reset-class-A']",
+    );
+    expect(aReset).not.toBeNull();
+    // 반 A 가 유일 cursor 이므로 reset 후 query empty → "/admin/principal" string.
+    expect(aReset?.getAttribute("href")).toBe("/admin/principal");
+
+    // 반 B 는 cursor 없음 → reset 미노출.
+    expect(
+      container.querySelector("[data-testid='principal-students-cursor-reset-class-B']"),
+    ).toBeNull();
   });
 
-  it("[5] cross-tenant 차단 — page 는 본인 institutionId 만 전달 (cursor 영향 없음)", async () => {
+  it("[4] 반 A + B 둘 다 cursor → '더 보기' href 가 OTHER 반 cursor 보존", async () => {
     setAuthUser(USER_PRINCIPAL);
     setUserRow("principal", INSTITUTION_A);
     loadDashMock.mockResolvedValueOnce(
-      dashboardWithMore(INSTITUTION_A, { hasMore: true, nextCursor: STUDENT_LAST }),
+      twoClassDashboard(INSTITUTION_A, {
+        classA: { hasMore: true, nextCursor: STUDENT_NEXT_A },
+        classB: { hasMore: true, nextCursor: STUDENT_NEXT_B },
+      }),
+    );
+
+    const ui = await PrincipalDashboardPage({
+      searchParams: Promise.resolve({
+        "students_cursor_class-A": STUDENT_OTHER,
+        "students_cursor_class-B": STUDENT_LAST,
+      }),
+    });
+    const { container } = render(ui);
+
+    // 반 A "더 보기" href → A 는 nextCursor 로 갱신, B 는 기존 cursor (STUDENT_LAST) 보존.
+    const moreA = container.querySelector(
+      "[data-testid='principal-students-cursor-next-class-A']",
+    );
+    const moreAHref = moreA?.getAttribute("href") ?? "";
+    expect(moreAHref).toContain(`students_cursor_class-A=${encodeURIComponent(STUDENT_NEXT_A)}`);
+    expect(moreAHref).toContain(`students_cursor_class-B=${encodeURIComponent(STUDENT_LAST)}`);
+
+    // 반 B "더 보기" href → B 는 nextCursor, A 는 기존 cursor (STUDENT_OTHER) 보존.
+    const moreB = container.querySelector(
+      "[data-testid='principal-students-cursor-next-class-B']",
+    );
+    const moreBHref = moreB?.getAttribute("href") ?? "";
+    expect(moreBHref).toContain(`students_cursor_class-B=${encodeURIComponent(STUDENT_NEXT_B)}`);
+    expect(moreBHref).toContain(`students_cursor_class-A=${encodeURIComponent(STUDENT_OTHER)}`);
+
+    // 반 A "이 반 처음으로" → A 만 제거, B 보존.
+    const resetA = container.querySelector(
+      "[data-testid='principal-students-cursor-reset-class-A']",
+    );
+    const resetAHref = resetA?.getAttribute("href") ?? "";
+    expect(resetAHref).toContain(`students_cursor_class-B=${encodeURIComponent(STUDENT_LAST)}`);
+    expect(resetAHref).not.toContain("students_cursor_class-A=");
+  });
+
+  it("[5] cross-tenant 차단 — page 는 본인 institutionId 만 aggregator 에 전달", async () => {
+    setAuthUser(USER_PRINCIPAL);
+    setUserRow("principal", INSTITUTION_A);
+    loadDashMock.mockResolvedValueOnce(
+      twoClassDashboard(INSTITUTION_A, {
+        classA: { hasMore: true, nextCursor: STUDENT_NEXT_A },
+      }),
     );
 
     await PrincipalDashboardPage({
-      searchParams: Promise.resolve({ students_cursor: STUDENT_LAST }),
+      searchParams: Promise.resolve({ "students_cursor_class-A": STUDENT_LAST }),
     });
 
     expect(loadDashMock).toHaveBeenCalledTimes(1);
-    // 첫 번째 인자는 본인 institutionId, 다른 기관 id 절대 미사용.
     const callArgs = loadDashMock.mock.calls[0];
     expect(callArgs[0]).toBe(INSTITUTION_A);
     const argsJson = JSON.stringify(callArgs);
     expect(argsJson).not.toContain(INSTITUTION_B);
   });
 
-  it("[6] searchParams.students_cursor → loadPrincipalDashboard 의 studentsCursor 로 전달", async () => {
+  it("[6] searchParams 의 cursor 들이 모두 studentsCursors map 으로 전달", async () => {
     setAuthUser(USER_PRINCIPAL);
     setUserRow("principal", INSTITUTION_A);
-    loadDashMock.mockResolvedValueOnce(dashboardWithMore(INSTITUTION_A, { hasMore: false }));
+    loadDashMock.mockResolvedValueOnce(twoClassDashboard(INSTITUTION_A));
 
     await PrincipalDashboardPage({
-      searchParams: Promise.resolve({ students_cursor: STUDENT_LAST }),
+      searchParams: Promise.resolve({
+        "students_cursor_class-A": STUDENT_LAST,
+        "students_cursor_class-B": STUDENT_OTHER,
+        // 무관한 param 은 무시.
+        page: "1",
+      }),
     });
 
     expect(loadDashMock).toHaveBeenCalledWith(INSTITUTION_A, {
-      studentsCursor: STUDENT_LAST,
+      studentsCursors: {
+        "class-A": STUDENT_LAST,
+        "class-B": STUDENT_OTHER,
+      },
     });
   });
 
-  it("[7] CON-04 — cursor 분기 UI (더 보기 / 처음으로 모두 노출) 금칙어 0건", async () => {
+  it("[7] CON-04 — cursor 분기 UI 포함 금칙어 0건", async () => {
     setAuthUser(USER_PRINCIPAL);
     setUserRow("principal", INSTITUTION_A);
     loadDashMock.mockResolvedValueOnce(
-      dashboardWithMore(INSTITUTION_A, { hasMore: true, nextCursor: STUDENT_LAST }),
+      twoClassDashboard(INSTITUTION_A, {
+        classA: { hasMore: true, nextCursor: STUDENT_NEXT_A },
+      }),
     );
 
     const ui = await PrincipalDashboardPage({
-      searchParams: Promise.resolve({ students_cursor: STUDENT_OTHER }),
+      searchParams: Promise.resolve({ "students_cursor_class-A": STUDENT_OTHER }),
     });
     const { container } = render(ui);
 
-    // 두 Link 모두 노출되는 페이지.
     expect(
       container.querySelector("[data-testid='principal-students-cursor-reset']"),
     ).not.toBeNull();
     expect(
-      container.querySelector("[data-testid='principal-students-cursor-next']"),
+      container.querySelector("[data-testid='principal-students-cursor-next-class-A']"),
     ).not.toBeNull();
 
     assertNoMedicalTerms(container.textContent ?? "");
   });
 
-  it("[8] 빈 문자열 cursor → undefined 로 정규화 (trim 후 길이 0)", async () => {
+  it("[8] 빈 문자열 cursor → 해당 반 cursor 제외 (parse 단계)", async () => {
     setAuthUser(USER_PRINCIPAL);
     setUserRow("principal", INSTITUTION_A);
-    loadDashMock.mockResolvedValueOnce(dashboardWithMore(INSTITUTION_A, { hasMore: false }));
+    loadDashMock.mockResolvedValueOnce(twoClassDashboard(INSTITUTION_A));
 
     await PrincipalDashboardPage({
-      searchParams: Promise.resolve({ students_cursor: "   " }),
+      searchParams: Promise.resolve({
+        "students_cursor_class-A": "   ",
+        "students_cursor_class-B": STUDENT_LAST,
+      }),
     });
 
-    expect(loadDashMock).toHaveBeenCalledWith(INSTITUTION_A, { studentsCursor: undefined });
+    // class-A 는 빈/공백이므로 제외, class-B 만 전달.
+    expect(loadDashMock).toHaveBeenCalledWith(INSTITUTION_A, {
+      studentsCursors: { "class-B": STUDENT_LAST },
+    });
+  });
+
+  it("[9] DashboardPaginationBeacon — cursor 있는 페이지에서만 렌더 + role/cursors 전달", async () => {
+    setAuthUser(USER_PRINCIPAL);
+    setUserRow("principal", INSTITUTION_A);
+    loadDashMock.mockResolvedValueOnce(twoClassDashboard(INSTITUTION_A));
+
+    const ui = await PrincipalDashboardPage({
+      searchParams: Promise.resolve({
+        "students_cursor_class-A": STUDENT_LAST,
+        "students_cursor_class-B": STUDENT_OTHER,
+      }),
+    });
+    const { container } = render(ui);
+
+    const beacon = container.querySelector("[data-testid='dashboard-pagination-beacon']");
+    expect(beacon).not.toBeNull();
+    expect(beacon?.getAttribute("data-role")).toBe("principal");
+    const keys = (beacon?.getAttribute("data-cursor-keys") ?? "").split(",").sort();
+    expect(keys).toEqual(["class-A", "class-B"]);
   });
 });

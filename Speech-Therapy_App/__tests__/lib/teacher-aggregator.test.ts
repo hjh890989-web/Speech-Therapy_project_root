@@ -1,18 +1,24 @@
 // FR-Q-TEACHER — loadTeacherDashboard 단위 테스트 (Prisma mock).
 //
-// 검증 시나리오 (≥ 6):
+// FR-DASH-CURSOR-PER-CLASSROOM 후속 — 반별 cursor 적용을 위해 user.findMany 가 반 단위로 호출됨.
+//   기존: class.findMany 의 select.users 안에서 한 번에 fetch.
+//   변경: class.findMany 는 id/name 만 → 반별 prisma.user.findMany 로 fan-out.
+//
+// 검증 시나리오:
 //   1. 정상 — 본인 teacherId 의 Class + 원아 + 진단 집계 정합
 //   2. 빈 teacherId → emptyPayload (Prisma 미호출)
 //   3. 담당 반 0 → classroomsEmpty=true + 카운트 0 + Prisma 추가 호출 없음
 //   4. 반 안 원아 0명 — 추가 evaluationResult 쿼리 skip + 0/null 채움
 //   5. articulationAvg null — 데이터 0건 처리
-//   6. cross-teacher 차단 — where.teacherId 가 입력값으로만 전달 (다른 teacherId 미포함)
-//   7. class.findMany select.users — take=TEACHER_STUDENTS_PER_CLASS + orderBy id asc + where parent
+//   6. cross-teacher 차단 — where.teacherId 가 입력값으로만 전달
+//   7. user.findMany 가 반당 1회 호출 + where.classId/role=parent + take=N+1 + orderBy id asc
 //   8. 최근 N일 since 윈도우 (createdAt.gte)
+//   9. 동일 원아가 여러 반에 속하지 않는다고 가정 — flat 중복 제거 검증
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const classFindManyMock = vi.fn();
+const userFindManyMock = vi.fn();
 const evalCountMock = vi.fn();
 const evalAggregateMock = vi.fn();
 
@@ -20,6 +26,9 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     class: {
       findMany: (...args: unknown[]) => classFindManyMock(...args),
+    },
+    user: {
+      findMany: (...args: unknown[]) => userFindManyMock(...args),
     },
     evaluationResult: {
       count: (...args: unknown[]) => evalCountMock(...args),
@@ -39,6 +48,7 @@ const TEACHER_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 function resetAll() {
   classFindManyMock.mockReset();
+  userFindManyMock.mockReset();
   evalCountMock.mockReset();
   evalAggregateMock.mockReset();
 }
@@ -50,13 +60,18 @@ describe("loadTeacherDashboard — FR-Q-TEACHER 집계 helper", () => {
 
   it("[1] 정상 — 본인 teacherId 의 Class + 원아 + 진단 집계 정합", async () => {
     classFindManyMock.mockResolvedValueOnce([
-      { id: "class-1", name: "햇님반", users: [{ id: "u-1" }, { id: "u-2" }] },
-      { id: "class-2", name: "달님반", users: [{ id: "u-3" }] },
+      { id: "class-1", name: "햇님반" },
+      { id: "class-2", name: "달님반" },
     ]);
+    userFindManyMock.mockImplementation(async (arg: { where: { classId: string } }) => {
+      if (arg.where.classId === "class-1") return [{ id: "u-1" }, { id: "u-2" }];
+      if (arg.where.classId === "class-2") return [{ id: "u-3" }];
+      return [];
+    });
     // 전체 집계 (allUserIds = [u-1, u-2, u-3])
     evalCountMock.mockResolvedValueOnce(50); // 전체 thisWeek
     evalAggregateMock.mockResolvedValueOnce({ _avg: { articulationScore: 72.5 } }); // 전체 avg
-    // 반별 (class-1) — count + aggregate
+    // 반별 (class-1)
     evalCountMock.mockResolvedValueOnce(40);
     evalAggregateMock.mockResolvedValueOnce({ _avg: { articulationScore: 75 } });
     // 반별 (class-2)
@@ -96,6 +111,7 @@ describe("loadTeacherDashboard — FR-Q-TEACHER 집계 helper", () => {
     const data = await loadTeacherDashboard("");
 
     expect(classFindManyMock).not.toHaveBeenCalled();
+    expect(userFindManyMock).not.toHaveBeenCalled();
     expect(evalCountMock).not.toHaveBeenCalled();
     expect(evalAggregateMock).not.toHaveBeenCalled();
 
@@ -115,6 +131,8 @@ describe("loadTeacherDashboard — FR-Q-TEACHER 집계 helper", () => {
     const data = await loadTeacherDashboard(TEACHER_A);
 
     expect(classFindManyMock).toHaveBeenCalledTimes(1);
+    // 반 0건 → user.findMany 호출 0.
+    expect(userFindManyMock).not.toHaveBeenCalled();
     // allUserIds 빈 분기 — eval count/aggregate Prisma 직접 호출 0.
     expect(evalCountMock).not.toHaveBeenCalled();
     expect(evalAggregateMock).not.toHaveBeenCalled();
@@ -128,9 +146,8 @@ describe("loadTeacherDashboard — FR-Q-TEACHER 집계 helper", () => {
   });
 
   it("[4] 반 안 원아 0명 — 반별 추가 evaluationResult 쿼리 skip", async () => {
-    classFindManyMock.mockResolvedValueOnce([
-      { id: "class-empty", name: "신설반", users: [] },
-    ]);
+    classFindManyMock.mockResolvedValueOnce([{ id: "class-empty", name: "신설반" }]);
+    userFindManyMock.mockResolvedValueOnce([]);
     // allUserIds=[] → 전체 집계도 Prisma 호출 0.
 
     const data = await loadTeacherDashboard(TEACHER_A);
@@ -156,9 +173,8 @@ describe("loadTeacherDashboard — FR-Q-TEACHER 집계 helper", () => {
   });
 
   it("[5] articulationAvg null (집계 결과 _avg null) → 그대로 null 반환", async () => {
-    classFindManyMock.mockResolvedValueOnce([
-      { id: "class-1", name: "햇님반", users: [{ id: "u-1" }] },
-    ]);
+    classFindManyMock.mockResolvedValueOnce([{ id: "class-1", name: "햇님반" }]);
+    userFindManyMock.mockResolvedValueOnce([{ id: "u-1" }]);
     evalCountMock.mockResolvedValueOnce(0);
     evalAggregateMock.mockResolvedValueOnce({ _avg: { articulationScore: null } });
     // class-1 별:
@@ -183,6 +199,7 @@ describe("loadTeacherDashboard — FR-Q-TEACHER 집계 helper", () => {
     // 다른 teacherId (B) 가 어떤 호출 인자에도 등장하지 않음.
     const allCalls = [
       ...classFindManyMock.mock.calls,
+      ...userFindManyMock.mock.calls,
       ...evalCountMock.mock.calls,
       ...evalAggregateMock.mock.calls,
     ];
@@ -190,24 +207,27 @@ describe("loadTeacherDashboard — FR-Q-TEACHER 집계 helper", () => {
     expect(serialized).not.toContain(TEACHER_B);
   });
 
-  it("[7] class.findMany.users select — take=TEACHER_STUDENTS_PER_CLASS + orderBy id asc + where parent", async () => {
-    classFindManyMock.mockResolvedValueOnce([]);
+  it("[7] user.findMany 가 반별 1회 + where.classId/role=parent + take=N+1 + orderBy id asc", async () => {
+    classFindManyMock.mockResolvedValueOnce([{ id: "class-1", name: "햇님반" }]);
+    userFindManyMock.mockResolvedValueOnce([]);
 
     await loadTeacherDashboard(TEACHER_A);
 
-    const arg = classFindManyMock.mock.calls[0][0];
-    // take+1 trick — hasMore 판정용 fetch.
-    expect(arg.select.users.take).toBe(TEACHER_STUDENTS_PER_CLASS + 1);
-    expect(arg.select.users.orderBy).toEqual({ id: "asc" });
-    expect(arg.select.users.where).toEqual({ role: "parent" });
-    expect(arg.select.users.select).toEqual({ id: true });
-    expect(arg.orderBy).toEqual({ createdAt: "asc" });
+    expect(userFindManyMock).toHaveBeenCalledTimes(1);
+    const arg = userFindManyMock.mock.calls[0][0];
+    expect(arg.take).toBe(TEACHER_STUDENTS_PER_CLASS + 1);
+    expect(arg.orderBy).toEqual({ id: "asc" });
+    expect(arg.where).toEqual({ role: "parent", classId: "class-1" });
+    expect(arg.select).toEqual({ id: true });
+
+    const classArg = classFindManyMock.mock.calls[0][0];
+    expect(classArg.select).toEqual({ id: true, name: true });
+    expect(classArg.orderBy).toEqual({ createdAt: "asc" });
   });
 
   it("[8] 최근 N일 since 윈도우 — KST 자정 정렬 (TZ 통일 PR 후)", async () => {
-    classFindManyMock.mockResolvedValueOnce([
-      { id: "class-1", name: "햇님반", users: [{ id: "u-1" }] },
-    ]);
+    classFindManyMock.mockResolvedValueOnce([{ id: "class-1", name: "햇님반" }]);
+    userFindManyMock.mockResolvedValueOnce([{ id: "u-1" }]);
     evalCountMock.mockResolvedValueOnce(0);
     evalAggregateMock.mockResolvedValueOnce({ _avg: { articulationScore: null } });
     evalCountMock.mockResolvedValueOnce(0);
@@ -219,8 +239,6 @@ describe("loadTeacherDashboard — FR-Q-TEACHER 집계 helper", () => {
     const evalCountArg = evalCountMock.mock.calls[0][0];
     const since: Date = evalCountArg.where.createdAt.gte;
     expect(since).toBeInstanceOf(Date);
-    // TZ 통일 (9f204cd 후속): since = kstDaysAgoStart(7).
-    // 호출 시점 KST 일자 기준 -7일 KST 자정 instant — 일자 안에서는 변동 없음.
     const sevenDaysMs = TEACHER_RECENT_DAYS * 24 * 60 * 60 * 1000;
     const dayMs = 24 * 60 * 60 * 1000;
     expect(since.getTime()).toBeGreaterThanOrEqual(beforeCall - sevenDaysMs - dayMs);
@@ -232,9 +250,14 @@ describe("loadTeacherDashboard — FR-Q-TEACHER 집계 helper", () => {
   it("[9] 동일 원아가 여러 반에 속하지 않는다고 가정 — flat 중복 제거 검증 (Set)", async () => {
     // 운영상 한 부모(원아)는 1개 반만 — 그러나 방어적으로 동일 id 중복 입력 시 dedupe 보장.
     classFindManyMock.mockResolvedValueOnce([
-      { id: "class-1", name: "햇님반", users: [{ id: "u-1" }, { id: "u-2" }] },
-      { id: "class-2", name: "달님반", users: [{ id: "u-2" }, { id: "u-3" }] }, // u-2 중복
+      { id: "class-1", name: "햇님반" },
+      { id: "class-2", name: "달님반" },
     ]);
+    userFindManyMock.mockImplementation(async (arg: { where: { classId: string } }) => {
+      if (arg.where.classId === "class-1") return [{ id: "u-1" }, { id: "u-2" }];
+      if (arg.where.classId === "class-2") return [{ id: "u-2" }, { id: "u-3" }]; // u-2 중복
+      return [];
+    });
     // 전체 집계
     evalCountMock.mockResolvedValueOnce(10);
     evalAggregateMock.mockResolvedValueOnce({ _avg: { articulationScore: 80 } });

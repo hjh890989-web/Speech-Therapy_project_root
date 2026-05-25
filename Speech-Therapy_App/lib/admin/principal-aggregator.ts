@@ -73,7 +73,8 @@ export interface ClassroomSummary {
   students: ClassroomStudent[];
   /// 본 반 students 페이지 이후 더 많은 학생이 존재? (take+1 trick — 31 번째 fetch 시 true).
   hasMoreStudents: boolean;
-  /// 다음 페이지 cursor (다음 fetch 시 `studentsCursor` 로 전달). hasMoreStudents=true 일 때만 set.
+  /// 다음 페이지 cursor (다음 fetch 시 `studentsCursors[<classroomId>]` 로 전달).
+  /// hasMoreStudents=true 일 때만 set. 반별로 독립적으로 산출됨 (FR-DASH-CURSOR-PER-CLASSROOM).
   nextStudentsCursor?: string;
 }
 
@@ -110,13 +111,17 @@ function emptyPayload(institutionId: string): PrincipalDashboardData {
 /** loadPrincipalDashboard 옵션 — students cursor 페이지네이션 등. */
 export interface LoadPrincipalDashboardOptions {
   /**
-   * Students cursor — User.id (UUID) 값. 본 값보다 큰 id 부터 fetch ({ id: { gt: cursor } }).
-   *   - 단일 cursor 가 모든 반에 동일 적용 (반별 cursor 분리는 후속 PR — UI 단순화).
-   *   - 빈 문자열 / undefined → 첫 페이지 (id asc 첫 PRINCIPAL_STUDENTS_PER_CLASS 명).
+   * 반(classroom)별 students cursor 맵 — key=Class.id (UUID), value=User.id (UUID).
+   * 본 값보다 큰 id 부터 fetch ({ id: { gt: cursors[classroom.id] } }).
+   *
+   * FR-DASH-CURSOR-PER-CLASSROOM (본 PR 신규 — 기존 단일 `studentsCursor` 교체):
+   *   - 반별 독립 cursor → 한 반의 페이지네이션이 다른 반에 영향 0건.
+   *   - 특정 반의 entry 가 없거나 빈 문자열이면 해당 반은 첫 페이지 (where.id 미설정).
    *   - cross-tenant 우회 차단: cursor 는 id 비교만 — institutionId where 조건은 그대로 유지되어
    *     다른 기관 id 를 입력해도 본 기관 users 안에서만 매칭됨 (안전).
+   *   - 미지정 반은 그냥 첫 페이지로 처리 (호출 측은 모든 반 cursor 를 채울 필요 없음).
    */
-  studentsCursor?: string;
+  studentsCursors?: Record<string, string>;
 }
 
 /**
@@ -128,11 +133,12 @@ export interface LoadPrincipalDashboardOptions {
  *
  * 빈 institutionId 입력 시 emptyPayload 반환 (호출 측이 분기 전에 호출해도 안전).
  *
- * Cursor 페이지네이션 (FR-Q-009 후속):
- *   - options.studentsCursor 가 있으면 반별 users 를 { id: { gt: cursor } } 로 필터링 후 fetch.
+ * Cursor 페이지네이션 (FR-DASH-CURSOR-PER-CLASSROOM, 반별 독립):
+ *   - options.studentsCursors[classroom.id] 가 있으면 해당 반 users 만 { id: { gt: cursor } } 로 필터.
  *   - take+1 trick: PRINCIPAL_STUDENTS_PER_CLASS+1 개 fetch → 마지막 1 개를 잘라내고
- *     hasMoreStudents=true + nextStudentsCursor=마지막 노출 학생 id 로 설정.
- *   - 같은 cursor 가 모든 반에 적용됨 (반별 분리 cursor 는 후속 PR — UI 단순화).
+ *     반별 hasMoreStudents=true + nextStudentsCursor=마지막 노출 학생 id 로 설정.
+ *   - 반마다 cursor 가 다를 수 있으므로 1차 class.findMany 는 id/name 만 fetch 한 뒤
+ *     2차에서 반별로 user.findMany 를 Promise.all 로 fan-out.
  */
 export async function loadPrincipalDashboard(
   institutionId: string,
@@ -143,15 +149,11 @@ export async function loadPrincipalDashboard(
   // TZ 통일: since = "오늘 KST 자정으로부터 7일 전 KST 자정" instant.
   // 기존 `Date.now() - 7d` 의 KST 일자 boundary 불안정성 해소 (9f204cd 후속).
   const since = kstDaysAgoStart(PRINCIPAL_RECENT_DAYS);
-  const cursor = options.studentsCursor && options.studentsCursor.length > 0
-    ? options.studentsCursor
-    : undefined;
+  const cursors = options.studentsCursors ?? {};
   // hasMore 판정용 take+1 — 31 개 fetch 시 31 번째 존재 = 다음 페이지 존재.
   const studentsTake = PRINCIPAL_STUDENTS_PER_CLASS + 1;
-  // where 절: parent role + (cursor 있으면 id > cursor).
-  const studentsWhere: { role: "parent"; id?: { gt: string } } = { role: "parent" };
-  if (cursor) studentsWhere.id = { gt: cursor };
 
+  // 1단계: 반별 cursor 분리를 위해 class.findMany 는 id/name 만 — users 는 2단계에서 반별 fan-out.
   // 병렬 fan-out — RSC LCP < 3,000ms (REQ-NF-004) 보장.
   const [classCount, studentCount, thisWeekDiagnoseCount, avgAgg, classrooms] =
     await Promise.all([
@@ -173,37 +175,44 @@ export async function loadPrincipalDashboard(
       prisma.class.findMany({
         where: { institutionId },
         orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          name: true,
-          users: {
-            where: studentsWhere,
-            select: { id: true },
-            orderBy: { id: "asc" },
-            take: studentsTake,
-          },
-        },
+        select: { id: true, name: true },
       }),
     ]);
 
-  // 반별 evaluationResult 집계 — 각 반의 parent userId 집합으로 1회씩 조회.
-  // N+1 우려: 반 N개 → N 회 쿼리. 단일 기관당 반 수 ≤ 30 가정 (어린이집/유치원 상한)
-  // → 운영상 N = 5~15 이므로 단일 RSC 내 acceptable. 추후 Class 모델에 집계 컬럼 캐시 시 단순화.
-  // Prisma 7 typed-client 미가용 환경 (app/generated/prisma/client 부재) 회피용 명시 타입.
-  type ClassRow = { id: string; name: string; users: Array<{ id: string }> };
+  type ClassRow = { id: string; name: string };
+  const classRows = classrooms as ClassRow[];
+
+  // 2단계: 반별 users + 반별 evaluationResult 집계 fan-out — 반별 cursor 독립 적용.
+  // N+1 우려: 반 N개 → N 회 user.findMany + N 회 evaluationResult 쿼리. 단일 기관당 반 수 ≤ 30 가정
+  // (어린이집/유치원 상한) → 운영상 N = 5~15 이므로 단일 RSC 내 acceptable.
   const classroomSummaries: ClassroomSummary[] = await Promise.all(
-    (classrooms as ClassRow[]).map(async (cls: ClassRow) => {
-      // take+1 trick — fetched.length > PRINCIPAL_STUDENTS_PER_CLASS → hasMore=true 후 마지막 1개 절단.
-      const fetched = cls.users;
-      const hasMoreStudents = fetched.length > PRINCIPAL_STUDENTS_PER_CLASS;
+    classRows.map(async (cls): Promise<ClassroomSummary> => {
+      const cursor = typeof cursors[cls.id] === "string" && cursors[cls.id].length > 0
+        ? cursors[cls.id]
+        : undefined;
+      const studentsWhere: { role: "parent"; classId: string; id?: { gt: string } } = {
+        role: "parent",
+        classId: cls.id,
+      };
+      if (cursor) studentsWhere.id = { gt: cursor };
+
+      const fetched = await prisma.user.findMany({
+        where: studentsWhere,
+        select: { id: true },
+        orderBy: { id: "asc" },
+        take: studentsTake,
+      });
+      const rows = fetched as Array<{ id: string }>;
+      const hasMoreStudents = rows.length > PRINCIPAL_STUDENTS_PER_CLASS;
       const visible = hasMoreStudents
-        ? fetched.slice(0, PRINCIPAL_STUDENTS_PER_CLASS)
-        : fetched;
-      const userIds = visible.map((u: { id: string }) => u.id);
-      const students: ClassroomStudent[] = visible.map((u: { id: string }) => ({ id: u.id }));
+        ? rows.slice(0, PRINCIPAL_STUDENTS_PER_CLASS)
+        : rows;
+      const userIds = visible.map((u) => u.id);
+      const students: ClassroomStudent[] = visible.map((u) => ({ id: u.id }));
       const nextStudentsCursor = hasMoreStudents
         ? visible[visible.length - 1]?.id
         : undefined;
+
       if (userIds.length === 0) {
         return {
           id: cls.id,

@@ -69,7 +69,8 @@ export interface TeacherClassroomSummary {
   students: TeacherClassroomStudent[];
   /// 본 반 students 페이지 이후 더 많은 학생이 존재? (take+1 trick).
   hasMoreStudents: boolean;
-  /// 다음 페이지 cursor (다음 fetch 시 `studentsCursor` 로 전달).
+  /// 다음 페이지 cursor (다음 fetch 시 `studentsCursors[<classroomId>]` 로 전달).
+  /// 반별로 독립적으로 산출됨 (FR-DASH-CURSOR-PER-CLASSROOM).
   nextStudentsCursor?: string;
 }
 
@@ -105,13 +106,16 @@ function emptyPayload(teacherId: string): TeacherDashboardData {
 /** loadTeacherDashboard 옵션 — students cursor 페이지네이션. */
 export interface LoadTeacherDashboardOptions {
   /**
-   * Students cursor — User.id (UUID) 값. 본 값보다 큰 id 부터 fetch ({ id: { gt: cursor } }).
-   *   - 단일 cursor 가 모든 반에 동일 적용 (반별 cursor 분리는 후속 PR).
-   *   - 빈 문자열 / undefined → 첫 페이지.
-   *   - cross-teacher 우회 차단: cursor 는 id 비교만 — where: { teacherId } scope 가
-   *     상위에서 적용되어 다른 teacher 의 반에는 절대 도달 못함 (안전).
+   * 반(classroom)별 students cursor 맵 — key=Class.id (UUID), value=User.id (UUID).
+   * 본 값보다 큰 id 부터 fetch ({ id: { gt: cursors[classroom.id] } }).
+   *
+   * FR-DASH-CURSOR-PER-CLASSROOM (본 PR 신규 — 기존 단일 `studentsCursor` 교체):
+   *   - 반별 독립 cursor → 한 반의 페이지네이션이 다른 반에 영향 0건.
+   *   - 미지정 / 빈 문자열 → 해당 반은 첫 페이지 (where.id 미설정).
+   *   - cross-teacher 우회 차단: where: { teacherId } scope 가 상위에서 적용되어
+   *     다른 teacher 의 반에는 절대 도달 못함 (안전).
    */
-  studentsCursor?: string;
+  studentsCursors?: Record<string, string>;
 }
 
 /**
@@ -124,9 +128,10 @@ export interface LoadTeacherDashboardOptions {
  *
  * 빈 teacherId 입력 시 emptyPayload 반환.
  *
- * Cursor 페이지네이션 (FR-Q-009 후속, principal-aggregator 와 패턴 일치):
- *   - options.studentsCursor 가 있으면 반별 users 를 { id: { gt: cursor } } 로 필터링.
+ * Cursor 페이지네이션 (FR-DASH-CURSOR-PER-CLASSROOM, 반별 독립):
+ *   - options.studentsCursors[classroom.id] 가 있으면 해당 반 users 만 { id: { gt: cursor } } 로 필터.
  *   - take+1 trick — TEACHER_STUDENTS_PER_CLASS+1 fetch 후 마지막 절단.
+ *   - 1차 class.findMany 는 id/name 만 fetch → 2차에서 반별 user.findMany 를 Promise.all 로 fan-out.
  */
 export async function loadTeacherDashboard(
   teacherId: string,
@@ -137,34 +142,22 @@ export async function loadTeacherDashboard(
   // TZ 통일: since = "오늘 KST 자정으로부터 7일 전 KST 자정" instant.
   // principal-aggregator 와 동일 정책 (9f204cd 후속).
   const since = kstDaysAgoStart(TEACHER_RECENT_DAYS);
-  const cursor = options.studentsCursor && options.studentsCursor.length > 0
-    ? options.studentsCursor
-    : undefined;
+  const cursors = options.studentsCursors ?? {};
   const studentsTake = TEACHER_STUDENTS_PER_CLASS + 1;
-  const studentsWhere: { role: "parent"; id?: { gt: string } } = { role: "parent" };
-  if (cursor) studentsWhere.id = { gt: cursor };
 
-  // 1단계: 본인 담당 Class 와 소속 parent users 1회 fetch.
+  // 1단계: 본인 담당 Class id/name 만 fetch — users 는 2단계에서 반별 cursor 와 함께 fetch.
   // where: { teacherId } 가 cross-teacher 차단의 핵심 — 다른 teacherId 의 Class 는 절대 포함 X.
   const classrooms = await prisma.class.findMany({
     where: { teacherId },
     orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      name: true,
-      users: {
-        where: studentsWhere,
-        select: { id: true },
-        orderBy: { id: "asc" },
-        take: studentsTake,
-      },
-    },
+    select: { id: true, name: true },
   });
 
-  type ClassRow = { id: string; name: string; users: Array<{ id: string }> };
+  type ClassRow = { id: string; name: string };
   const rows = classrooms as ClassRow[];
 
-  // take+1 trick — 반별 hasMoreStudents 사전 계산 (전체 집계용 visible userIds 도 함께).
+  // 2단계: 반별 user.findMany — 반별 cursor 독립 적용 (FR-DASH-CURSOR-PER-CLASSROOM).
+  // R4: where.classId=cls.id 로 본인 담당 반의 parent 만 fetch (cls 는 teacherId 로 이미 scope 됨).
   type ClassPaged = {
     id: string;
     name: string;
@@ -172,24 +165,41 @@ export async function loadTeacherDashboard(
     hasMoreStudents: boolean;
     nextStudentsCursor?: string;
   };
-  const paged: ClassPaged[] = rows.map((r) => {
-    const hasMoreStudents = r.users.length > TEACHER_STUDENTS_PER_CLASS;
-    const visible = hasMoreStudents
-      ? r.users.slice(0, TEACHER_STUDENTS_PER_CLASS)
-      : r.users;
-    return {
-      id: r.id,
-      name: r.name,
-      visible,
-      hasMoreStudents,
-      nextStudentsCursor: hasMoreStudents ? visible[visible.length - 1]?.id : undefined,
-    };
-  });
+  const paged: ClassPaged[] = await Promise.all(
+    rows.map(async (r): Promise<ClassPaged> => {
+      const cursor = typeof cursors[r.id] === "string" && cursors[r.id].length > 0
+        ? cursors[r.id]
+        : undefined;
+      const studentsWhere: { role: "parent"; classId: string; id?: { gt: string } } = {
+        role: "parent",
+        classId: r.id,
+      };
+      if (cursor) studentsWhere.id = { gt: cursor };
+
+      const fetched = (await prisma.user.findMany({
+        where: studentsWhere,
+        select: { id: true },
+        orderBy: { id: "asc" },
+        take: studentsTake,
+      })) as Array<{ id: string }>;
+      const hasMoreStudents = fetched.length > TEACHER_STUDENTS_PER_CLASS;
+      const visible = hasMoreStudents
+        ? fetched.slice(0, TEACHER_STUDENTS_PER_CLASS)
+        : fetched;
+      return {
+        id: r.id,
+        name: r.name,
+        visible,
+        hasMoreStudents,
+        nextStudentsCursor: hasMoreStudents ? visible[visible.length - 1]?.id : undefined,
+      };
+    }),
+  );
 
   // 본인 담당 반의 모든 visible parent userId 집합 (전체 집계 용).
   const allUserIds = Array.from(new Set(paged.flatMap((p) => p.visible.map((u) => u.id))));
 
-  // 2단계: 전체 집계 + 반별 집계 fan-out (반 N 회 추가 쿼리, N ≤ 5 운영 가정).
+  // 3단계: 전체 집계 + 반별 집계 fan-out (반 N 회 추가 쿼리, N ≤ 5 운영 가정).
   const [thisWeekDiagnoseCount, avgAgg, perClassSummaries] = await Promise.all([
     allUserIds.length === 0
       ? Promise.resolve(0)

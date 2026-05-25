@@ -192,7 +192,7 @@ describe("/admin/teacher — FR-Q-TEACHER 선생님 대시보드", () => {
     expect(container.querySelector("[data-testid='admin-teacher-page']")).not.toBeNull();
     expect(container.querySelector("[data-testid='teacher-forbidden']")).toBeNull();
     // admin 본인 user.id 가 loadTeacherDashboard 인자로 전달.
-    expect(loadDashMock).toHaveBeenCalledWith(USER_ADMIN, { studentsCursor: undefined });
+    expect(loadDashMock).toHaveBeenCalledWith(USER_ADMIN, { studentsCursors: {} });
   });
 
   it("[3] principal role → 통과", async () => {
@@ -204,7 +204,7 @@ describe("/admin/teacher — FR-Q-TEACHER 선생님 대시보드", () => {
     const { container } = render(ui);
 
     expect(container.querySelector("[data-testid='admin-teacher-page']")).not.toBeNull();
-    expect(loadDashMock).toHaveBeenCalledWith(USER_PRINCIPAL, { studentsCursor: undefined });
+    expect(loadDashMock).toHaveBeenCalledWith(USER_PRINCIPAL, { studentsCursors: {} });
   });
 
   it("[4] parent role → 403 안내 (teacher-forbidden)", async () => {
@@ -263,7 +263,7 @@ describe("/admin/teacher — FR-Q-TEACHER 선생님 대시보드", () => {
     await TeacherDashboardPage({ searchParams: Promise.resolve({}) });
 
     expect(loadDashMock).toHaveBeenCalledTimes(1);
-    expect(loadDashMock).toHaveBeenCalledWith(USER_TEACHER, { studentsCursor: undefined });
+    expect(loadDashMock).toHaveBeenCalledWith(USER_TEACHER, { studentsCursors: {} });
 
     const allCalls = JSON.stringify(loadDashMock.mock.calls);
     expect(allCalls).not.toContain(USER_TEACHER_OTHER);

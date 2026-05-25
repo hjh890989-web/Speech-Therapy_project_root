@@ -12,11 +12,12 @@
 //   - 기본 닫힘 (정보 밀도 우선, 운영자 톤).
 //   - cls.studentCount 0건 → details 자체 미렌더 (펼칠 게 없음).
 //
-// 9f204cd 후속 — cursor 페이지네이션 UI 진입 (본 PR):
-//   - aggregator 가 hasMoreStudents=true + nextStudentsCursor 를 반환 → "더 보기" Link 노출
-//     (URL search param `students_cursor` 갱신 → RSC 재 fetch).
-//   - 현재 backend 는 단일 cursor 가 모든 반에 동일 적용 — 본 UI 도 동일 (반별 cursor 분리는 후속 PR).
-//   - 페이지가 cursor 있는 상태로 진입 시 grid 상단에 "처음으로" Link 노출 (첫 페이지로 복귀).
+// FR-DASH-CURSOR-PER-CLASSROOM (본 PR) — 반별 cursor 분리 UI:
+//   - 각 반 카드 안에 "더 보기" Link 노출 (hasMoreStudents=true 일 때만).
+//     · href 는 OTHER classrooms 의 cursor 를 보존 + 현재 반의 nextStudentsCursor 만 갱신.
+//   - 각 반 카드 안에 "처음으로" Link 노출 (해당 반에 현재 cursor 적용된 상태일 때만).
+//     · href 는 OTHER classrooms 의 cursor 를 보존 + 현재 반의 cursor 만 제거.
+//   - 모든 cursor 가 제거된 첫 페이지 진입 시 "처음으로" 미노출 (불필요).
 
 import Link from "next/link";
 
@@ -27,12 +28,15 @@ import { StudentRow } from "./StudentRow";
 export interface ClassroomGridProps {
   classrooms: ClassroomSummary[];
   /**
-   * 현재 페이지 진입이 cursor 가 있는 "다음 페이지" 인가?
-   *   - true → 상단에 "처음으로" Link 노출 (cursor 없는 첫 페이지 복귀).
-   *   - false → 첫 페이지 진입, "처음으로" Link 미노출.
-   * 기본 false (cursor 없음).
+   * 현재 페이지에 적용된 반별 cursor 맵 (Record<classroomId, cursor>).
+   * "더 보기" / "처음으로" Link URL 생성 시 OTHER classrooms 의 cursor 를 보존하기 위해 사용.
    */
-  hasCursor?: boolean;
+  studentsCursors?: Record<string, string>;
+  /**
+   * 임의의 반에 cursor 가 1개라도 적용되어 있는지 — true 면 grid 상단에 "전체 처음으로"
+   * Link 노출 (모든 반 cursor 동시 제거). 반별 "처음으로" 와는 별도.
+   */
+  hasAnyCursor?: boolean;
 }
 
 function formatScore(value: number | null): string {
@@ -40,15 +44,33 @@ function formatScore(value: number | null): string {
   return value.toFixed(1);
 }
 
-export function ClassroomGrid({ classrooms, hasCursor = false }: ClassroomGridProps) {
-  // 단일 cursor 정책 — 첫 번째로 발견된 nextStudentsCursor 를 "더 보기" Link href 에 사용.
-  // (현재 backend 도 단일 cursor 가 모든 반에 동일 적용 — 반별 분리는 후속 PR).
-  const nextCursorClass = classrooms.find(
-    (c) => c.hasMoreStudents && typeof c.nextStudentsCursor === "string",
-  );
-  const nextCursor = nextCursorClass?.nextStudentsCursor;
-  const hasNextPage = Boolean(nextCursor);
+/**
+ * OTHER classrooms 의 cursor 를 보존한 채 currentClassroomId 의 cursor 만 갱신/제거.
+ *   - newCursor=undefined → 해당 반 cursor 제거.
+ *   - newCursor=string → 해당 반 cursor 갱신.
+ * 결과 query 는 다른 반의 cursor 키들을 그대로 유지.
+ */
+function buildCursorQuery(
+  current: Record<string, string>,
+  classroomId: string,
+  newCursor: string | undefined,
+): Record<string, string> {
+  const query: Record<string, string> = {};
+  for (const [otherId, cursor] of Object.entries(current)) {
+    if (otherId === classroomId) continue;
+    query[`students_cursor_${otherId}`] = cursor;
+  }
+  if (newCursor !== undefined) {
+    query[`students_cursor_${classroomId}`] = newCursor;
+  }
+  return query;
+}
 
+export function ClassroomGrid({
+  classrooms,
+  studentsCursors = {},
+  hasAnyCursor = false,
+}: ClassroomGridProps) {
   return (
     <section
       data-testid="principal-classroom-grid"
@@ -59,19 +81,27 @@ export function ClassroomGrid({ classrooms, hasCursor = false }: ClassroomGridPr
         <h2 id="classrooms-heading" className="text-lg font-semibold text-slate-900">
           반 단위 발달 현황
         </h2>
-        {hasCursor ? (
+        {hasAnyCursor ? (
           <Link
             href="/admin/principal"
             data-testid="principal-students-cursor-reset"
             className="inline-flex min-h-[36px] items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
           >
-            처음으로
+            전체 처음으로
           </Link>
         ) : null}
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {classrooms.map((cls) => {
           const hasStudents = cls.students.length > 0;
+          const classHasCursor = typeof studentsCursors[cls.id] === "string";
+          const showNext = cls.hasMoreStudents && typeof cls.nextStudentsCursor === "string";
+          const nextQuery = showNext
+            ? buildCursorQuery(studentsCursors, cls.id, cls.nextStudentsCursor)
+            : null;
+          const resetQuery = classHasCursor
+            ? buildCursorQuery(studentsCursors, cls.id, undefined)
+            : null;
           return (
             <article
               key={cls.id}
@@ -121,21 +151,36 @@ export function ClassroomGrid({ classrooms, hasCursor = false }: ClassroomGridPr
                   </ul>
                 </details>
               ) : null}
+              {showNext && nextQuery ? (
+                <div className="mt-3 flex justify-end">
+                  <Link
+                    href={{ pathname: "/admin/principal", query: nextQuery }}
+                    data-testid={`principal-students-cursor-next-${cls.id}`}
+                    className="inline-flex min-h-[36px] items-center rounded-md bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-900"
+                  >
+                    더 보기
+                  </Link>
+                </div>
+              ) : null}
+              {classHasCursor && resetQuery ? (
+                <div className="mt-2 flex justify-end">
+                  <Link
+                    href={
+                      Object.keys(resetQuery).length === 0
+                        ? "/admin/principal"
+                        : { pathname: "/admin/principal", query: resetQuery }
+                    }
+                    data-testid={`principal-students-cursor-reset-${cls.id}`}
+                    className="inline-flex min-h-[32px] items-center rounded-md border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                  >
+                    이 반 처음으로
+                  </Link>
+                </div>
+              ) : null}
             </article>
           );
         })}
       </div>
-      {hasNextPage && nextCursor ? (
-        <div className="mt-4 flex justify-center">
-          <Link
-            href={{ pathname: "/admin/principal", query: { students_cursor: nextCursor } }}
-            data-testid="principal-students-cursor-next"
-            className="inline-flex min-h-[44px] items-center rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900"
-          >
-            더 보기
-          </Link>
-        </div>
-      ) : null}
     </section>
   );
 }
