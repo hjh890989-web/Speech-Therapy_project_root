@@ -25,6 +25,7 @@
 //       __tests__/security/rbac-rls.test.ts 시나리오 7 (AuditLog 보호).
 
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { alertIfCritical } from "@/lib/audit/critical-alert";
 
 /**
  * 허용 action 종류 — 무한 drift 방어용 union literal.
@@ -168,6 +169,16 @@ export async function recordAudit(input: RecordAuditInput): Promise<void> {
   } catch (err) {
     console.error("[audit] INSERT 예외 (graceful — 메인 흐름 유지):", err);
   }
+
+  // 6) DB-011 후속 — critical action 시 Slack 알림 (fire-and-forget, 진정 비동기).
+  //    isCriticalAction 검증 + AUDIT_SLACK_WEBHOOK_URL 부재 시 skip. throw 0 (호출 측 흐름 미차단).
+  //    setImmediate 로 next tick 위임 — recordAudit 의 await 완료 후 진정 백그라운드 실행.
+  //    이로 인해 호출 측은 alertIfCritical 의 부수효과 (warn/error log) 와 격리됨 (회귀 0건).
+  setImmediate(() => {
+    void alertIfCritical(input.action, actorId, input.payload ?? null).catch((err) => {
+      console.error("[audit] alertIfCritical 백그라운드 예외 (graceful):", err);
+    });
+  });
 }
 
 /// payload key 들 중 SUSPICIOUS_PAYLOAD_KEYS 매칭 (대소문자 무관 contains).

@@ -184,6 +184,20 @@ export default async function AuditLogPage({ searchParams }: AuditPageProps) {
     return `/admin/audit?${search.toString()}`;
   })();
 
+  // CSV / JSON 다운로드 href — 현재 필터 유지 (cursor 제외 — export 는 일괄 추출).
+  const buildExportHref = (format: "csv" | "json") => {
+    const search = new URLSearchParams();
+    search.set("format", format);
+    if (actionParam) search.set("action", actionParam);
+    if (actorIdParam) search.set("actorId", actorIdParam);
+    if (tableNameParam) search.set("tableName", tableNameParam);
+    if (params.from) search.set("from", params.from);
+    if (params.to) search.set("to", params.to);
+    return `/api/admin/audit/export?${search.toString()}`;
+  };
+  const csvHref = buildExportHref("csv");
+  const jsonHref = buildExportHref("json");
+
   return (
     <main
       data-testid="admin-audit-page"
@@ -209,6 +223,29 @@ export default async function AuditLogPage({ searchParams }: AuditPageProps) {
         initialFromDate={params.from ?? ""}
         initialToDate={params.to ?? ""}
       />
+
+      {/* DB-011 후속 — CSV / JSON 다운로드 버튼 (현재 필터 유지, 최대 5000 row). */}
+      <nav
+        aria-label="감사 기록 다운로드"
+        className="mb-4 flex flex-wrap items-center justify-end gap-2"
+      >
+        <a
+          href={csvHref}
+          download
+          data-testid="audit-export-csv"
+          className="inline-flex min-h-[44px] items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        >
+          CSV 다운로드
+        </a>
+        <a
+          href={jsonHref}
+          download
+          data-testid="audit-export-json"
+          className="inline-flex min-h-[44px] items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        >
+          JSON 다운로드
+        </a>
+      </nav>
 
       <AuditLogTable entries={result.entries} />
 

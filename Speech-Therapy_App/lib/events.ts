@@ -852,6 +852,20 @@ export type AnalyticsEvent =
         resultCount: number;
       };
     }
+  // === DB-011 후속 — /api/admin/audit/export CSV/JSON 다운로드 텔레메트리 ===
+  | {
+      // GET /api/admin/audit/export 응답 직전 1회 (server-side console.log telemetry — Vercel Logs).
+      // format: 'csv' | 'json' — 사용자가 선택한 다운로드 형식.
+      // recordCount: 응답 body 에 포함된 entries 총 건수 (≤ AUDIT_EXPORT_LIMIT 5000).
+      // R4 보호: filter 본문 / actorId raw value / diff 자녀 식별 정보 절대 노출 금지 — 카운트 + 옵션만.
+      //   admin 만 본 endpoint 호출 가능 (route handler L2 RBAC) — 텔레메트리 자체는 admin 활동 분석용.
+      // KPI 활용: CSV vs JSON 사용 비율 → 분석 도구 정합성 / 운영 워크플로 분기 결정.
+      name: "audit_log_exported";
+      properties: {
+        format: "csv" | "json";
+        recordCount: number;
+      };
+    }
   // === FR-NAV-SEARCH — 글로벌 검색 box (admin/teacher/principal 운영자 통합 검색) ===
   | {
       // GlobalSearch client component 가 fetch 응답을 받은 직후 1회 (debounce 300ms 종료 + API 200 후).
