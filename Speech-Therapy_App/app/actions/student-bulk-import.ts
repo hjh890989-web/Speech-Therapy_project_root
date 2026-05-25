@@ -17,6 +17,10 @@
 // 금칙어: "치료" / "진단" / "장애" 사용 금지.
 // R4: 다른 institutionId 의 student 정보 cross-read 절대 금지.
 
+import { revalidateTag } from "next/cache";
+// Next.js 16 — revalidateTag signature `(tag: string, profile: string | CacheLifeConfig)`.
+// 본 호출에서는 default 프로파일 (`'default'`) 로 즉시 invalidate. 단순 시그니처 정합 목적.
+const REVALIDATE_PROFILE_DEFAULT = "default" as const;
 import { prisma } from "@/lib/db";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -26,6 +30,7 @@ import {
   type ImportErrorRow,
   type PrismaCreateManyArgs,
 } from "@/lib/admin/student-bulk-import";
+import { principalDashboardCacheTag } from "@/lib/admin/principal-aggregator";
 import { sendParentInvite } from "@/app/actions/parent-invite";
 
 /** Server Action 권한 분기 — 익명/권한부족 시 errorCount 만 보고. */
@@ -194,6 +199,20 @@ export async function submitBulkImport(
       result,
       options,
     );
+
+    // Performance 감사 2차 — principal dashboard cache 무효화.
+    // 신규 원아 등록 시 다음 dashboard 진입에서 즉시 fresh 데이터 노출.
+    // 실패해도 사용자 흐름 차단 금지 (graceful) — revalidateTag 는 동기 + throw 가능성 낮음.
+    if (result.successCount > 0) {
+      try {
+        revalidateTag(
+          principalDashboardCacheTag(userRow.institutionId),
+          REVALIDATE_PROFILE_DEFAULT,
+        );
+      } catch (err) {
+        console.error("student-bulk-import: revalidateTag failed", err);
+      }
+    }
 
     return { status: "ok", result, parentInvites };
   } catch (err) {

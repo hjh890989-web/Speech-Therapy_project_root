@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -p 4000",
     "build": "next build",
+    "analyze": "node -e \"process.env.ANALYZE='true';require('child_process').spawnSync(process.platform==='win32'?'npx.cmd':'npx',['next','build'],{stdio:'inherit',env:process.env})\"",
     "start": "next start -p 4000",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
@@ -35,6 +36,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.6",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/dom": "^10.4.1",

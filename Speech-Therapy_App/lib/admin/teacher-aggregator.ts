@@ -25,8 +25,38 @@
 //
 // 성능: 단일 teacher 당 담당 반 수는 운영상 1~5 → N+1 회 추가 쿼리도 acceptable.
 
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
 import { kstDaysAgoStart } from "@/lib/timeline/tz";
+
+// Performance 감사 2차 — unstable_cache + revalidateTag wiring (principal 과 동일 정책).
+//
+// loadTeacherDashboard 도 fan-out + 반별 fan-out 으로 5~10 회 prisma query 가 발생한다.
+// 같은 선생님이 짧은 간격으로 페이지 새로고침 시 동일 데이터 반복 fetch → 60초 stale 허용
+// + tag 기반 invalidate 로 절감.
+//
+// 캐시 tag:
+//   `teacher:<teacherId>:dashboard` (개별 선생님 단위) +
+//   `institution:<institutionId>:dashboard` (기관 단위 — 학생 등록 등 broader invalidation 대응)
+//
+//   기관 단위 tag 는 본 함수에서는 teacher.institutionId 조회 비용을 피하기 위해 미부착.
+//   대신 student-bulk-import 등이 principal/teacher 양쪽 cache 를 다 invalidate 하도록
+//   호출자가 책임 (helper 노출).
+
+/** unstable_cache 의 cache key 결정성을 위해 cursors record 를 정렬된 JSON 으로 직렬화. */
+function serializeCursorsKey(cursors: Record<string, string>): string {
+  const keys = Object.keys(cursors).sort();
+  if (keys.length === 0) return "";
+  return keys.map((k) => `${k}:${cursors[k]}`).join("|");
+}
+
+/** 특정 teacher 의 dashboard cache invalidation 용 tag. */
+export function teacherDashboardCacheTag(teacherId: string): string {
+  return `teacher:${teacherId}:dashboard`;
+}
+
+/** unstable_cache revalidate 주기 (초) — 1분. principal 과 동일 정책. */
+export const TEACHER_DASHBOARD_CACHE_TTL_SECONDS = 60;
 
 /**
  * 최근 N일 윈도우 — principal 과 동일 정책 (7일).
@@ -133,7 +163,11 @@ export interface LoadTeacherDashboardOptions {
  *   - take+1 trick — TEACHER_STUDENTS_PER_CLASS+1 fetch 후 마지막 절단.
  *   - 1차 class.findMany 는 id/name 만 fetch → 2차에서 반별 user.findMany 를 Promise.all 로 fan-out.
  */
-export async function loadTeacherDashboard(
+/**
+ * 캐시되지 않은 본체 — 실 prisma fan-out. unstable_cache wrapper 가 본 함수를 호출.
+ * 단위 테스트는 본 함수를 직접 호출하면 cache layer 통과 없이 결정성 있게 동작.
+ */
+async function loadTeacherDashboardUncached(
   teacherId: string,
   options: LoadTeacherDashboardOptions = {},
 ): Promise<TeacherDashboardData> {
@@ -274,4 +308,32 @@ export async function loadTeacherDashboard(
     classrooms: perClassSummaries,
     classroomsEmpty: perClassSummaries.length === 0,
   };
+}
+
+/**
+ * Public export — unstable_cache wrapped 버전 (principal 과 동일 정책).
+ *
+ * Performance 감사 2차:
+ *   1) keyParts: ["teacher-dashboard", teacherId, cursorsKey]
+ *   2) tags: [teacher:<teacherId>:dashboard]
+ *   3) revalidate: 60 — tag invalidate 가 누락된 경로에 대한 안전망.
+ *
+ * 빈 teacherId 는 cache 통과 없이 즉시 empty 반환.
+ */
+export async function loadTeacherDashboard(
+  teacherId: string,
+  options: LoadTeacherDashboardOptions = {},
+): Promise<TeacherDashboardData> {
+  if (!teacherId) return emptyPayload("");
+  const cursors = options.studentsCursors ?? {};
+  const cursorsKey = serializeCursorsKey(cursors);
+  const cached = unstable_cache(
+    async () => loadTeacherDashboardUncached(teacherId, { studentsCursors: cursors }),
+    ["teacher-dashboard", teacherId, cursorsKey],
+    {
+      tags: [teacherDashboardCacheTag(teacherId)],
+      revalidate: TEACHER_DASHBOARD_CACHE_TTL_SECONDS,
+    },
+  );
+  return cached();
 }

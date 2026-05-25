@@ -12,26 +12,40 @@
 // 이벤트: roi_simulated — 입력 변화 후 debounce 없이 발송 (슬라이더는 onChange 가 throttle 적당).
 //
 // CON-04: 의료 어휘 0건. "원아", "발음 발달 확인" 등 비즈니스 표현만.
+//
+// Performance 감사 2차 (1차 63fbccf 후속):
+//   Recharts (~80KB gzip) BarChart 부분만 `next/dynamic` 으로 lazy-load
+//   (./RoiSimulatorChart). /roi 마케팅 페이지 진입 직후 LCP 영향 0 (슬라이더/숫자 카드는
+//   상위 critical UI). 슬라이더 조작 시 처음 1회 chart bundle fetch.
+//
+// 회귀 0건:
+//   호출 측 (page.tsx) 의 import 경로 `./RoiSimulator` 와 named export `RoiSimulator` 및
+//   props (none) / data-testid (roi-simulator/roi-monthly-revenue/...) 는 변경 없음.
+//   기존 RoiSimulator.test.tsx 의 vi.mock("recharts", ...) 는 RoiSimulatorChart 내부
+//   recharts 도 동시 mock → 동작 유지 (test 가 import 한 모듈 그래프 안의 recharts 전부 hook).
 
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import dynamic from "next/dynamic";
 import { trackEvent } from "@/lib/analytics";
 import { calculateRoi, buildMonthlyRoiSeries } from "@/lib/roi";
 
 const DEFAULT_STUDENT_COUNT = 50;
 const DEFAULT_MONTHLY_FEE = 20_000;
 const DEFAULT_EXPERT_HOURLY_RATE = 100_000;
+
+// Recharts BarChart 본체는 client only — ssr=false. loading: skeleton 으로 280px 자리 유지.
+const RoiSimulatorChart = dynamic(() => import("./RoiSimulatorChart"), {
+  ssr: false,
+  loading: () => (
+    <div
+      data-testid="roi-simulator-chart-skeleton"
+      aria-hidden="true"
+      className="h-[280px] w-full animate-pulse rounded-md bg-slate-100 dark:bg-slate-800"
+    />
+  ),
+});
 
 export function RoiSimulator() {
   const [studentCount, setStudentCount] = useState<number>(DEFAULT_STUDENT_COUNT);
@@ -129,23 +143,7 @@ export function RoiSimulator() {
       >
         <h2 className="mb-3 text-sm font-medium">월별 누적 (12개월)</h2>
         <div className="w-full">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="month"
-                fontSize={12}
-                tickFormatter={(m: number) => `${m}월차`}
-              />
-              <YAxis fontSize={12} tickFormatter={(v: number) => formatCompactKRW(v)} />
-              <Tooltip
-                formatter={(value) => formatKRW(typeof value === "number" ? value : Number(value))}
-              />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="cumulativeRevenue" name="누적 매출" fill="#10b981" />
-              <Bar dataKey="cumulativeSavings" name="누적 절감" fill="#3b82f6" />
-            </BarChart>
-          </ResponsiveContainer>
+          <RoiSimulatorChart data={chartData} />
         </div>
       </section>
     </div>
@@ -210,10 +208,4 @@ function ResultCard({
 
 function formatKRW(value: number): string {
   return `₩${Math.round(value).toLocaleString("ko-KR")}`;
-}
-
-function formatCompactKRW(value: number): string {
-  if (value >= 100_000_000) return `${(value / 100_000_000).toFixed(1)}억`;
-  if (value >= 10_000) return `${Math.round(value / 10_000)}만`;
-  return `${value}`;
 }

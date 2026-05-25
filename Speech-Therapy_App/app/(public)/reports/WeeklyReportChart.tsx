@@ -1,49 +1,41 @@
 "use client";
 
-// FR-Q-005 — 주간 추이 차트 (Recharts LineChart).
-// 음소별 다중 라인 (실제 데이터에선 다중 음소, 단순화로 백분위 1 라인).
+// FR-Q-005 / Performance 감사 2차 — 주간 추이 차트 wrapper (next/dynamic, ssr: false).
+//
+// Performance 감사 2차 (1차 63fbccf 후속):
+//   본 wrapper 는 Recharts (~80KB gzip) 본체 (`WeeklyReportChartImpl`) 를 `next/dynamic`
+//   으로 lazy-load → /reports 진입한 경우에만 chart bundle 로드. 부모/익명 사용자의 다른
+//   페이지 (홈/diagnose/missions) 초기 bundle 영향 0건.
+//
+// 회귀 0건:
+//   호출 측 (page.tsx) 의 import 경로 `./WeeklyReportChart` 와 named export
+//   `WeeklyReportChart` 및 props (`scoreTrend`) 는 변경 없음. 기존 vi.mock("@/app/(public)
+//   /reports/WeeklyReportChart", () => ({ WeeklyReportChart: () => null })) 도 그대로 동작.
 
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import dynamic from "next/dynamic";
 import type { ScoreTrend } from "@/lib/weekly-report";
 
 interface Props {
   scoreTrend: ScoreTrend;
 }
 
-export function WeeklyReportChart({ scoreTrend }: Props) {
-  // ScoreTrend → chart data (X축: 일자 MM/DD, Y축: 0~100).
-  const data = scoreTrend.map((entry) => ({
-    date: entry.date.slice(5).replace("-", "/"),
-    조음: entry.articulation,
-    언어: entry.linguistic,
-    음향: entry.acoustic,
-    또래백분위: entry.peerPercentile,
-  }));
+// Recharts 본체 (`WeeklyReportChartImpl`) 는 client only — ResponsiveContainer 가 window
+// 측정에 의존 → ssr=false 안전. loading: skeleton 으로 300px 자리 유지 (layout shift 0).
+const WeeklyReportChartImpl = dynamic(() => import("./WeeklyReportChartImpl"), {
+  ssr: false,
+  loading: () => (
+    <div
+      data-testid="weekly-report-chart-skeleton"
+      aria-hidden="true"
+      className="h-[300px] w-full animate-pulse rounded-md bg-slate-100 dark:bg-slate-800"
+    />
+  ),
+});
 
+export function WeeklyReportChart({ scoreTrend }: Props) {
   return (
     <div className="w-full" aria-label="주간 추이 그래프">
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="date" fontSize={12} />
-          <YAxis domain={[0, 100]} fontSize={12} />
-          <Tooltip />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Line type="monotone" dataKey="조음" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
-          <Line type="monotone" dataKey="언어" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-          <Line type="monotone" dataKey="음향" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
-          <Line type="monotone" dataKey="또래백분위" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
-        </LineChart>
-      </ResponsiveContainer>
+      <WeeklyReportChartImpl scoreTrend={scoreTrend} />
     </div>
   );
 }

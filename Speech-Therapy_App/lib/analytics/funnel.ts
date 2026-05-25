@@ -43,12 +43,27 @@
 //   - 기존 toDayStartUtc / addUtcDays / formatUtcDate 는 backwards-compat 으로 유지
 //     (기존 호출자 / 단위 테스트 회귀 방지). 신규 호출자는 KST 변형 사용 권장.
 
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
 import {
   formatKstDate as formatKstDateCanonical,
   toDayStartKst as toDayStartKstCanonical,
   addKstDays as addKstDaysCanonical,
 } from "@/lib/timeline/tz";
+
+// Performance 감사 2차 — funnel aggregation 캐싱.
+//
+// /admin/funnel 진입 시마다 aggregateFunnelByDay (= 7~14 회 aggregateFunnel) 가 실행되어
+// 단계별 distinct user count + 4종 prisma.count 가 매일 반복된다. 같은 dateRange 의 결과는
+// 5분 단위로 stale 허용 가능 (퍼널 KPI 는 분/시간 단위 모니터링 충분).
+//
+// 캐시 tag:
+//   `funnel:aggregate` — funnel-alert cron 또는 신규 분석 ingestion 시 invalidate.
+//   (현재 trackEvent 가 stub 이라 mutating path 가 명시적이지 않음 → 주로 revalidate 의존).
+//
+// 캐시 key:
+//   ["funnel-aggregate", from.toISOString(), to.toISOString()]
+//   ["funnel-aggregate-by-day", ...]
 
 export type FunnelStepName =
   | "landing"
@@ -247,7 +262,7 @@ export function buildSteps(raw: RawCounts): FunnelStep[] {
 ///           Korea 사용자 인지 일자와 일치 — UTC 라벨이 필요한 호출자는 `formatUtcDate` 별도 사용.
 ///   - steps: 6단계 FunnelStep 배열 (FUNNEL_STEP_ORDER 순서).
 ///   - totalUsers: landing 단계 count (편의용 alias).
-export async function aggregateFunnel(dateRange: {
+async function aggregateFunnelUncached(dateRange: {
   from: Date;
   to: Date;
 }): Promise<FunnelSummary> {
@@ -259,6 +274,35 @@ export async function aggregateFunnel(dateRange: {
     steps,
     totalUsers: raw.landingDistinctUsers,
   };
+}
+
+/// funnel cache tag — invalidation 시 본 tag 만 revalidateTag 호출하면
+/// `aggregateFunnel` / `aggregateFunnelByDay` 양쪽 모두 무효화된다.
+export const FUNNEL_CACHE_TAG = "funnel:aggregate";
+
+/// funnel revalidate TTL (초) — 5분.
+/// 관리자 모니터링용 dashboard 라 5분 stale 허용 OK (KPI 는 시간/일 단위 추세 위주).
+export const FUNNEL_CACHE_TTL_SECONDS = 300;
+
+/**
+ * Public export — unstable_cache wrapped 버전.
+ *
+ * Performance 감사 2차:
+ *   1) keyParts: ["funnel-aggregate", from.toISOString(), to.toISOString()]
+ *   2) tags: [FUNNEL_CACHE_TAG]
+ *   3) revalidate: 300 (5분).
+ */
+export async function aggregateFunnel(dateRange: {
+  from: Date;
+  to: Date;
+}): Promise<FunnelSummary> {
+  const { from, to } = dateRange;
+  const cached = unstable_cache(
+    async () => aggregateFunnelUncached({ from, to }),
+    ["funnel-aggregate", from.toISOString(), to.toISOString()],
+    { tags: [FUNNEL_CACHE_TAG], revalidate: FUNNEL_CACHE_TTL_SECONDS },
+  );
+  return cached();
 }
 
 /// 일자별 funnel 집계 — 일간 변동 비교 + 다일 dashboard 차트용.

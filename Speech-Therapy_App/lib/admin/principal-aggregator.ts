@@ -25,8 +25,47 @@
 //
 // Empty data graceful: institutionId 가 비어 있거나 데이터 0건이면 모든 카운트 0 + classrooms=[].
 
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
 import { kstDaysAgoStart } from "@/lib/timeline/tz";
+
+// Performance 감사 2차 (1차 63fbccf 후속) — unstable_cache + revalidateTag wiring.
+//
+// loadPrincipalDashboard 는 RSC 진입 시마다 호출되며 단일 호출에 5~10 회 prisma query
+// (Promise.all fan-out + 반별 fan-out) 가 발생한다. 같은 기관 원장이 짧은 간격으로
+// 페이지를 새로고침하면 동일 데이터를 반복 fetch. 60초 stale 허용 + tag 기반 invalidate
+// 로 절감.
+//
+// stale-허용 근거: 발음 점수 / 반 카운트 등은 분 단위 변동이 일반적. 60s 지연은 운영상
+// 무시 가능 (원장 dashboard 는 모니터링 목적, real-time 이 아님).
+//
+// 캐시 key 구성:
+//   ["principal-dashboard", institutionId, cursorsKey]
+//     - cursorsKey 는 studentsCursors 의 정렬된 JSON 직렬화 — 반별 페이지가 달라지면
+//       독립적으로 cache miss → 정확성 보장.
+//
+// 캐시 tag:
+//   `institution:<institutionId>:dashboard`
+//     - 학생/반/평가결과 mutating Server Action 에서 revalidateTag 로 invalidate.
+//     - student-bulk-import 등 신규 원아 등록 후 즉시 dashboard refresh 보장.
+
+/**
+ * unstable_cache 의 cache key 결정성을 위해 cursors record 를 정렬된 JSON 으로 직렬화.
+ * 동일 cursors 라도 키 순서가 다를 수 있으므로 정렬 필요.
+ */
+function serializeCursorsKey(cursors: Record<string, string>): string {
+  const keys = Object.keys(cursors).sort();
+  if (keys.length === 0) return "";
+  return keys.map((k) => `${k}:${cursors[k]}`).join("|");
+}
+
+/** 특정 institution 의 dashboard cache invalidation 용 tag. */
+export function principalDashboardCacheTag(institutionId: string): string {
+  return `institution:${institutionId}:dashboard`;
+}
+
+/** unstable_cache revalidate 주기 (초) — 1분. 운영상 sufficient. */
+export const PRINCIPAL_DASHBOARD_CACHE_TTL_SECONDS = 60;
 
 /**
  * 1주 = 7일 (KST 자정 기준 now - 7d). FR-Q-009 §AC Scenario 4 의 "최근 1주" 정의.
@@ -140,7 +179,11 @@ export interface LoadPrincipalDashboardOptions {
  *   - 반마다 cursor 가 다를 수 있으므로 1차 class.findMany 는 id/name 만 fetch 한 뒤
  *     2차에서 반별로 user.findMany 를 Promise.all 로 fan-out.
  */
-export async function loadPrincipalDashboard(
+/**
+ * 캐시되지 않은 본체 — 실 prisma fan-out. unstable_cache wrapper 가 본 함수를 호출.
+ * 단위 테스트는 본 함수를 직접 호출하면 cache layer 통과 없이 결정성 있게 동작.
+ */
+async function loadPrincipalDashboardUncached(
   institutionId: string,
   options: LoadPrincipalDashboardOptions = {},
 ): Promise<PrincipalDashboardData> {
@@ -262,4 +305,34 @@ export async function loadPrincipalDashboard(
     classrooms: classroomSummaries,
     classroomsEmpty: classroomSummaries.length === 0,
   };
+}
+
+/**
+ * Public export — unstable_cache wrapped 버전.
+ *
+ * Performance 감사 2차:
+ *   1) keyParts: ["principal-dashboard", institutionId, cursorsKey] — 동일 기관 + 동일
+ *      반별 cursor 조합은 60초간 single fan-out 결과 재사용.
+ *   2) tags: [institution:<id>:dashboard] — mutating Server Action 측에서
+ *      `revalidateTag(principalDashboardCacheTag(institutionId))` 로 invalidate.
+ *   3) revalidate: 60 — tag invalidate 가 누락된 경로에 대한 안전망.
+ *
+ * 빈 institutionId 는 cache 통과 없이 즉시 empty 반환 (불필요 cache row 생성 회피).
+ */
+export async function loadPrincipalDashboard(
+  institutionId: string,
+  options: LoadPrincipalDashboardOptions = {},
+): Promise<PrincipalDashboardData> {
+  if (!institutionId) return emptyPayload("");
+  const cursors = options.studentsCursors ?? {};
+  const cursorsKey = serializeCursorsKey(cursors);
+  const cached = unstable_cache(
+    async () => loadPrincipalDashboardUncached(institutionId, { studentsCursors: cursors }),
+    ["principal-dashboard", institutionId, cursorsKey],
+    {
+      tags: [principalDashboardCacheTag(institutionId)],
+      revalidate: PRINCIPAL_DASHBOARD_CACHE_TTL_SECONDS,
+    },
+  );
+  return cached();
 }
