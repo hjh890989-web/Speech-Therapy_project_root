@@ -735,6 +735,20 @@ export type AnalyticsEvent =
         userId: string;
         role: string;
       };
+    }
+  // === FR-NAV-SEARCH — 글로벌 검색 box (admin/teacher/principal 운영자 통합 검색) ===
+  | {
+      // GlobalSearch client component 가 fetch 응답을 받은 직후 1회 (debounce 300ms 종료 + API 200 후).
+      // queryLength: 사용자가 입력한 query 길이 (검색 ergonomics 분석용 — 짧은/긴 query 분포).
+      // resultCount: API 가 반환한 results 총 건수 (kind 합산, 최대 60).
+      // role: 검색 시점의 운영자 role — admin / principal / teacher 중 하나.
+      // R4 보호: query 본문 / userId / 결과 항목 (자녀 이메일/반 이름) 절대 노출 금지 — 메트릭만.
+      name: "global_search_executed";
+      properties: {
+        queryLength: number;
+        resultCount: number;
+        role: string;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

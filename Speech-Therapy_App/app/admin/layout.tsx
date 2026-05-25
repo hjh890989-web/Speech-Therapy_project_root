@@ -28,6 +28,7 @@
 import { Suspense } from "react";
 
 import { MainNav } from "@/components/nav/MainNav";
+import { GlobalSearchSlot } from "@/components/search/GlobalSearchSlot";
 
 // admin 영역도 (public) 와 동일하게 매 요청 fresh 렌더 — Supabase auth + DB role 변경 반영.
 export const dynamic = "force-dynamic";
@@ -40,6 +41,10 @@ export default function AdminLayout({
       <Suspense fallback={null}>
         <MainNav />
       </Suspense>
+      {/* FR-NAV-SEARCH — 글로벌 검색 box (admin/principal/teacher 만 노출, 내부 RBAC). */}
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-end px-4 py-2">
+        <GlobalSearchSlot />
+      </div>
       <main>{children}</main>
     </>
   );
