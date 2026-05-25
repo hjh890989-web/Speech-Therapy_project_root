@@ -159,7 +159,7 @@ describe("getNavBadgeCounts — role 별 HITL 카운트 매트릭스", () => {
     expect(out).toEqual({ hitlPending: 0, missionPendingToday: 0 });
   });
 
-  it("[9] cache dedup — 같은 인자 2회 호출 → prisma.count 1회만 (React cache request-scope)", async () => {
+  it("[9] 같은 인자 2회 호출 → 결과 동등 (React cache() 는 RSC request-scope 만 dedup, vitest 환경은 미적용)", async () => {
     hitlCountMock.mockResolvedValue(4);
     const args = {
       role: "admin",
@@ -170,9 +170,9 @@ describe("getNavBadgeCounts — role 별 HITL 카운트 매트릭스", () => {
       getNavBadgeCounts(args),
       getNavBadgeCounts(args),
     ]);
+    // 결과 동등성만 검증 — 실 dedup 은 Next.js RSC runtime 의 request context 에서 작동.
     expect(a).toEqual(b);
-    // React cache() dedup — 동일 인자 객체 reference 로 호출 시 1회.
-    expect(hitlCountMock).toHaveBeenCalledTimes(1);
+    expect(a.hitlPending).toBe(4);
   });
 });
 
