@@ -75,6 +75,13 @@ const SETTINGS_ENTRIES: ReadonlyArray<SettingsEntry> = [
       "주간 리뷰 / 쿠션어 알림장 등 이메일 알림 수신 여부를 항목별로 설정해요.",
     testId: "settings-card-notifications",
   },
+  {
+    href: "/settings/security",
+    icon: "🔐",
+    title: "보안 / 2단계 인증",
+    description: "TOTP 인증 앱으로 로그인 보안을 강화해요.",
+    testId: "settings-card-security",
+  },
 ];
 
 export default async function SettingsIndexPage() {

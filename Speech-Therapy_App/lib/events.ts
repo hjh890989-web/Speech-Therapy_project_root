@@ -777,6 +777,37 @@ export type AnalyticsEvent =
         )[];
       };
     }
+  // === FR-C-SECURITY — /settings/security 2FA TOTP enroll/verify/disable 텔레메트리 ===
+  | {
+      // EnrollTotpFlow 가 verifyTotpEnroll Server Action success 직후 1회 발송.
+      // R4 보호: userId 는 분석 백엔드 자동 해시 가정 (PII 직접 노출 금지).
+      //   TOTP secret / backup codes / qrCode 절대 노출 금지 — userId 식별자만.
+      // KPI 활용: 2FA 활성화 부모/운영자 비율 → 보안 정책 결정 (강제 적용 검토 등).
+      name: "totp_enrolled";
+      properties: {
+        userId: string;
+      };
+    }
+  | {
+      // EnrollTotpFlow 또는 DisableTotpFlow 가 invalid_code / expired 응답 직후 1회 발송.
+      // R4 보호: userId 는 분석 백엔드 자동 해시 가정 — code 본문 절대 노출 금지.
+      // reason 매트릭스: 잘못된 코드 vs 만료 — 어느 분기가 더 많은지 측정해
+      //   UI 카피 ("코드 30초 이내 입력 안내" 등) 개선 의사결정.
+      name: "totp_verification_failed";
+      properties: {
+        userId: string;
+        reason: "wrong_code" | "expired";
+      };
+    }
+  | {
+      // DisableTotpFlow 가 disableTotp Server Action success 직후 1회 발송.
+      // R4 보호: userId 는 분석 백엔드 자동 해시 가정 — factorId 절대 노출 금지.
+      // KPI 활용: enroll → disable 전환율 → 사용성 문제 진단 (앱 분실 / 사용자 불편 등).
+      name: "totp_disabled";
+      properties: {
+        userId: string;
+      };
+    }
   // === FR-NAV-SEARCH — 글로벌 검색 box (admin/teacher/principal 운영자 통합 검색) ===
   | {
       // GlobalSearch client component 가 fetch 응답을 받은 직후 1회 (debounce 300ms 종료 + API 200 후).
