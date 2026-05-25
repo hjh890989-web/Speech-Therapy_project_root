@@ -6,14 +6,17 @@
 //   - next/navigation redirect mock — throw 흉내
 //   - @/components/settings/DataExportButton mock — stub
 //   - @/components/settings/AccountDeleteButton mock — stub
+//   - @/components/settings/EmailChangeForm mock — stub (FR-C-ACCOUNT 확장)
+//   - @/components/settings/RequestPasswordResetButton mock — stub (FR-C-ACCOUNT 확장)
 //
-// 시나리오 (총 5건):
-//   1. 정상 인증 user → 3 카드 (info / export / delete) 노출
+// 시나리오 (총 7건):
+//   1. 정상 인증 user → 5 카드 (info / export / email / password / delete) 노출
 //   2. 비인증 → redirect("/login?next=/settings/account")
 //   3. Supabase 오류 (getUser throw) → redirect (graceful)
 //   4. 가입일 / 이메일 / 역할 표시 정확 (한국어 포맷)
 //   5. CON-04 의료 금칙어 0건
 //   6. User row 없음 (DB findUnique null) → "정보 없음" fallback 정상 렌더
+//   7. prisma findUnique throw → graceful
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
@@ -57,6 +60,23 @@ vi.mock("@/components/settings/AccountDeleteButton", () => ({
   ),
 }));
 
+vi.mock("@/components/settings/EmailChangeForm", () => ({
+  EmailChangeForm: ({ currentEmail }: { currentEmail: string | null }) => (
+    <div
+      data-testid="email-change-form-stub"
+      data-current-email={currentEmail ?? ""}
+    >
+      email change stub
+    </div>
+  ),
+}));
+
+vi.mock("@/components/settings/RequestPasswordResetButton", () => ({
+  RequestPasswordResetButton: () => (
+    <div data-testid="password-reset-button-stub">password reset stub</div>
+  ),
+}));
+
 import SettingsAccountPage from "@/app/(public)/settings/account/page";
 
 const USER_ID = "user-uuid-account-2222";
@@ -76,7 +96,7 @@ beforeEach(() => {
 });
 
 describe("/settings/account — FR-C-ACCOUNT 계정 정보 + GDPR 페이지", () => {
-  it("[1] 정상 인증 user → 3 카드 (info / export / delete) 노출", async () => {
+  it("[1] 정상 인증 user → 5 카드 (info / export / email / password / delete) 노출", async () => {
     setAuthUser(USER_ID);
     findUniqueMock.mockResolvedValueOnce({
       email: "parent@example.com",
@@ -98,6 +118,12 @@ describe("/settings/account — FR-C-ACCOUNT 계정 정보 + GDPR 페이지", ()
       container.querySelector("[data-testid='settings-account-export-card']"),
     ).not.toBeNull();
     expect(
+      container.querySelector("[data-testid='settings-account-email-card']"),
+    ).not.toBeNull();
+    expect(
+      container.querySelector("[data-testid='settings-account-password-card']"),
+    ).not.toBeNull();
+    expect(
       container.querySelector("[data-testid='settings-account-delete-card']"),
     ).not.toBeNull();
     expect(
@@ -105,6 +131,12 @@ describe("/settings/account — FR-C-ACCOUNT 계정 정보 + GDPR 페이지", ()
     ).not.toBeNull();
     expect(
       container.querySelector("[data-testid='account-delete-button-stub']"),
+    ).not.toBeNull();
+    expect(
+      container.querySelector("[data-testid='email-change-form-stub']"),
+    ).not.toBeNull();
+    expect(
+      container.querySelector("[data-testid='password-reset-button-stub']"),
     ).not.toBeNull();
 
     // findUnique 가 본인 user.id 만 사용.
@@ -118,6 +150,14 @@ describe("/settings/account — FR-C-ACCOUNT 계정 정보 + GDPR 페이지", ()
       "[data-testid='data-export-button-stub']",
     );
     expect(exportStub?.getAttribute("data-user-id")).toBe(USER_ID);
+
+    // EmailChangeForm 에 현재 이메일 prop 전달.
+    const emailStub = container.querySelector(
+      "[data-testid='email-change-form-stub']",
+    );
+    expect(emailStub?.getAttribute("data-current-email")).toBe(
+      "parent@example.com",
+    );
   });
 
   it("[2] 비인증 → redirect('/login?next=/settings/account')", async () => {
@@ -192,9 +232,15 @@ describe("/settings/account — FR-C-ACCOUNT 계정 정보 + GDPR 페이지", ()
       container.querySelector("[data-testid='settings-account-role']")
         ?.textContent,
     ).toMatch(/정보 없음/);
-    // 카드 2/3 는 여전히 정상 렌더 (다운로드 / 삭제 가능).
+    // 카드 2/3/4/5 는 여전히 정상 렌더 (다운로드 / 이메일 / 비밀번호 / 삭제 가능).
     expect(
       container.querySelector("[data-testid='data-export-button-stub']"),
+    ).not.toBeNull();
+    expect(
+      container.querySelector("[data-testid='email-change-form-stub']"),
+    ).not.toBeNull();
+    expect(
+      container.querySelector("[data-testid='password-reset-button-stub']"),
     ).not.toBeNull();
     expect(
       container.querySelector("[data-testid='account-delete-button-stub']"),

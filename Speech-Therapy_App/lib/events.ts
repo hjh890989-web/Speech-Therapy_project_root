@@ -736,6 +736,27 @@ export type AnalyticsEvent =
         role: string;
       };
     }
+  // === FR-C-ACCOUNT — /settings/account 이메일 변경 요청 (Supabase confirmation 발송) ===
+  | {
+      // EmailChangeForm 이 requestEmailChange Server Action success 직후 1회 발송.
+      // R4 보호: userId 는 server-side 텔레메트리에서 분석 백엔드 자동 해시 가정.
+      //   _이메일 본문_ (현재/새 주소) 절대 노출 금지 — userId 만.
+      //   본 이벤트는 "변경 요청" 시점 — 사용자가 새 이메일 confirmation 클릭하기 전.
+      name: "email_change_requested";
+      properties: {
+        userId: string;
+      };
+    }
+  // === FR-C-ACCOUNT — /settings/account 비밀번호 reset 링크 발송 요청 ===
+  | {
+      // RequestPasswordResetButton 이 requestPasswordReset Server Action success 직후 1회 발송.
+      // R4 보호: userId 는 server-side 텔레메트리 백엔드 자동 해시 가정.
+      //   이메일 주소 절대 노출 금지 — 사용자 식별은 userId 만.
+      name: "password_reset_requested";
+      properties: {
+        userId: string;
+      };
+    }
   // === FR-NAV-SEARCH — 글로벌 검색 box (admin/teacher/principal 운영자 통합 검색) ===
   | {
       // GlobalSearch client component 가 fetch 응답을 받은 직후 1회 (debounce 300ms 종료 + API 200 후).
