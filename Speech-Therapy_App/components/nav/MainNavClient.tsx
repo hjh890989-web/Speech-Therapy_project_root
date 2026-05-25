@@ -46,6 +46,13 @@ export interface MainNavItem {
   label: string;
   /** 자녀 친화 표현 — 부모 메뉴에만 emoji 부착. 운영자 메뉴도 시각적 단서로 활용. */
   emoji?: string;
+  /**
+   * FR-NAV-BADGE — 미처리 항목 카운트.
+   *  - `> 0` : 데스크탑은 "(N)" 카운트, 모바일은 빨간 dot 노출.
+   *  - `0` / undefined : 미노출 (시각 노이즈 최소화).
+   * 산출 helper: `lib/nav/badge-counts.ts::getNavBadgeCounts`.
+   */
+  badgeCount?: number;
 }
 
 export interface MainNavClientProps {
@@ -85,6 +92,11 @@ export function MainNavClient({ items, role, userEmail }: MainNavClientProps) {
         >
           {items.map((item) => {
             const active = isPathActive(pathname, item.href);
+            const hasBadge =
+              typeof item.badgeCount === "number" && item.badgeCount > 0;
+            const badgeAriaSuffix = hasBadge
+              ? `, ${item.badgeCount}건 미처리`
+              : "";
             return (
               <li key={item.href}>
                 <Link
@@ -92,6 +104,7 @@ export function MainNavClient({ items, role, userEmail }: MainNavClientProps) {
                   prefetch={false}
                   onClick={() => handleClick(item.href)}
                   aria-current={active ? "page" : undefined}
+                  aria-label={`${item.label}${badgeAriaSuffix}`}
                   data-active={active ? "true" : "false"}
                   className={[
                     "inline-flex h-11 items-center gap-1 rounded-md px-3 text-sm font-medium",
@@ -102,6 +115,15 @@ export function MainNavClient({ items, role, userEmail }: MainNavClientProps) {
                 >
                   {item.emoji ? <span aria-hidden="true">{item.emoji}</span> : null}
                   <span>{item.label}</span>
+                  {hasBadge ? (
+                    <span
+                      data-testid={`main-nav-badge-${item.href}`}
+                      aria-hidden="true"
+                      className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-rose-600 px-1.5 text-xs font-semibold text-white"
+                    >
+                      {item.badgeCount}
+                    </span>
+                  ) : null}
                 </Link>
               </li>
             );
@@ -125,6 +147,11 @@ export function MainNavClient({ items, role, userEmail }: MainNavClientProps) {
           >
             {items.map((item) => {
               const active = isPathActive(pathname, item.href);
+              const hasBadge =
+                typeof item.badgeCount === "number" && item.badgeCount > 0;
+              const badgeAriaSuffix = hasBadge
+                ? `, ${item.badgeCount}건 미처리`
+                : "";
               return (
                 <li key={item.href}>
                   <Link
@@ -132,6 +159,7 @@ export function MainNavClient({ items, role, userEmail }: MainNavClientProps) {
                     prefetch={false}
                     onClick={() => handleClick(item.href)}
                     aria-current={active ? "page" : undefined}
+                    aria-label={`${item.label}${badgeAriaSuffix}`}
                     data-active={active ? "true" : "false"}
                     className={[
                       "flex h-11 items-center gap-2 rounded-md px-3 text-base",
@@ -142,6 +170,13 @@ export function MainNavClient({ items, role, userEmail }: MainNavClientProps) {
                   >
                     {item.emoji ? <span aria-hidden="true">{item.emoji}</span> : null}
                     <span>{item.label}</span>
+                    {hasBadge ? (
+                      <span
+                        data-testid={`main-nav-mobile-badge-${item.href}`}
+                        aria-hidden="true"
+                        className="ml-auto inline-block h-2.5 w-2.5 rounded-full bg-rose-600"
+                      />
+                    ) : null}
                   </Link>
                 </li>
               );
