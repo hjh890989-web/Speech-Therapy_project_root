@@ -4,6 +4,8 @@
 //   - admin/principal/teacher/expert 의 "HITL 큐" 메뉴에 미처리 (pending + in_review)
 //     건수를 dot/badge 로 노출하기 위한 read-only 집계.
 //   - parent 의 "미션 도전" 메뉴에 "오늘 미완료" SessionLog 건수를 dot/badge 로 노출.
+//   - FR-CONSENT-BADGE — parent/principal/teacher/admin 의 "설정" 메뉴에
+//     미서명 동의서 (ConsentSignature.status='pending') 건수를 dot/badge 로 노출.
 //   - Server Component (`components/nav/MainNav.tsx`) 에서만 호출 — client bundle 0.
 //
 // React cache():
@@ -15,11 +17,11 @@
 //   - 실패 (DB 장애 / 권한 거부 / institutionId 누락) 시 모두 0 반환. nav 차단 금지.
 //
 // role 매트릭스:
-//   - admin     : 전체 HITLQueue pending+in_review 카운트 (institution 무관) + missionPendingToday=0 + weeklyReportUnread=0
-//   - principal : 본인 institutionId 의 HITLQueue (HITLQueue.user.institutionId == 본인) + missionPendingToday=0 + weeklyReportUnread=0
+//   - admin     : 전체 HITLQueue pending+in_review 카운트 (institution 무관) + 전체 ConsentSignature pending 카운트 + missionPendingToday=0 + weeklyReportUnread=0
+//   - principal : 본인 institutionId 의 HITLQueue (HITLQueue.user.institutionId == 본인) + 본인 institutionId 의 ConsentSignature pending 카운트 + missionPendingToday=0 + weeklyReportUnread=0
 //   - teacher   : 동일 (institution scope) — Teacher portal 노출용 + missionPendingToday=0 + weeklyReportUnread=0
-//   - expert    : assignedExpertId == userId 인 HITLQueue 만 (본인 담당 큐) + missionPendingToday=0 + weeklyReportUnread=0
-//   - parent    : HITL 카운트 0 + missionPendingToday = 본인 (R4) 오늘 미완료 SessionLog 카운트 + weeklyReportUnread = 본인 (R4) viewedAt IS NULL 카운트
+//   - expert    : assignedExpertId == userId 인 HITLQueue 만 (본인 담당 큐) + consentReminderPending=0 + missionPendingToday=0 + weeklyReportUnread=0
+//   - parent    : HITL 카운트 0 + missionPendingToday = 본인 (R4) 오늘 미완료 SessionLog 카운트 + weeklyReportUnread = 본인 (R4) viewedAt IS NULL 카운트 + consentReminderPending = 본인 (R4) parentEmail==user.email AND status='pending' 카운트
 //   - anonymous : 0 (호출 가드)
 //
 // missionPendingToday 정의 (parent 전용):
@@ -36,6 +38,16 @@
 //   - retention: 북극성 KPI W-AUR 의 핵심 surface — 미열람 dot 으로 nudge.
 //   - cap: 표시 목적이므로 정확한 카운트는 불필요하나, 자연스럽게 1~N 노출.
 //   - R4: 본인 userId 만 (cross-read 금지).
+//
+// consentReminderPending 정의 (FR-CONSENT-BADGE):
+//   - parent     : ConsentSignature 중 parentEmail == user.email AND status == 'pending' 카운트 (R4 — 본인 이메일만).
+//                  user.email 이 null 이면 0 (가드).
+//   - principal  : ConsentSignature 중 institutionId == user.institutionId AND status == 'pending' (institution scope).
+//   - teacher    : principal 과 동일 (institution scope) — Teacher portal 노출용.
+//   - admin      : ConsentSignature 중 status == 'pending' 전체 (institution 무관 — 글로벌 oversight).
+//   - expert / anonymous : 0.
+//   - 의미: 부모가 동의서 서명 안 한 것 / 운영자가 학부모에게 재전송 nudge 필요한 것을 dot 으로 노출.
+//   - HITL count 와 ConsentSignature count 는 독립 try/catch — 한쪽 실패가 다른 쪽 drop 시키지 않음.
 
 import { cache } from "react";
 
@@ -52,6 +64,12 @@ export interface NavBadgeCounts {
   /// parent 의 "우리 아이 주간 리뷰" 메뉴 badge — viewedAt IS NULL 인 본인 WeeklyReport 카운트.
   /// 의미: cron 으로 생성된 새 주간 리뷰가 있는데 부모가 페이지를 아직 안 봄. parent 외 role 0.
   weeklyReportUnread: number;
+  /// FR-CONSENT-BADGE — "설정" 메뉴 badge.
+  ///   - parent     : parentEmail == user.email AND status='pending' 본인 ConsentSignature 카운트.
+  ///   - principal/teacher : institutionId == user.institutionId AND status='pending' 카운트.
+  ///   - admin      : 전체 status='pending' 카운트.
+  ///   - expert/anonymous : 0.
+  consentReminderPending: number;
 }
 
 /// HITLQueue 의 미처리 status — admin.ts ACTIVE_HITL_STATUSES 와 동일 의미.
@@ -65,6 +83,10 @@ export interface NavBadgeCountsInput {
   institutionId: string | null;
   /// expert 의 assignedExpertId 매칭용. expert 외 role 은 null 가능.
   userId: string | null;
+  /// FR-CONSENT-BADGE — parent 의 ConsentSignature.parentEmail 매칭용.
+  /// parent 외 role 도 caller 가 갖고 있다면 전달 OK (사용 안 함, harmless).
+  /// 누락/null 이면 parent 의 consentReminderPending=0 (R4 가드).
+  userEmail?: string | null;
 }
 
 /**
@@ -88,47 +110,73 @@ export const getNavBadgeCounts = cache(
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     };
-    const { role, institutionId, userId } = input;
+    const { role, institutionId, userId, userEmail } = input;
 
     // anonymous: 인증 안 됨 → 0 (안전 가드).
     if (role === "anonymous") {
       return empty;
     }
 
-    // parent: "오늘 미완료 미션" + "미열람 주간 리뷰" 카운트 (HITL 메뉴 미노출).
+    // parent: "오늘 미완료 미션" + "미열람 주간 리뷰" + "미서명 동의서" 카운트 (HITL 메뉴 미노출).
     if (role === "parent") {
       if (!userId) return empty;
-      const [missionPendingToday, weeklyReportUnread] = await Promise.all([
-        countMissionPendingToday(userId).catch((err) => {
-          console.error(
-            "[FR-NAV-BADGE] missionPendingToday(parent) 실패 (graceful):",
-            err,
-          );
-          return 0;
-        }),
-        countWeeklyReportUnread(userId).catch((err) => {
-          console.error(
-            "[FR-NAV-BADGE] weeklyReportUnread(parent) 실패 (graceful):",
-            err,
-          );
-          return 0;
-        }),
-      ]);
+      const [missionPendingToday, weeklyReportUnread, consentReminderPending] =
+        await Promise.all([
+          countMissionPendingToday(userId).catch((err) => {
+            console.error(
+              "[FR-NAV-BADGE] missionPendingToday(parent) 실패 (graceful):",
+              err,
+            );
+            return 0;
+          }),
+          countWeeklyReportUnread(userId).catch((err) => {
+            console.error(
+              "[FR-NAV-BADGE] weeklyReportUnread(parent) 실패 (graceful):",
+              err,
+            );
+            return 0;
+          }),
+          // FR-CONSENT-BADGE — parent 본인 email 의 pending consent 만.
+          // email 누락 시 query skip (R4 가드 — cross-read 금지).
+          countConsentReminderPendingForParent(userEmail ?? null).catch(
+            (err) => {
+              console.error(
+                "[FR-CONSENT-BADGE] consentReminderPending(parent) 실패 (graceful):",
+                err,
+              );
+              return 0;
+            },
+          ),
+        ]);
       return {
         hitlPending: 0,
         missionPendingToday,
         weeklyReportUnread,
+        consentReminderPending,
       };
     }
 
     try {
       let hitlPending = 0;
+      let consentReminderPending = 0;
       if (role === "admin") {
         // admin: 전체 미처리 카운트 (institution 무관).
         hitlPending = await prisma.hITLQueue.count({
           where: { status: { in: [...HITL_PENDING_STATUSES] } },
         });
+        // FR-CONSENT-BADGE — admin 은 글로벌 oversight (institution 무관).
+        // HITL 와 독립 try/catch — consent 실패가 HITL 카운트 drop 시키지 않음.
+        consentReminderPending = await countConsentReminderPendingGlobal().catch(
+          (err) => {
+            console.error(
+              "[FR-CONSENT-BADGE] consentReminderPending(admin) 실패 (graceful):",
+              err,
+            );
+            return 0;
+          },
+        );
       } else if (role === "principal" || role === "teacher") {
         // principal/teacher: 본인 institution 의 HITL 만.
         if (!institutionId) return empty;
@@ -138,8 +186,20 @@ export const getNavBadgeCounts = cache(
             user: { institutionId },
           },
         });
+        // FR-CONSENT-BADGE — principal/teacher 은 institution scope.
+        // HITL 와 독립 try/catch — consent 실패가 HITL 카운트 drop 시키지 않음.
+        consentReminderPending =
+          await countConsentReminderPendingForInstitution(institutionId).catch(
+            (err) => {
+              console.error(
+                "[FR-CONSENT-BADGE] consentReminderPending(principal/teacher) 실패 (graceful):",
+                err,
+              );
+              return 0;
+            },
+          );
       } else if (role === "expert") {
-        // expert: 본인이 담당으로 할당된 HITL 만.
+        // expert: 본인이 담당으로 할당된 HITL 만. consent 는 0 (관여 안 함).
         if (!userId) return empty;
         hitlPending = await prisma.hITLQueue.count({
           where: {
@@ -152,7 +212,12 @@ export const getNavBadgeCounts = cache(
         return empty;
       }
 
-      return { hitlPending, missionPendingToday: 0, weeklyReportUnread: 0 };
+      return {
+        hitlPending,
+        missionPendingToday: 0,
+        weeklyReportUnread: 0,
+        consentReminderPending,
+      };
     } catch (err) {
       // graceful: DB 장애 / 권한 거부 → 0 (nav 차단 금지).
       console.error("[FR-NAV-BADGE] getNavBadgeCounts 실패 (graceful):", err);
@@ -206,6 +271,65 @@ async function countWeeklyReportUnread(userId: string): Promise<number> {
       userId,
       viewedAt: null,
     },
+  });
+}
+
+/**
+ * FR-CONSENT-BADGE — parent 본인 email 의 미서명 동의서 카운트.
+ *
+ * 정의:
+ *   - ConsentSignature 중 parentEmail == userEmail AND status == 'pending'.
+ *   - 의미: 운영자가 보낸 동의서가 있는데 부모가 아직 서명 안 함 → 설정 메뉴에 dot 노출.
+ *
+ * R4: parentEmail 매칭만 — institutionId 무관 (parent 는 자기 동의서만 봄, cross-read 금지).
+ * userEmail 누락 시 0 (caller 측 가드).
+ *
+ * @internal helper — getNavBadgeCounts 의 parent 분기 내부에서만 호출.
+ */
+async function countConsentReminderPendingForParent(
+  userEmail: string | null,
+): Promise<number> {
+  if (!userEmail) return 0;
+  return prisma.consentSignature.count({
+    where: {
+      parentEmail: userEmail,
+      status: "pending",
+    },
+  });
+}
+
+/**
+ * FR-CONSENT-BADGE — principal/teacher 의 institution 단위 미서명 동의서 카운트.
+ *
+ * 정의:
+ *   - ConsentSignature 중 institutionId == 본인 institutionId AND status == 'pending'.
+ *   - 의미: 본인 기관이 발급한 동의서 중 아직 서명 안 받은 건 → 학부모 재전송 nudge.
+ *
+ * @internal helper — getNavBadgeCounts 의 principal/teacher 분기 내부에서만 호출.
+ */
+async function countConsentReminderPendingForInstitution(
+  institutionId: string,
+): Promise<number> {
+  return prisma.consentSignature.count({
+    where: {
+      institutionId,
+      status: "pending",
+    },
+  });
+}
+
+/**
+ * FR-CONSENT-BADGE — admin 의 글로벌 미서명 동의서 카운트.
+ *
+ * 정의:
+ *   - ConsentSignature 중 status == 'pending' 전체 (institution 무관).
+ *   - 의미: 전사 oversight — 어느 기관이든 미서명 상태가 누적되면 dot 으로 노출.
+ *
+ * @internal helper — getNavBadgeCounts 의 admin 분기 내부에서만 호출.
+ */
+async function countConsentReminderPendingGlobal(): Promise<number> {
+  return prisma.consentSignature.count({
+    where: { status: "pending" },
   });
 }
 

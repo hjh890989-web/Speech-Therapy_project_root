@@ -23,6 +23,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const sessionLogCountMock = vi.fn();
 const hitlCountMock = vi.fn();
 const weeklyReportCountMock = vi.fn().mockResolvedValue(0);
+const consentSignatureCountMock = vi.fn().mockResolvedValue(0);
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -38,6 +39,9 @@ vi.mock("@/lib/db", () => ({
     weeklyReport: {
       count: (...args: unknown[]) => weeklyReportCountMock(...args),
     },
+    consentSignature: {
+      count: (...args: unknown[]) => consentSignatureCountMock(...args),
+    },
   },
 }));
 
@@ -49,6 +53,8 @@ beforeEach(() => {
   hitlCountMock.mockReset();
   weeklyReportCountMock.mockReset();
   weeklyReportCountMock.mockResolvedValue(0);
+  consentSignatureCountMock.mockReset();
+  consentSignatureCountMock.mockResolvedValue(0);
 });
 
 afterEach(() => {
@@ -67,6 +73,7 @@ describe("getNavBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)
       hitlPending: 0,
       missionPendingToday: 3,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     expect(sessionLogCountMock).toHaveBeenCalledTimes(1);
   });
@@ -92,9 +99,11 @@ describe("getNavBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     expect(sessionLogCountMock).not.toHaveBeenCalled();
     expect(weeklyReportCountMock).not.toHaveBeenCalled();
+    expect(consentSignatureCountMock).not.toHaveBeenCalled();
   });
 
   it("[4] parent + DB error → 0 graceful (count throws)", async () => {
@@ -110,6 +119,7 @@ describe("getNavBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     expect(errSpy).toHaveBeenCalled();
   });
@@ -192,10 +202,12 @@ describe("getNavBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     expect(sessionLogCountMock).not.toHaveBeenCalled();
     expect(hitlCountMock).not.toHaveBeenCalled();
     expect(weeklyReportCountMock).not.toHaveBeenCalled();
+    expect(consentSignatureCountMock).not.toHaveBeenCalled();
   });
 });
 
@@ -225,6 +237,7 @@ describe("getNavBadgeCounts — parent weeklyReportUnread (FR-WEEKLY-UNREAD)", (
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 2,
+      consentReminderPending: 0,
     });
   });
 
@@ -276,6 +289,7 @@ describe("getNavBadgeCounts — parent weeklyReportUnread (FR-WEEKLY-UNREAD)", (
       hitlPending: 0,
       missionPendingToday: 2,
       weeklyReportUnread: 1,
+      consentReminderPending: 0,
     });
     expect(sessionLogCountMock).toHaveBeenCalledTimes(1);
     expect(weeklyReportCountMock).toHaveBeenCalledTimes(1);
@@ -319,5 +333,155 @@ describe("getNavBadgeCounts — parent weeklyReportUnread (FR-WEEKLY-UNREAD)", (
     };
     expect(args.where.userId).toBe("parent-w8");
     expect(args.where.viewedAt).toBeNull();
+  });
+});
+
+// ============================================================================
+// FR-CONSENT-BADGE — parent/principal/teacher/admin 의 미서명 동의서 badge 단위 테스트.
+// ============================================================================
+//
+// 검증 시나리오 (6건):
+//   [c1] parent + userEmail + 2건 → consentReminderPending=2 (where: parentEmail+status='pending')
+//   [c2] parent + userEmail=null → 0 + consentSignature.count 미호출 (R4 가드)
+//   [c3] parent + consentSignature.count error → 0 graceful (mission/weekly 영향 X)
+//   [c4] principal + institutionId='inst-X' + 3건 → 3 (institution scope where)
+//   [c5] principal + institutionId=null → 0 graceful (query skip — 기존 [7] 와 동일 가드)
+//   [c6] admin → 전체 status='pending' 카운트 (institution 무관 where)
+describe("getNavBadgeCounts — consentReminderPending (FR-CONSENT-BADGE)", () => {
+  it("[c1] parent + userEmail + 2건 → consentReminderPending=2 (where: parentEmail+status='pending')", async () => {
+    sessionLogCountMock.mockResolvedValueOnce(0);
+    weeklyReportCountMock.mockResolvedValueOnce(0);
+    consentSignatureCountMock.mockResolvedValueOnce(2);
+    const out = await getNavBadgeCounts({
+      role: "parent",
+      institutionId: null,
+      userId: "parent-c1",
+      userEmail: "mom@example.com",
+    });
+    expect(out).toEqual({
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+      consentReminderPending: 2,
+    });
+    const args = consentSignatureCountMock.mock.calls[0]![0] as {
+      where: { parentEmail: string; status: string };
+    };
+    expect(args.where.parentEmail).toBe("mom@example.com");
+    expect(args.where.status).toBe("pending");
+  });
+
+  it("[c2] parent + userEmail=null → 0 + consentSignature.count 미호출 (R4 가드)", async () => {
+    sessionLogCountMock.mockResolvedValueOnce(0);
+    weeklyReportCountMock.mockResolvedValueOnce(0);
+    const out = await getNavBadgeCounts({
+      role: "parent",
+      institutionId: null,
+      userId: "parent-c2",
+      userEmail: null,
+    });
+    expect(out.consentReminderPending).toBe(0);
+    expect(consentSignatureCountMock).not.toHaveBeenCalled();
+  });
+
+  it("[c3] parent + consentSignature.count error → 0 graceful (mission/weekly 영향 X)", async () => {
+    sessionLogCountMock.mockResolvedValueOnce(4);
+    weeklyReportCountMock.mockResolvedValueOnce(1);
+    consentSignatureCountMock.mockRejectedValueOnce(new Error("db down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const out = await getNavBadgeCounts({
+      role: "parent",
+      institutionId: null,
+      userId: "parent-c3",
+      userEmail: "dad@example.com",
+    });
+    // 다른 두 카운트는 정상 보존, consent 만 graceful 0.
+    expect(out.missionPendingToday).toBe(4);
+    expect(out.weeklyReportUnread).toBe(1);
+    expect(out.consentReminderPending).toBe(0);
+    expect(errSpy).toHaveBeenCalled();
+  });
+
+  it("[c4] principal + institutionId='inst-X' + 3건 → 3 (institution scope where)", async () => {
+    hitlCountMock.mockResolvedValueOnce(0);
+    consentSignatureCountMock.mockResolvedValueOnce(3);
+    const out = await getNavBadgeCounts({
+      role: "principal",
+      institutionId: "inst-X",
+      userId: "principal-c4",
+    });
+    expect(out.consentReminderPending).toBe(3);
+    const args = consentSignatureCountMock.mock.calls[0]![0] as {
+      where: { institutionId: string; status: string };
+    };
+    expect(args.where.institutionId).toBe("inst-X");
+    expect(args.where.status).toBe("pending");
+  });
+
+  it("[c4b] teacher + institutionId='inst-T' + 1건 → 1 (principal 과 동일 institution scope)", async () => {
+    hitlCountMock.mockResolvedValueOnce(0);
+    consentSignatureCountMock.mockResolvedValueOnce(1);
+    const out = await getNavBadgeCounts({
+      role: "teacher",
+      institutionId: "inst-T",
+      userId: "teacher-c4b",
+    });
+    expect(out.consentReminderPending).toBe(1);
+    const args = consentSignatureCountMock.mock.calls[0]![0] as {
+      where: { institutionId: string };
+    };
+    expect(args.where.institutionId).toBe("inst-T");
+  });
+
+  it("[c5] principal + institutionId=null → 0 graceful + consentSignature.count 미호출", async () => {
+    const out = await getNavBadgeCounts({
+      role: "principal",
+      institutionId: null,
+      userId: "principal-c5",
+    });
+    expect(out.consentReminderPending).toBe(0);
+    expect(consentSignatureCountMock).not.toHaveBeenCalled();
+  });
+
+  it("[c6] admin → 전체 status='pending' 카운트 (institution 무관 where)", async () => {
+    hitlCountMock.mockResolvedValueOnce(0);
+    consentSignatureCountMock.mockResolvedValueOnce(42);
+    const out = await getNavBadgeCounts({
+      role: "admin",
+      institutionId: null,
+      userId: "admin-c6",
+    });
+    expect(out.consentReminderPending).toBe(42);
+    const args = consentSignatureCountMock.mock.calls[0]![0] as {
+      where: { status: string; institutionId?: string };
+    };
+    expect(args.where.status).toBe("pending");
+    expect(args.where.institutionId).toBeUndefined();
+  });
+
+  it("[c7] expert → consentReminderPending=0 + consentSignature.count 미호출 (관여 안 함)", async () => {
+    hitlCountMock.mockResolvedValueOnce(0);
+    const out = await getNavBadgeCounts({
+      role: "expert",
+      institutionId: null,
+      userId: "expert-c7",
+    });
+    expect(out.consentReminderPending).toBe(0);
+    expect(consentSignatureCountMock).not.toHaveBeenCalled();
+  });
+
+  it("[c8] principal + HITL count OK + consent count error → HITL 유지, consent graceful 0", async () => {
+    hitlCountMock.mockResolvedValueOnce(5);
+    consentSignatureCountMock.mockRejectedValueOnce(new Error("db down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const out = await getNavBadgeCounts({
+      role: "principal",
+      institutionId: "inst-c8",
+      userId: "principal-c8",
+    });
+    // HITL 5 보존, consent 만 0 (독립 try/catch 동작 검증).
+    expect(out.hitlPending).toBe(5);
+    expect(out.consentReminderPending).toBe(0);
+    expect(errSpy).toHaveBeenCalled();
   });
 });

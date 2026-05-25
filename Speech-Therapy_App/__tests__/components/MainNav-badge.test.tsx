@@ -67,6 +67,7 @@ describe("applyBadgeCounts — pure decorator", () => {
       hitlPending: 3,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     const hitl = decorated.find((i) => i.href === "/admin/hitl");
     expect(hitl).toBeTruthy();
@@ -82,6 +83,7 @@ describe("applyBadgeCounts — pure decorator", () => {
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     expect(decorated).toBe(base); // 동일 reference (zero-allocation 최적화)
     for (const item of decorated) {
@@ -95,6 +97,7 @@ describe("applyBadgeCounts — pure decorator", () => {
       hitlPending: 5,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     // parent 메뉴엔 /admin/hitl 자체가 없음 → 모든 item.badgeCount 미설정.
     for (const item of decorated) {
@@ -112,6 +115,7 @@ describe("MainNavClient — badge UI 렌더", () => {
       hitlPending: 3,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     render(<MainNavClient items={items} role="admin" userEmail={null} />);
 
@@ -142,6 +146,7 @@ describe("MainNavClient — badge UI 렌더", () => {
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     render(<MainNavClient items={items} role="admin" userEmail={null} />);
     expect(
@@ -164,6 +169,7 @@ describe("MainNavClient — badge UI 렌더", () => {
       hitlPending: 999,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     render(<MainNavClient items={items} role="parent" userEmail={null} />);
     const desktop = screen.getByTestId("main-nav-desktop");
@@ -184,6 +190,7 @@ describe("MainNavClient — badge UI 렌더", () => {
       hitlPending: 3,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     render(<MainNavClient items={items} role="admin" userEmail={null} />);
     const nav = screen.getByTestId("main-nav");
@@ -206,6 +213,7 @@ describe("MainNavClient — badge UI 렌더", () => {
       hitlPending: 2,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     render(<MainNavClient items={items} role="expert" userEmail={null} />);
 
@@ -225,6 +233,7 @@ describe("applyBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)"
       hitlPending: 0,
       missionPendingToday: 2,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     const mission = decorated.find((i) => i.href === "/missions");
     expect(mission).toBeTruthy();
@@ -243,6 +252,7 @@ describe("applyBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)"
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     expect(decorated).toBe(base);
   });
@@ -256,6 +266,7 @@ describe("applyBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)"
       hitlPending: 0,
       missionPendingToday: 4,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     const mission = decorated.find((i) => i.href === "/missions");
     expect(mission!.badgeCount).toBe(4);
@@ -269,6 +280,7 @@ describe("MainNavClient — parent 미션 badge UI 렌더", () => {
       hitlPending: 0,
       missionPendingToday: 2,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     render(<MainNavClient items={items} role="parent" userEmail={null} />);
 
@@ -300,6 +312,7 @@ describe("MainNavClient — parent 미션 badge UI 렌더", () => {
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     render(<MainNavClient items={items} role="parent" userEmail={null} />);
     expect(
@@ -322,6 +335,7 @@ describe("MainNavClient — parent 미션 badge UI 렌더", () => {
       hitlPending: 0,
       missionPendingToday: 7,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     render(<MainNavClient items={items} role="parent" userEmail={null} />);
     const nav = screen.getByTestId("main-nav");
@@ -348,6 +362,7 @@ describe("applyBadgeCounts — parent weeklyReportUnread (FR-WEEKLY-UNREAD)", ()
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 1,
+      consentReminderPending: 0,
     });
     const weekly = decorated.find((i) => i.href === "/weekly-review");
     expect(weekly).toBeTruthy();
@@ -366,6 +381,7 @@ describe("applyBadgeCounts — parent weeklyReportUnread (FR-WEEKLY-UNREAD)", ()
       hitlPending: 0,
       missionPendingToday: 2,
       weeklyReportUnread: 1,
+      consentReminderPending: 0,
     });
     expect(decorated.find((i) => i.href === "/weekly-review")!.badgeCount).toBe(1);
     expect(decorated.find((i) => i.href === "/missions")!.badgeCount).toBe(2);
@@ -379,6 +395,7 @@ describe("applyBadgeCounts — parent weeklyReportUnread (FR-WEEKLY-UNREAD)", ()
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 3,
+      consentReminderPending: 0,
     });
     const weekly = decorated.find((i) => i.href === "/weekly-review");
     expect(weekly!.badgeCount).toBe(3);
@@ -392,6 +409,7 @@ describe("MainNavClient — parent weekly-review badge UI 렌더", () => {
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 1,
+      consentReminderPending: 0,
     });
     render(<MainNavClient items={items} role="parent" userEmail={null} />);
 
@@ -423,6 +441,7 @@ describe("MainNavClient — parent weekly-review badge UI 렌더", () => {
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
     render(<MainNavClient items={items} role="parent" userEmail={null} />);
     expect(
@@ -444,6 +463,117 @@ describe("MainNavClient — parent weekly-review badge UI 렌더", () => {
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 2,
+      consentReminderPending: 0,
+    });
+    render(<MainNavClient items={items} role="parent" userEmail={null} />);
+    const nav = screen.getByTestId("main-nav");
+    expect(containsBannedTerms(nav.textContent ?? "")).toBe(false);
+    const links = Array.from(nav.querySelectorAll("a"));
+    for (const link of links) {
+      const label = link.getAttribute("aria-label") ?? "";
+      expect(
+        containsBannedTerms(label),
+        `aria-label="${label}" 가 금칙어 매칭됨`,
+      ).toBe(false);
+    }
+  });
+});
+
+// ============================================================================
+// FR-CONSENT-BADGE — parent/principal/teacher/admin 의 /settings 미서명 동의서 badge.
+// ============================================================================
+//
+// 검증 시나리오 (5건):
+//   [cb1] parent + consentReminderPending=1 → /settings item.badgeCount=1
+//   [cb2] admin (also has /settings) + consentReminderPending=2 → /settings badge=2 (decorator pure)
+//   [cb3] parent + 모든 카운트 0 → identity 반환 (consent 만 추가되어도 zero-allocation 보존)
+//   [cb4] UI 렌더 — parent + consentReminderPending=1 → "설정, 1건 미처리" + data-testid main-nav-badge-/settings
+//   [cb5] CON-04 — 설정 badge DOM 텍스트 + aria-label 금칙어 0건
+describe("applyBadgeCounts — consentReminderPending (FR-CONSENT-BADGE)", () => {
+  it("[cb1] parent + consentReminderPending=1 → /settings item.badgeCount=1", () => {
+    const base = buildNavItemsForRole("parent");
+    const decorated = applyBadgeCounts(base, {
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+      consentReminderPending: 1,
+    });
+    const settings = decorated.find((i) => i.href === "/settings");
+    expect(settings).toBeTruthy();
+    expect(settings!.badgeCount).toBe(1);
+    // 다른 parent 메뉴는 영향 없음.
+    for (const item of decorated) {
+      if (item.href !== "/settings") {
+        expect(item.badgeCount).toBeUndefined();
+      }
+    }
+  });
+
+  it("[cb2] admin items (also have /settings) + consentReminderPending=2 → /settings badge=2 (decorator pure)", () => {
+    // applyBadgeCounts 는 pure decorator — counts 그대로 적용. 실 production 에서는
+    // getNavBadgeCounts 가 admin role 에 대해 글로벌 pending 카운트를 반환 (정책 layering).
+    const base = buildNavItemsForRole("admin");
+    const decorated = applyBadgeCounts(base, {
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+      consentReminderPending: 2,
+    });
+    const settings = decorated.find((i) => i.href === "/settings");
+    expect(settings).toBeTruthy();
+    expect(settings!.badgeCount).toBe(2);
+  });
+
+  it("[cb3] parent + 모든 카운트 0 → identity 반환 (zero-allocation 보존)", () => {
+    const base = buildNavItemsForRole("parent");
+    const decorated = applyBadgeCounts(base, {
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+      consentReminderPending: 0,
+    });
+    expect(decorated).toBe(base);
+  });
+});
+
+describe("MainNavClient — /settings consent badge UI 렌더", () => {
+  it("[cb4] parent + consentReminderPending=1 → '설정, 1건 미처리' + data-testid main-nav-badge-/settings", () => {
+    usePathnameMock.mockReturnValue("/");
+    const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+      consentReminderPending: 1,
+    });
+    render(<MainNavClient items={items} role="parent" userEmail={null} />);
+
+    const desktop = screen.getByTestId("main-nav-desktop");
+    const settingsLink = Array.from(desktop.querySelectorAll("a")).find(
+      (a) => a.getAttribute("href") === "/settings",
+    );
+    expect(settingsLink).toBeTruthy();
+    expect(settingsLink!.getAttribute("aria-label")).toBe("설정, 1건 미처리");
+    const badge = settingsLink!.querySelector(
+      "[data-testid='main-nav-badge-/settings']",
+    );
+    expect(badge).toBeTruthy();
+    expect(badge!.textContent).toBe("1");
+
+    // 모바일 dot 노출.
+    const mobile = screen.getByTestId("main-nav-mobile-list");
+    const mobileBadge = mobile.querySelector(
+      "[data-testid='main-nav-mobile-badge-/settings']",
+    );
+    expect(mobileBadge).toBeTruthy();
+  });
+
+  it("[cb5] CON-04 — /settings consent badge DOM 텍스트 + aria-label 금칙어 0건", () => {
+    usePathnameMock.mockReturnValue("/");
+    const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+      consentReminderPending: 3,
     });
     render(<MainNavClient items={items} role="parent" userEmail={null} />);
     const nav = screen.getByTestId("main-nav");

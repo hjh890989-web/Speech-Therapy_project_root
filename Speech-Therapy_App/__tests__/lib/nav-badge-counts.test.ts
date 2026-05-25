@@ -28,6 +28,7 @@ const hitlCountMock = vi.fn();
 const userFindUniqueMock = vi.fn();
 
 const weeklyReportCountMock = vi.fn().mockResolvedValue(0);
+const consentSignatureCountMock = vi.fn().mockResolvedValue(0);
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -39,6 +40,9 @@ vi.mock("@/lib/db", () => ({
     },
     weeklyReport: {
       count: (...args: unknown[]) => weeklyReportCountMock(...args),
+    },
+    consentSignature: {
+      count: (...args: unknown[]) => consentSignatureCountMock(...args),
     },
   },
 }));
@@ -53,6 +57,8 @@ beforeEach(() => {
   userFindUniqueMock.mockReset();
   weeklyReportCountMock.mockReset();
   weeklyReportCountMock.mockResolvedValue(0);
+  consentSignatureCountMock.mockReset();
+  consentSignatureCountMock.mockResolvedValue(0);
 });
 
 afterEach(() => {
@@ -67,7 +73,12 @@ describe("getNavBadgeCounts — role 별 HITL 카운트 매트릭스", () => {
       institutionId: null,
       userId: "admin-user-1",
     });
-    expect(out).toEqual({ hitlPending: 7, missionPendingToday: 0, weeklyReportUnread: 0 });
+    expect(out).toEqual({
+      hitlPending: 7,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+      consentReminderPending: 0,
+    });
     // where 절: status in [pending, in_review] 만, user.institutionId 필터 없음.
     const args = hitlCountMock.mock.calls[0]![0] as {
       where: { status: { in: string[] }; user?: unknown };
@@ -146,8 +157,10 @@ describe("getNavBadgeCounts — role 별 HITL 카운트 매트릭스", () => {
     });
     expect(out.hitlPending).toBe(0);
     expect(out.weeklyReportUnread).toBe(0);
+    expect(out.consentReminderPending).toBe(0);
     expect(hitlCountMock).not.toHaveBeenCalled();
     expect(weeklyReportCountMock).not.toHaveBeenCalled();
+    expect(consentSignatureCountMock).not.toHaveBeenCalled();
   });
 
   it("[7] principal + institutionId=null → 0 graceful (query skip)", async () => {
@@ -171,6 +184,7 @@ describe("getNavBadgeCounts — role 별 HITL 카운트 매트릭스", () => {
       hitlPending: 0,
       missionPendingToday: 0,
       weeklyReportUnread: 0,
+      consentReminderPending: 0,
     });
   });
 

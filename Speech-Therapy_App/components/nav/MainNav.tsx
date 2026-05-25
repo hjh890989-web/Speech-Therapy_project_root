@@ -153,9 +153,12 @@ export async function fetchCurrentNavRole(): Promise<{
  *      대해서는 항상 0 을 반환하여 다른 role 의 미션 menu 에 badge 가 표시되지 않음.)
  *   - parent 의 "우리 아이 주간 리뷰" (/weekly-review) 항목 → counts.weeklyReportUnread
  *     (FR-WEEKLY-UNREAD — viewedAt IS NULL 인 본인 WeeklyReport 카운트. parent 외 role 0.)
+ *   - FR-CONSENT-BADGE — parent/principal/teacher/admin 의 "설정" (/settings) 항목 → counts.consentReminderPending
+ *     (parent 는 본인 email 의 미서명 ConsentSignature, principal/teacher 는 institution scope,
+ *      admin 은 전체. expert / anonymous 는 getNavBadgeCounts 가 0 반환하여 badge 미노출.)
  *   - anonymous : badge 없음 (메뉴 자체 부재)
  *   - 0 일 경우 badgeCount 미설정 (UI 시각 노이즈 최소화 — Client 에서 > 0 만 렌더)
- *   - 세 가지 모두 0 이면 items identity 반환 (zero-allocation 최적화 — 기존 회귀 0건 보장).
+ *   - 네 가지 모두 0 이면 items identity 반환 (zero-allocation 최적화 — 기존 회귀 0건 보장).
  *
  * 본 helper 는 pure (Prisma 호출 없음) — caller 가 미리 counts 를 fetch 하여 주입.
  */
@@ -166,7 +169,8 @@ export function applyBadgeCounts(
   const hasHitl = counts.hitlPending > 0;
   const hasMission = counts.missionPendingToday > 0;
   const hasWeeklyUnread = counts.weeklyReportUnread > 0;
-  if (!hasHitl && !hasMission && !hasWeeklyUnread) return items;
+  const hasConsent = counts.consentReminderPending > 0;
+  if (!hasHitl && !hasMission && !hasWeeklyUnread && !hasConsent) return items;
   return items.map((item) => {
     if (hasHitl && item.href === "/admin/hitl") {
       return { ...item, badgeCount: counts.hitlPending };
@@ -176,6 +180,9 @@ export function applyBadgeCounts(
     }
     if (hasWeeklyUnread && item.href === "/weekly-review") {
       return { ...item, badgeCount: counts.weeklyReportUnread };
+    }
+    if (hasConsent && item.href === "/settings") {
+      return { ...item, badgeCount: counts.consentReminderPending };
     }
     return item;
   });
@@ -215,7 +222,15 @@ export async function MainNav(props: MainNavProps = {}) {
   let items = buildNavItemsForRole(role);
   if (needsBadge && userId) {
     const institutionId = await getCachedUserInstitutionId(userId);
-    const counts = await getNavBadgeCounts({ role, institutionId, userId });
+    // FR-CONSENT-BADGE — parent 의 ConsentSignature.parentEmail 매칭용으로 userEmail 전달.
+    // userEmail 은 fetchCurrentNavRole 이 이미 Supabase auth 에서 fetch 한 값을 재활용
+    // (parent 외 role 도 caller 가 갖고 있다면 전달 OK, helper 측에서 사용 안 함).
+    const counts = await getNavBadgeCounts({
+      role,
+      institutionId,
+      userId,
+      userEmail: userEmail ?? null,
+    });
     items = applyBadgeCounts(items, counts);
   }
 
