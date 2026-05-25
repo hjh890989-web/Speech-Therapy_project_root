@@ -25,6 +25,8 @@ const getActiveUsersMock = vi.fn();
 const aggregateWeeklyReportMock = vi.fn();
 const upsertWeeklyReportMock = vi.fn();
 const sendSlackMessageMock = vi.fn();
+const sendWeeklyReportEmailMock = vi.fn();
+const findUniqueMock = vi.fn();
 
 vi.mock("@/lib/cron-auth", () => ({
   verifyCronSecret: (...args: unknown[]) => verifyCronSecretMock(...args),
@@ -43,6 +45,19 @@ vi.mock("@/lib/reports/weekly-aggregator", async () => {
 
 vi.mock("@/lib/notifications/slack", () => ({
   sendSlackMessage: (...args: unknown[]) => sendSlackMessageMock(...args),
+}));
+
+// FR-C-NOTIFICATION-PREFERENCE — weekly_report 이메일 발송 path mock (본 파일은 발송 검증 X).
+vi.mock("@/lib/email/weekly-report-email", () => ({
+  sendWeeklyReportEmail: (...args: unknown[]) => sendWeeklyReportEmailMock(...args),
+}));
+
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    user: {
+      findUnique: (...args: unknown[]) => findUniqueMock(...args),
+    },
+  },
 }));
 
 vi.mock("@/lib/weekly-report", () => ({
@@ -65,12 +80,17 @@ beforeEach(() => {
   aggregateWeeklyReportMock.mockReset();
   upsertWeeklyReportMock.mockReset();
   sendSlackMessageMock.mockReset();
+  sendWeeklyReportEmailMock.mockReset();
+  findUniqueMock.mockReset();
 
   // 기본: 인증 통과.
   verifyCronSecretMock.mockReturnValue({ ok: true });
   // 기본: 0 user (각 it 에서 override).
   getActiveUsersMock.mockResolvedValue([]);
   sendSlackMessageMock.mockResolvedValue({ ok: true });
+  // 본 파일은 이메일 발송 분기 검증 X — 항상 noop sent: true 로 응답.
+  sendWeeklyReportEmailMock.mockResolvedValue({ sent: true, skipped: false });
+  findUniqueMock.mockResolvedValue({ email: "parent@example.com" });
 });
 
 afterEach(() => {

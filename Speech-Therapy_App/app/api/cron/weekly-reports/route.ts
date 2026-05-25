@@ -1,4 +1,4 @@
-// INFRA-002 + FR-C-010 (#33) — 주간 리포트 Cron Route Handler.
+// INFRA-002 + FR-C-010 (#33) + FR-C-NOTIFICATION-PREFERENCE — 주간 리포트 Cron Route Handler.
 // schedule: 매주 일요일 03:00 UTC (한국 12시) — vercel.json 의 "0 3 * * 0"
 //
 // 동작:
@@ -6,11 +6,23 @@
 //  2) 지난 주의 ISO week 계산 + [weekStart, weekEnd) UTC 범위 산출
 //  3) 활성 user (evaluation_results 가 있는 unique user) 식별 → getActiveUsers
 //  4) 각 user 별 aggregateWeeklyReport → upsertWeeklyReport (멱등)
-//  5) 사용자별 실패는 graceful — failureCount 누적 + 다른 user 계속 진행
-//  6) 5건 이상 실패 시 Slack alert
-//  7) 응답: { successCount, failureCount, wAurAchievedCount, durationMs }
+//  5) upsert 직후 sendWeeklyReportEmail 호출 (preference 체크 + Resend 위임)
+//     - User.email 부재 → email skip (no_parent_email)
+//     - weeklyReportEmail opt-out → email skip (user_opt_out)
+//     - Resend 미설정 / 환경 graceful skip
+//     - 다른 user 처리 계속 (이메일 실패가 cron 전체를 막지 않음)
+//  6) 사용자별 실패는 graceful — failureCount 누적 + 다른 user 계속 진행
+//  7) 5건 이상 실패 시 Slack alert
+//  8) 응답: { successCount, failureCount, emailSentCount, emailSkippedCount,
+//            wAurAchievedCount, durationMs }
 //
-// 본 route 는 thin wrapper — 핵심 로직은 lib/reports/weekly-aggregator.ts.
+// 이메일 발송 option flag:
+//  - URL 쿼리 ?sendEmails=false → 본 실행에서 이메일 발송 skip (upsert 만).
+//  - 환경변수 WEEKLY_REPORT_EMAIL_DISABLED=1 → 모든 실행에서 이메일 발송 skip.
+//  - 기본값: 이메일 발송 활성 (default true).
+//
+// 본 route 는 thin wrapper — 핵심 로직은 lib/reports/weekly-aggregator.ts +
+// lib/email/weekly-report-email.ts.
 
 import { NextResponse } from "next/server";
 import { verifyCronSecret } from "@/lib/cron-auth";
@@ -21,8 +33,38 @@ import {
   upsertWeeklyReport,
 } from "@/lib/reports/weekly-aggregator";
 import { sendSlackMessage } from "@/lib/notifications/slack";
+import { sendWeeklyReportEmail } from "@/lib/email/weekly-report-email";
+import { prisma } from "@/lib/db";
 
 const SLACK_ALERT_THRESHOLD = 5;
+
+/// /weekly-review 페이지 base URL — sendWeeklyReportEmail 의 dashboardLink.
+/// 우선순위: NEXT_PUBLIC_SITE_URL > VERCEL_URL > localhost.
+function getDashboardLink(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicit && explicit.trim().length > 0) {
+    return `${explicit.replace(/\/$/, "")}/weekly-review`;
+  }
+  const vercelUrl = process.env.VERCEL_URL;
+  if (vercelUrl && vercelUrl.trim().length > 0) {
+    return `https://${vercelUrl.replace(/\/$/, "")}/weekly-review`;
+  }
+  return "http://localhost:4000/weekly-review";
+}
+
+/// URL ?sendEmails=false 또는 WEEKLY_REPORT_EMAIL_DISABLED=1 → 이메일 발송 skip.
+/// 기본 (URL 미전달 + 환경변수 미설정) → 이메일 발송 활성.
+function resolveSendEmailsFlag(request: Request): boolean {
+  if (process.env.WEEKLY_REPORT_EMAIL_DISABLED === "1") return false;
+  try {
+    const url = new URL(request.url);
+    const param = url.searchParams.get("sendEmails");
+    if (param !== null && param.toLowerCase() === "false") return false;
+  } catch {
+    // graceful — URL 파싱 실패 시 default true.
+  }
+  return true;
+}
 
 export async function GET(request: Request) {
   const auth = verifyCronSecret(request);
@@ -31,6 +73,7 @@ export async function GET(request: Request) {
   }
 
   const start = Date.now();
+  const sendEmailsEnabled = resolveSendEmailsFlag(request);
 
   // 지난 주의 ISO week 계산 (cron 은 일요일 03:00 UTC 발화 — "지난 주" = -7d 기준 ISO 주차).
   const now = new Date();
@@ -55,6 +98,11 @@ export async function GET(request: Request) {
   let successCount = 0;
   let failureCount = 0;
   let wAurAchievedCount = 0;
+  let emailSentCount = 0;
+  let emailSkippedCount = 0;
+  let emailFailedCount = 0;
+
+  const dashboardLink = getDashboardLink();
 
   for (const userId of userIds) {
     try {
@@ -70,6 +118,50 @@ export async function GET(request: Request) {
           `sessions=${data.sessionCount} wAurAchieved=${data.wAurAchieved} ` +
           `predicted=${data.predictedNextScore ?? "null"}`,
       );
+
+      // FR-C-NOTIFICATION-PREFERENCE — upsert 직후 weekly_report 이메일 발송.
+      // 본 실행이 sendEmails=false / WEEKLY_REPORT_EMAIL_DISABLED=1 일 때만 skip.
+      if (!sendEmailsEnabled) {
+        continue;
+      }
+      try {
+        // R4: parentEmail 만 select — 그 외 PII 미조회.
+        const userRow = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true },
+        });
+        const parentEmail = userRow?.email ?? "";
+        const emailResult = await sendWeeklyReportEmail({
+          userId,
+          parentEmail,
+          dashboardLink,
+          report: {
+            weekNumber: data.weekNumber,
+            year: data.year,
+            articulationAvg: data.articulationAvg,
+            linguisticAvg: data.linguisticAvg,
+            acousticAvg: data.acousticAvg,
+            sessionCount: data.sessionCount,
+            wAurAchieved: data.wAurAchieved,
+            predictedNextScore: data.predictedNextScore,
+          },
+        });
+        if (emailResult.sent) {
+          emailSentCount += 1;
+        } else if (emailResult.skipped) {
+          emailSkippedCount += 1;
+        } else {
+          emailFailedCount += 1;
+        }
+        console.log(
+          `weekly-reports: email userId=${userId} sent=${emailResult.sent} ` +
+            `skipped=${emailResult.skipped} error=${emailResult.error ?? "null"}`,
+        );
+      } catch (emailErr) {
+        // 이메일 실패 → cron 전체를 막지 않고 graceful counter 증가.
+        emailFailedCount += 1;
+        console.error("weekly-reports: email 발송 실패", userId, emailErr);
+      }
     } catch (err) {
       failureCount += 1;
       console.error("weekly-reports: user 처리 실패", userId, err);
@@ -92,6 +184,10 @@ export async function GET(request: Request) {
     successCount,
     failureCount,
     wAurAchievedCount,
+    emailEnabled: sendEmailsEnabled,
+    emailSentCount,
+    emailSkippedCount,
+    emailFailedCount,
     durationMs,
   });
 }

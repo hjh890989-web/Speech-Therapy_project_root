@@ -4,6 +4,8 @@
 //   - @/lib/supabase/server mock (auth.getUser + from(User).select)
 //   - @/lib/email/resend mock (sendEmail)
 //   - @/lib/auth/parent-invite mock (createParentInviteToken)
+//   - @/lib/db (prisma.user.findFirst) mock — FR-C-NOTIFICATION-PREFERENCE wrapper 가 user lookup
+//   - @/lib/notifications/preference mock — wrapper 의 opt-out 체크 우회 (본 파일 검증 X)
 //
 // 시나리오:
 //   1. 비로그인 → unauthorized, sent=false, skipped=true, sendEmail 미호출
@@ -45,6 +47,25 @@ vi.mock("@/lib/auth/parent-invite", () => ({
   createParentInviteToken: (...args: unknown[]) => createTokenMock(...args),
 }));
 
+// FR-C-NOTIFICATION-PREFERENCE — wrapper 의 user lookup / preference 체크 mock.
+// 본 파일은 sendParentInvite 의 RBAC + 발송 흐름 검증 — preference 분기는
+// __tests__/lib/parent-invite-email-preference.test.ts 가 별도 검증.
+const findFirstMock = vi.fn();
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    user: {
+      findFirst: (...args: unknown[]) => findFirstMock(...args),
+    },
+  },
+}));
+
+const getPrefMock = vi.fn();
+vi.mock("@/lib/notifications/preference", () => ({
+  getNotificationPreference: (...args: unknown[]) => getPrefMock(...args),
+  shouldSendEmail: (pref: Record<string, boolean>, kind: string) =>
+    pref[kind] !== false,
+}));
+
 import { sendParentInvite } from "@/app/actions/parent-invite";
 
 const PRINCIPAL_USER = "11111111-1111-4111-8111-111111111111";
@@ -56,10 +77,21 @@ beforeEach(() => {
   fromSelectMaybeSingleMock.mockReset();
   sendEmailMock.mockReset();
   createTokenMock.mockReset();
+  findFirstMock.mockReset();
+  getPrefMock.mockReset();
 
   // 기본값 — 정상 흐름 가정.
   createTokenMock.mockResolvedValue("jwt.payload.signature");
   sendEmailMock.mockResolvedValue({ ok: true, id: "email-1", skipped: false });
+  // 기본: 가입 전 부모 (User 미존재) — wrapper 가 preference 체크 우회, sendEmail 호출.
+  findFirstMock.mockResolvedValue(null);
+  // 안전 default — preference 체크가 발생해도 모두 opt-in (관찰 X).
+  getPrefMock.mockResolvedValue({
+    weeklyReportEmail: true,
+    cushionNoteEmail: true,
+    consentReminderEmail: true,
+    parentInviteEmail: true,
+  });
 });
 
 afterEach(() => {

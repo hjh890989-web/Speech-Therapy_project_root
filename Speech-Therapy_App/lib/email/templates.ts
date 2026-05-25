@@ -498,3 +498,152 @@ export function buildCushionNoteEmail(input: CushionNoteEmailInput): EmailTempla
 
   return { subject, html, text: textLines.join("\n") };
 }
+
+/// FR-C-010 + FR-C-NOTIFICATION-PREFERENCE — 주간 리포트 이메일 본문.
+///
+/// 본 템플릿은 매주 일요일 cron (app/api/cron/weekly-reports) 이 WeeklyReport upsert
+/// 직후 호출. 수신자 = 부모. 3축 평균 / sessionCount / 예측 점수를 자녀 친화 톤으로 요약.
+///
+/// CON-04 정책:
+///   - "발음 발달" / "주간 활동" / "다음 주 예상" 표현만 사용
+///   - "치료/진단/장애" 단어 절대 미포함
+///   - 의료 disclaimer 본문 하단 명시
+///
+/// R4 정책:
+///   - 수신자 = 부모이므로 childName 본문 포함 OK.
+///   - userId / weeklyReport id 등 식별자는 본문 미포함 (tags 만 호출 측에서 사용).
+export interface WeeklyReportEmailInput {
+  /// (선택) 부모 호칭. 인사말 "{parentName} 부모님께".
+  parentName?: string;
+  /// (선택) 자녀 이름. 본문 인사말 / subject 에 사용.
+  childName?: string;
+  /// ISO 8601 주차 (1~53).
+  weekNumber: number;
+  /// 연도 (예: 2026).
+  year: number;
+  /// 조음 평균 (0~100).
+  articulationAvg: number;
+  /// 어휘 평균 (0~100).
+  linguisticAvg: number;
+  /// 음향 평균 (0~100).
+  acousticAvg: number;
+  /// 주간 세션 수.
+  sessionCount: number;
+  /// W-AUR 충족 여부 (sessionCount ≥ W_AUR_MIN_SESSIONS).
+  wAurAchieved: boolean;
+  /// 다음 주 예상 점수 (0~100). null 이면 "준비 중" 표시.
+  predictedNextScore: number | null;
+  /// /weekly-review 페이지 link (RBAC 자동 검증).
+  dashboardLink: string;
+}
+
+/// 숫자 → 친화 포맷 (소수 1자리, 0~100 클램프).
+function fmtScore(value: number): string {
+  const n = Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
+  return (Math.round(n * 10) / 10).toFixed(1);
+}
+
+export function buildWeeklyReportEmail(
+  input: WeeklyReportEmailInput,
+): EmailTemplate {
+  const parent = input.parentName ? escapeHtml(input.parentName) : null;
+  const child = input.childName ? escapeHtml(input.childName) : null;
+  const link = escapeHtml(input.dashboardLink);
+  const greeting = parent
+    ? `${parent} 부모님께`
+    : child
+      ? `${child} 부모님께`
+      : "부모님께";
+  const childNoun = child ?? "자녀";
+
+  const articulation = fmtScore(input.articulationAvg);
+  const linguistic = fmtScore(input.linguisticAvg);
+  const acoustic = fmtScore(input.acousticAvg);
+  const sessionLabel = `${Math.max(0, Math.floor(input.sessionCount))}회`;
+  const wAurLine = input.wAurAchieved
+    ? "이번 주 주간 활동 목표를 달성했어요. 잘 했어요!"
+    : "이번 주 주간 활동이 조금 부족했어요. 다음 주에 다시 함께해요.";
+  const predictedLine =
+    input.predictedNextScore === null
+      ? "다음 주 예상 점수는 데이터가 더 모이면 알려드릴게요."
+      : `다음 주 예상 평균은 약 ${fmtScore(input.predictedNextScore)} 점이에요.`;
+  const childSafeForSubject = input.childName
+    ? `${input.childName} `
+    : "";
+
+  const subject = `[Speech-Therapy] ${childSafeForSubject}${input.year}년 ${input.weekNumber}주차 발음 발달 요약`;
+
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>${escapeHtml(subject)}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 24px;">
+  <h1 style="font-size: 20px; margin-bottom: 16px;">${greeting}</h1>
+  <p style="font-size: 15px; line-height: 1.6;">
+    이번 주 ${escapeHtml(childNoun)} 의 발음 발달 활동을 한 눈에 요약해 드려요.
+  </p>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px;">
+    <tr>
+      <td style="padding: 8px 12px; background: #f5f7fa; border: 1px solid #e5e7eb;">조음 평균</td>
+      <td style="padding: 8px 12px; border: 1px solid #e5e7eb; text-align: right;">${articulation} 점</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px 12px; background: #f5f7fa; border: 1px solid #e5e7eb;">어휘 평균</td>
+      <td style="padding: 8px 12px; border: 1px solid #e5e7eb; text-align: right;">${linguistic} 점</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px 12px; background: #f5f7fa; border: 1px solid #e5e7eb;">음향 평균</td>
+      <td style="padding: 8px 12px; border: 1px solid #e5e7eb; text-align: right;">${acoustic} 점</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px 12px; background: #f5f7fa; border: 1px solid #e5e7eb;">주간 세션 수</td>
+      <td style="padding: 8px 12px; border: 1px solid #e5e7eb; text-align: right;">${sessionLabel}</td>
+    </tr>
+  </table>
+
+  <p style="font-size: 14px; line-height: 1.6; color: #2563eb;">${wAurLine}</p>
+  <p style="font-size: 14px; line-height: 1.6; color: #555;">${predictedLine}</p>
+
+  <p style="text-align: center; margin: 32px 0;">
+    <a href="${link}" style="display: inline-block; padding: 12px 24px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">
+      이번 주 상세 결과 보기
+    </a>
+  </p>
+  <p style="font-size: 13px; color: #666; line-height: 1.5;">
+    링크가 동작하지 않으면 아래 주소를 브라우저에 복사하세요:<br>
+    <span style="word-break: break-all;">${link}</span>
+  </p>
+
+  <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+  <p style="font-size: 11px; color: #999;">
+    본 메일은 발신 전용입니다. /settings/notifications 에서 주간 요약 알림을 끌 수 있어요.<br>
+    Speech-Therapy 는 의료 서비스가 아닌 부모 정보 제공용 보조 도구입니다.
+  </p>
+</body>
+</html>`;
+
+  const textLines = [
+    greeting,
+    "",
+    `이번 주 ${input.childName ?? "자녀"} 의 발음 발달 활동을 한 눈에 요약해 드려요.`,
+    "",
+    `- 조음 평균: ${articulation} 점`,
+    `- 어휘 평균: ${linguistic} 점`,
+    `- 음향 평균: ${acoustic} 점`,
+    `- 주간 세션 수: ${sessionLabel}`,
+    "",
+    wAurLine,
+    predictedLine,
+    "",
+    `상세 결과 보기: ${input.dashboardLink}`,
+    "",
+    "---",
+    "본 메일은 발신 전용입니다. /settings/notifications 에서 주간 요약 알림을 끌 수 있어요.",
+    "Speech-Therapy 는 의료 서비스가 아닌 부모 정보 제공용 보조 도구입니다.",
+  ];
+
+  return { subject, html, text: textLines.join("\n") };
+}

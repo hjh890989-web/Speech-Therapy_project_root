@@ -8,7 +8,8 @@
 //   3) createParentInviteToken — 7일 JWT 발급
 //   4) signupLink = `${BASE_URL}/signup/parent?token=...`
 //   5) buildParentInviteEmail — CON-04 검증된 본문 생성
-//   6) sendEmail — Resend graceful (env 미설정 / 금칙어 / 5xx 모두 skip 처리)
+//   6) sendParentInviteEmailWithPreference — User lookup → preference 체크 후 Resend 위임
+//      (가입 전 부모: preference 미적용 / 가입된 부모: parentInviteEmail opt-out 시 skipped)
 //   7) server-side telemetry log — parent_invite_sent
 //
 // graceful (throw 절대 금지):
@@ -27,7 +28,7 @@
 
 import { createParentInviteToken } from "@/lib/auth/parent-invite";
 import { buildParentInviteEmail } from "@/lib/email/templates";
-import { sendEmail } from "@/lib/email/resend";
+import { sendParentInviteEmailWithPreference } from "@/lib/parent-invite/email-with-preference";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 /// 본 Action 허용 role — principal 와 admin (expert 제외, 부모/교사 차단).
@@ -51,16 +52,18 @@ export interface SendParentInviteInput {
 export interface SendParentInviteResult {
   /// 실 발송 (Resend ok) 성공 시 true.
   sent: boolean;
-  /// 환경 미설정 / 권한 / Resend 실패 등으로 발송 skip 된 경우 true.
+  /// 환경 미설정 / 권한 / Resend 실패 / 사용자 opt-out 으로 발송 skip 된 경우 true.
   /// (sent=true 일 때는 항상 false)
   skipped: boolean;
   /// skip 사유 (UI / 분석 분기).
+  /// - 'user_opt_out': FR-C-NOTIFICATION-PREFERENCE — 이미 가입한 부모가 parentInviteEmail 옵션을 false 로 설정한 경우.
   reason?:
     | "unauthorized"
     | "forbidden"
     | "invalid_input"
     | "jwt_misconfigured"
-    | "email_failed";
+    | "email_failed"
+    | "user_opt_out";
   /// (디버깅 / 텔레메트리) 발급된 token 식별자 — 본 PR 은 token 자체를 반환하지 않음 (R4).
   tokenIssued: boolean;
 }
@@ -227,8 +230,9 @@ export async function sendParentInvite(
   });
 
   // 6) Resend 발송 — graceful (env 미설정 / 5xx / 금칙어 등 모두 skipped 분기).
-  const sendResult = await sendEmail({
-    to: parentEmail,
+  //    FR-C-NOTIFICATION-PREFERENCE: 이미 가입한 부모는 parentInviteEmail opt-out 시 skipped.
+  const sendResult = await sendParentInviteEmailWithPreference({
+    parentEmail,
     subject: tpl.subject,
     html: tpl.html,
     text: tpl.text,
@@ -244,6 +248,15 @@ export async function sendParentInvite(
 
   if (sendResult.ok) {
     return { sent: true, skipped: false, tokenIssued: true };
+  }
+  // user_opt_out 은 별도 reason 으로 노출 (UI / 분석에서 'email_failed' 와 구분).
+  if (sendResult.skipped && sendResult.error === "user_opt_out") {
+    return {
+      sent: false,
+      skipped: true,
+      reason: "user_opt_out",
+      tokenIssued: true,
+    };
   }
   return {
     sent: false,
