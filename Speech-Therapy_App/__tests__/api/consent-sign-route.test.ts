@@ -35,8 +35,11 @@ vi.mock("@/lib/consent/repo", () => ({
     createOrReturnPendingConsentMock(...args),
   CONSENT_EXPIRE_DAYS: 7,
 }));
-vi.mock("@/lib/email/resend", () => ({
-  sendEmail: (...args: unknown[]) => sendEmailMock(...args),
+// FR-C-NOTIFICATION-PREFERENCE — route 가 sendConsentEmailWithPreference 를 통해 우회.
+//   본 단위 테스트에선 wrapper 를 mock 하여 sendEmail 호출만 검증 (preference 로직은
+//   __tests__/lib/consent-email-preference.test.ts 가 책임).
+vi.mock("@/lib/consent/email", () => ({
+  sendConsentEmailWithPreference: (...args: unknown[]) => sendEmailMock(...args),
 }));
 
 // next/headers cookies — happy-dom 에서도 안전한 mock.

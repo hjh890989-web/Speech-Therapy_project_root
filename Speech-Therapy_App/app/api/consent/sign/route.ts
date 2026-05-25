@@ -41,7 +41,7 @@ import {
   createOrReturnPendingConsent,
   CONSENT_EXPIRE_DAYS,
 } from "@/lib/consent/repo";
-import { sendEmail } from "@/lib/email/resend";
+import { sendConsentEmailWithPreference } from "@/lib/consent/email";
 import { buildConsentSignatureEmail } from "@/lib/email/templates";
 
 const IDEMPOTENCY_HEADER = "x-idempotency-key";
@@ -167,12 +167,18 @@ export async function POST(request: Request) {
       consentType: row.consentType === "data_usage" ? "데이터 활용" : row.consentType,
       expiresAt,
     });
-    const result = await sendEmail({
+    // FR-C-NOTIFICATION-PREFERENCE — sendConsentEmailWithPreference 가 parentEmail 로
+    //   가입한 User row 가 있으면 consentReminderEmail 옵션을 확인해 opt-out 시 차단.
+    //   가입 전 부모는 DEFAULTS 정책으로 그대로 발송 (FR-C-018 흐름 유지).
+    const result = await sendConsentEmailWithPreference({
       to: row.parentEmail,
+      parentEmail: row.parentEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,
       tags: [{ name: "template", value: "consent_signature" }],
+      // 초기 발송도 가입한 user 의 opt-out 을 존중 (옵션 B). 가입 전이면 자동 발송 진행.
+      skipPreferenceCheck: false,
     });
     emailSkipped = !result.ok;
     if (!result.ok && !result.skipped) {

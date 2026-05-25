@@ -25,7 +25,7 @@ import {
   markExpired,
   CONSENT_BATCH_LIMIT,
 } from "@/lib/consent/repo";
-import { sendEmail } from "@/lib/email/resend";
+import { sendConsentEmailWithPreference } from "@/lib/consent/email";
 import { buildConsentExpiredEmail } from "@/lib/email/templates";
 
 interface ExpireError {
@@ -83,16 +83,21 @@ export async function GET(request: Request) {
         originalSentAt: row.sentAt.toISOString(),
         consentType: row.consentType === "data_usage" ? "데이터 활용" : row.consentType,
       });
-      const result = await sendEmail({
+      // FR-C-NOTIFICATION-PREFERENCE — opt-out user 의 만료 안내는 차단 (consentReminderEmail 키 재사용).
+      //   markExpired 는 이미 위에서 수행됨 — DB 정합 우선 정책 유지.
+      const result = await sendConsentEmailWithPreference({
         to: row.parentEmail,
+        parentEmail: row.parentEmail,
         subject: template.subject,
         html: template.html,
         text: template.text,
         tags: [{ name: "template", value: "consent_expired" }],
+        skipPreferenceCheck: false,
       });
       if (result.ok) {
         emailSentCount += 1;
       } else if (result.skipped) {
+        // opt-out / API key 미설정 모두 동일 카운트 — manual 운영 분리는 본 PR 범위 외.
         emailSkippedCount += 1;
       } else {
         errors.push({

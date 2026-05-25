@@ -24,8 +24,10 @@ vi.mock("@/lib/consent/repo", () => ({
   markExpired: (...args: unknown[]) => markExpiredMock(...args),
   CONSENT_BATCH_LIMIT: 100,
 }));
-vi.mock("@/lib/email/resend", () => ({
-  sendEmail: (...args: unknown[]) => sendEmailMock(...args),
+// FR-C-NOTIFICATION-PREFERENCE — cron 이 sendConsentEmailWithPreference 통해 우회.
+//   본 단위 테스트에선 wrapper 를 mock 하여 cron 흐름만 검증.
+vi.mock("@/lib/consent/email", () => ({
+  sendConsentEmailWithPreference: (...args: unknown[]) => sendEmailMock(...args),
 }));
 
 import { GET } from "@/app/api/cron/consent-expire/route";

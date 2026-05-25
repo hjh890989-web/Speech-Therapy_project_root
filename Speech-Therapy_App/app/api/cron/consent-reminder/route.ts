@@ -28,7 +28,7 @@ import {
   daysSince,
   CONSENT_BATCH_LIMIT,
 } from "@/lib/consent/repo";
-import { sendEmail } from "@/lib/email/resend";
+import { sendConsentEmailWithPreference } from "@/lib/consent/email";
 import { buildConsentReminderEmail } from "@/lib/email/templates";
 
 interface ReminderError {
@@ -88,12 +88,17 @@ export async function GET(request: Request) {
           row.sentAt.getTime() + 7 * 24 * 60 * 60 * 1000,
         ).toISOString(),
       });
-      const result = await sendEmail({
+      // FR-C-NOTIFICATION-PREFERENCE — 가입 user 가 consentReminderEmail 을 opt-out 한 경우
+      //   skipped=true + error='user_opt_out' 응답 → markReminded(spam 방지) 적용.
+      //   가입 전 부모는 preference 미적용으로 그대로 발송.
+      const result = await sendConsentEmailWithPreference({
         to: row.parentEmail,
+        parentEmail: row.parentEmail,
         subject: template.subject,
         html: template.html,
         text: template.text,
         tags: [{ name: "template", value: "consent_reminder" }],
+        skipPreferenceCheck: false,
       });
       if (result.ok) {
         // 발송 성공 — remindedAt 마킹.
@@ -101,6 +106,14 @@ export async function GET(request: Request) {
         sentCount += 1;
         console.log(
           `consent_reminded consentId=${row.id} daysFromSent=${daysFromSent}`,
+        );
+      } else if (result.skipped && result.error === "user_opt_out") {
+        // 사용자 opt-out — 같은 row 가 매번 cron 마다 재평가되지 않도록 markReminded 적용
+        //   (spam 방지 + cron 비용 절감). 1회 처리로 본 row 는 다음 cron 후보에서 제외.
+        await markReminded(row.id, now);
+        skippedCount += 1;
+        console.log(
+          `consent_reminder_opt_out consentId=${row.id} daysFromSent=${daysFromSent}`,
         );
       } else if (result.skipped) {
         // RESEND_API_KEY 미설정 / NODE_ENV='test' — markReminded 하지 않음 (다음 cron 재시도).
