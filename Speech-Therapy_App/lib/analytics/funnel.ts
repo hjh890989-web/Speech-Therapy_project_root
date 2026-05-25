@@ -44,7 +44,11 @@
 //     (기존 호출자 / 단위 테스트 회귀 방지). 신규 호출자는 KST 변형 사용 권장.
 
 import { prisma } from "@/lib/db";
-import { kstStartOfDay, KST_OFFSET_MS } from "@/lib/timeline/tz";
+import {
+  formatKstDate as formatKstDateCanonical,
+  toDayStartKst as toDayStartKstCanonical,
+  addKstDays as addKstDaysCanonical,
+} from "@/lib/timeline/tz";
 
 export type FunnelStepName =
   | "landing"
@@ -90,14 +94,10 @@ export function formatUtcDate(date: Date): string {
 }
 
 /// YYYY-MM-DD (KST) 포맷터 — 본 instant 의 KST 일자 wall-clock.
-/// TZ 통일 (9f204cd 후속): funnel 일간 그루핑의 표시 라벨 / 키.
+/// FR-TZ-UNIFY-EXTEND: 본 함수는 `lib/timeline/tz.ts::formatKstDate` 의 thin re-export.
+/// 신규 호출자는 `@/lib/timeline/tz` 직접 import 권장 (단일 진실).
 export function formatKstDate(date: Date): string {
-  // KST wall-clock 으로 +9h 후 UTC 메서드로 KST 일자 추출.
-  const shifted = new Date(date.getTime() + KST_OFFSET_MS);
-  const year = shifted.getUTCFullYear();
-  const month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(shifted.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return formatKstDateCanonical(date);
 }
 
 /// UTC 자정 정렬 (date 부분만 보존).
@@ -108,8 +108,9 @@ export function toDayStartUtc(date: Date): Date {
 
 /// KST 자정 정렬 — `kstStartOfDay` 의 funnel 도메인 alias.
 /// 반환 Date 는 "KST 일자의 자정" instant (UTC 로는 전날 15:00).
+/// FR-TZ-UNIFY-EXTEND: 본 함수는 `lib/timeline/tz.ts::toDayStartKst` 의 thin re-export.
 export function toDayStartKst(date: Date): Date {
-  return kstStartOfDay(date);
+  return toDayStartKstCanonical(date);
 }
 
 /// UTC 일 단위 가산.
@@ -122,8 +123,9 @@ export function addUtcDays(date: Date, days: number): Date {
 
 /// KST 일 단위 가산 — Korea DST 없음으로 24h * days 단순 가산.
 /// 반환 instant 는 `date` 의 KST wall-clock 에서 `days` 만큼 더한 시각.
+/// FR-TZ-UNIFY-EXTEND: 본 함수는 `lib/timeline/tz.ts::addKstDays` 의 thin re-export.
 export function addKstDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+  return addKstDaysCanonical(date, days);
 }
 
 interface RawCounts {

@@ -33,6 +33,7 @@ import {
 } from "@/lib/admin/audit-aggregator";
 import { AuditLogFilter } from "@/components/admin/audit/AuditLogFilter";
 import { AuditLogTable } from "@/components/admin/audit/AuditLogTable";
+import { kstStartOfDay, addKstDays } from "@/lib/timeline/tz";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,12 @@ export const metadata = {
 const PAGE_ALLOWED_ROLE = "admin";
 
 /**
- * YYYY-MM-DD (HTML date input) → Date (UTC 자정).
+ * YYYY-MM-DD (HTML date input) → Date (KST 자정 instant).
+ *
+ * FR-TZ-UNIFY-EXTEND: 한국 사용자의 "오늘" 은 KST 기준 — UTC 자정 (= KST 09:00) 로
+ * 해석하면 9시간 미스매치 (예: 사용자가 "2026-05-25" 를 선택했지만 KST 5-25 00:00 ~
+ * 5-25 08:59 의 row 가 누락됨). KST 자정 (= UTC 전날 15:00) 으로 보정.
+ *
  * 유효성 검사 실패 시 undefined.
  */
 function parseDateParam(raw: string | undefined): Date | undefined {
@@ -55,16 +61,19 @@ function parseDateParam(raw: string | undefined): Date | undefined {
   if (trimmed.length === 0) return undefined;
   // YYYY-MM-DD 형식만 허용 (사용자 입력 sanitize 1차).
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return undefined;
-  const d = new Date(`${trimmed}T00:00:00.000Z`);
-  if (Number.isNaN(d.getTime())) return undefined;
-  return d;
+  // 일자 valid 검증 — `new Date("YYYY-MM-DDT00:00:00.000Z")` 로 1차 파싱 후 NaN 체크.
+  // 결과 instant 자체는 KST 자정 정렬 (kstStartOfDay) 로 재조정.
+  const parsed = new Date(`${trimmed}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  return kstStartOfDay(parsed);
 }
 
-/// toDate 는 종일 포함 — 23:59:59.999Z 까지.
+/// toDate 는 종일 포함 — KST 자정 다음날 - 1ms (= 같은 KST 일자의 23:59:59.999).
+/// FR-TZ-UNIFY-EXTEND: 기존엔 UTC 자정 + 24h - 1ms 였으나, KST 보정 후엔 KST 자정 + 24h - 1ms.
 function parseDateParamEndOfDay(raw: string | undefined): Date | undefined {
-  const d = parseDateParam(raw);
-  if (!d) return undefined;
-  return new Date(d.getTime() + 24 * 60 * 60 * 1000 - 1);
+  const start = parseDateParam(raw);
+  if (!start) return undefined;
+  return new Date(addKstDays(start, 1).getTime() - 1);
 }
 
 /// 사용자 입력 actorId / tableName 1차 sanitize — 길이 / 공백 trim.

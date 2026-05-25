@@ -22,6 +22,7 @@
 import { useState } from "react";
 
 import type { AuditLogEntry } from "@/lib/admin/audit-aggregator";
+import { formatKstDateTime } from "@/lib/timeline/tz";
 
 import { AuditLogDetailModal } from "./AuditLogDetailModal";
 
@@ -37,12 +38,14 @@ function truncateId(value: string | null | undefined, len = 8): string {
   return `${value.slice(0, len)}…`;
 }
 
-/// createdAt 이 string 으로 들어와도 안전하게 ISO 표시.
+/// createdAt 이 string 으로 들어와도 안전하게 KST 시각으로 표시.
+/// FR-TZ-UNIFY-EXTEND: 기존 ISO (UTC 기준) → KST wall-clock 으로 통일.
+/// 한국 사용자가 인지하는 발생 시각 그대로 노출 (서버 TZ 무관).
 function formatCreatedAt(value: Date | string | number): string {
   try {
     const d = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(d.getTime())) return String(value);
-    return d.toISOString().replace("T", " ").slice(0, 19);
+    return formatKstDateTime(d);
   } catch {
     return String(value);
   }

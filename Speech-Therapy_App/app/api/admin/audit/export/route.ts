@@ -34,6 +34,7 @@ import {
   type AuditLogFilter,
 } from "@/lib/admin/audit-aggregator";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { kstStartOfDay, addKstDays, formatKstDate } from "@/lib/timeline/tz";
 
 export const dynamic = "force-dynamic";
 
@@ -58,21 +59,26 @@ function sanitizeStringParam(
   return trimmed;
 }
 
-/** YYYY-MM-DD 형식만 허용 (사용자 입력 sanitize 1차). */
+/**
+ * YYYY-MM-DD 형식만 허용 (사용자 입력 sanitize 1차).
+ *
+ * FR-TZ-UNIFY-EXTEND: 입력 일자를 KST 자정 (UTC 전날 15:00) 으로 정렬 — admin 페이지의
+ * `parseDateParam` 과 동일 정책. UTC 자정 (= KST 09:00) 으로 해석하면 9 시간 누락 발생.
+ */
 function parseDateParam(raw: string | null | undefined): Date | undefined {
   if (!raw || typeof raw !== "string") return undefined;
   const trimmed = raw.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return undefined;
-  const d = new Date(`${trimmed}T00:00:00.000Z`);
-  if (Number.isNaN(d.getTime())) return undefined;
-  return d;
+  const parsed = new Date(`${trimmed}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return undefined;
+  return kstStartOfDay(parsed);
 }
 
-/** toDate 는 종일 포함 (23:59:59.999Z). */
+/** toDate 는 종일 포함 — KST 자정 다음날 - 1ms (= 같은 KST 일자의 23:59:59.999 in KST). */
 function parseDateParamEndOfDay(raw: string | null | undefined): Date | undefined {
-  const d = parseDateParam(raw);
-  if (!d) return undefined;
-  return new Date(d.getTime() + 24 * 60 * 60 * 1000 - 1);
+  const start = parseDateParam(raw);
+  if (!start) return undefined;
+  return new Date(addKstDays(start, 1).getTime() - 1);
 }
 
 /** format 파라미터 정규화. csv / json 외 입력 → json 폴백 (안전한 default). */
@@ -81,12 +87,16 @@ function parseFormat(raw: string | null | undefined): ExportFormat {
   return "json";
 }
 
-/** Date → YYYYMMDD 변환 (UTC 기준 filename 안전). */
+/**
+ * Date → YYYYMMDD 변환 (KST 일자 기준 filename).
+ *
+ * FR-TZ-UNIFY-EXTEND: 한국 사용자가 다운로드한 파일의 일자 라벨은 사용자의 KST 인지
+ * 일자 — 예: 사용자가 KST 2026-05-26 00:30 에 다운로드해도 UTC 로는 5-25 15:30 이라
+ * 기존 UTC 라벨은 "audit-20260525.csv" 였음. KST 라벨로 통일하여 사용자 기대치에 맞춤.
+ */
 function toFilenameDate(date: Date): string {
-  const yyyy = date.getUTCFullYear().toString().padStart(4, "0");
-  const mm = (date.getUTCMonth() + 1).toString().padStart(2, "0");
-  const dd = date.getUTCDate().toString().padStart(2, "0");
-  return `${yyyy}${mm}${dd}`;
+  // formatKstDate 는 "YYYY-MM-DD" → 하이픈 제거하여 filename 안전 8자.
+  return formatKstDate(date).replace(/-/g, "");
 }
 
 /**

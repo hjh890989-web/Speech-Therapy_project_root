@@ -163,7 +163,10 @@ describe("/admin/audit — DB-011 audit 페이지 RBAC + 필터 + 페이지네�
     expect(loadAuditLogsMock).not.toHaveBeenCalled();
   });
 
-  it("[6] 필터 적용 — searchParams 가 loadAuditLogs 인자로 정확 전달 + sanitize", async () => {
+  it("[6] 필터 적용 — searchParams 가 loadAuditLogs 인자로 정확 전달 + sanitize (KST 자정 기준)", async () => {
+    // FR-TZ-UNIFY-EXTEND: 한국 사용자의 "2026-05-01" 은 KST 5-01 00:00 (= UTC 4-30 15:00).
+    // 기존 UTC 자정 해석 (= "2026-05-01T00:00:00.000Z") 은 KST 5-01 09:00 ~ 5-01 23:59 의
+    // row 만 매칭 → 9시간 누락. KST 자정 보정으로 일자 정합 보장.
     setAuthRole(USER_ADMIN, "admin");
     loadAuditLogsMock.mockResolvedValueOnce({ entries: [], hasMore: false });
 
@@ -183,10 +186,11 @@ describe("/admin/audit — DB-011 audit 페이지 RBAC + 필터 + 페이지네�
     expect(filter.actorId).toBe("user-uuid-xyz"); // trim 적용.
     expect(filter.tableName).toBe("ConsentSignature");
     expect(filter.fromDate).toBeInstanceOf(Date);
-    expect(filter.fromDate.toISOString()).toBe("2026-05-01T00:00:00.000Z");
+    // KST 2026-05-01 00:00 = UTC 2026-04-30 15:00.
+    expect(filter.fromDate.toISOString()).toBe("2026-04-30T15:00:00.000Z");
     expect(filter.toDate).toBeInstanceOf(Date);
-    // 종일 포함 — 24h - 1ms.
-    expect(filter.toDate.toISOString()).toBe("2026-05-25T23:59:59.999Z");
+    // 종일 포함 — KST 2026-05-25 23:59:59.999 = UTC 2026-05-25 14:59:59.999.
+    expect(filter.toDate.toISOString()).toBe("2026-05-25T14:59:59.999Z");
     expect(cursor).toBeUndefined();
   });
 

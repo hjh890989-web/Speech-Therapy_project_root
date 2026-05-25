@@ -66,3 +66,72 @@ export function kstDaysAgoStart(daysAgo: number, ref: Date = new Date()): Date {
   const todayStart = kstStartOfDay(ref);
   return new Date(todayStart.getTime() - daysAgo * 24 * 60 * 60 * 1000);
 }
+
+/**
+ * `kstStartOfDay` 의 funnel / 일반 도메인 alias.
+ *
+ * 호출 측이 "이 instant 의 KST 일자 자정" 을 명확히 의도할 때 사용.
+ * 반환 Date 는 KST 자정 (UTC 로는 전날 15:00) instant.
+ *
+ * (`lib/analytics/funnel.ts` 에도 동일 이름이 backwards-compat re-export 로 존재.)
+ */
+export function toDayStartKst(date: Date): Date {
+  return kstStartOfDay(date);
+}
+
+/**
+ * KST 일 단위 가산 — Korea DST 없음으로 24h × days 단순 가산.
+ *
+ * 반환 instant 는 `date` 의 KST wall-clock 에서 `days` 만큼 더한 시각.
+ * KST 자정 boundary 입력에 적합 (`toDayStartKst` 와 조합).
+ *
+ * (`lib/analytics/funnel.ts` 에도 동일 이름이 backwards-compat re-export 로 존재.)
+ */
+export function addKstDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * 입력 instant 의 KST 일자를 `YYYY-MM-DD` 문자열로 반환.
+ *
+ * 사용처:
+ *   - UI 의 "발생일" 라벨 (예: AuditLog row 의 createdAt 표시).
+ *   - 일간 그루핑 key (funnel / 통계 / 알림 등).
+ *
+ * 정책:
+ *   - +9h offset 후 UTC 메서드로 KST wall-clock 추출 — 서버 TZ 의존 0.
+ *   - DST 없음 — 단순 산술 안전.
+ *
+ * 예: 2026-05-25T23:00:00+09:00 (UTC 14:00) → "2026-05-25"
+ *     2026-05-26T00:00:00+09:00 (UTC 15:00 전일) → "2026-05-26"
+ *
+ * (`lib/analytics/funnel.ts` 에도 동일 이름이 backwards-compat re-export 로 존재.)
+ */
+export function formatKstDate(date: Date): string {
+  const shifted = new Date(date.getTime() + KST_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(shifted.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * 입력 instant 의 KST 일자/시각 라벨 (`YYYY-MM-DD HH:mm:ss`).
+ *
+ * 사용처:
+ *   - UI 의 "발생 시각" 라벨 (예: AuditLog row 의 createdAt 표시).
+ *
+ * 정책:
+ *   - 한국 사용자의 wall-clock (KST 기준 HH:mm:ss) 를 그대로 표시.
+ *   - 서버 TZ (Vercel UTC) 의존 0 — Intl 의존 회피로 단순 산술만 사용.
+ */
+export function formatKstDateTime(date: Date): string {
+  const shifted = new Date(date.getTime() + KST_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(shifted.getUTCDate()).padStart(2, "0");
+  const hour = String(shifted.getUTCHours()).padStart(2, "0");
+  const minute = String(shifted.getUTCMinutes()).padStart(2, "0");
+  const second = String(shifted.getUTCSeconds()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}

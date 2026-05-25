@@ -23,6 +23,7 @@
 import { useEffect, useCallback } from "react";
 
 import type { AuditLogEntry } from "@/lib/admin/audit-aggregator";
+import { formatKstDateTime } from "@/lib/timeline/tz";
 
 export interface AuditLogDetailModalProps {
   /// 표시할 entry. null 이면 modal 미렌더.
@@ -133,12 +134,21 @@ export function AuditLogDetailModal({ entry, onClose }: AuditLogDetailModalProps
             </div>
             <div className="sm:col-span-2">
               <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                발생 시각
+                발생 시각 (KST)
               </dt>
               <dd className="mt-1">
+                {/*
+                  FR-TZ-UNIFY-EXTEND: 한국 사용자 wall-clock (KST) 으로 표시.
+                  기존 toISOString (UTC) 은 9시간 어긋나 운영팀이 헷갈림.
+                */}
                 {entry.createdAt instanceof Date
-                  ? entry.createdAt.toISOString()
-                  : String(entry.createdAt)}
+                  ? formatKstDateTime(entry.createdAt)
+                  : (() => {
+                      const d = new Date(entry.createdAt as unknown as string);
+                      return Number.isNaN(d.getTime())
+                        ? String(entry.createdAt)
+                        : formatKstDateTime(d);
+                    })()}
               </dd>
             </div>
           </dl>
