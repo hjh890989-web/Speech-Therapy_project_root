@@ -276,6 +276,10 @@ export async function sendCushionNoteToParent(
     noteText: parsed.noteText,
     senderName: parsed.senderName?.trim() || undefined,
     institutionName,
+    // FR-C-NOTIFICATION-PREFERENCE — 수신자 (자녀 own evaluation 의 parent user) 옵션 확인.
+    // admin override 경로에서도 동일하게 EvaluationResult.userId 의 preference 가 적용 — admin 이
+    // 다른 이메일로 보내더라도 _수신자가 본인 이메일을 가진 parent user_ 의 의사 존중.
+    recipientUserId: evaluation.userId,
   });
 
   return {

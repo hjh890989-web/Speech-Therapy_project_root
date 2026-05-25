@@ -1,0 +1,53 @@
+-- ============================================================================
+-- FR-C-NOTIFICATION-PREFERENCE — User.notificationPreference JSONB 컬럼 추가.
+-- Refs: app/(public)/settings/notifications/page.tsx,
+--       app/actions/update-notification-preference.ts,
+--       lib/notifications/preference.ts.
+-- ============================================================================
+--
+-- 목적:
+--   - 부모가 /settings/notifications 에서 선택한 알림 종류별 opt-in/out 선호를
+--     canonical 서버 상태로 보존.
+--   - Resend 발송 path (cushion-note / weekly-report / consent reminder / parent invite)
+--     이 본 컬럼을 참조해 발송 / skip 분기.
+--
+-- 정책:
+--   - shape (런타임 Zod 검증, lib/notifications/preference.ts NotificationPreference):
+--       {
+--         weeklyReportEmail:    boolean,  -- 부모 주간 리뷰 이메일
+--         cushionNoteEmail:     boolean,  -- 쿠션어 알림장 부모 발송
+--         consentReminderEmail: boolean,  -- 동의서 미서명 리마인더
+--         parentInviteEmail:    boolean   -- 부모 초대 이메일 (기본 true)
+--       }
+--   - default '{}'::jsonb — 모든 키 누락 = helper 측 DEFAULTS merge → 모두 true
+--     (opt-out 기반 정책).
+--   - 트랜잭션성 알림 (계정 변경 / 비밀번호 reset / 데이터 다운로드 안내 등) 은
+--     본 컬럼 무관 — 항상 발송 (GDPR / 한국 정보통신망법 §50 의 의무 정보).
+--
+-- 법적 정합:
+--   - GDPR Art. 21: 마케팅 동의 철회권 보장.
+--   - 한국 정보통신망법 §50: 마케팅성 정보 opt-in 필수, 트랜잭션성 opt-out 불가.
+--
+-- R4 (자녀 보호):
+--   - boolean 메트릭만 — 자녀 식별 정보 0건.
+--
+-- CON-04: 본 컬럼 / 주석 / Server Action 카피에 "치료/진단/장애" 금칙어 0건.
+--
+-- nullable 정책:
+--   - JSONB nullable (Json?) + DEFAULT '{}'::jsonb — Prisma 생성 client 가 null 허용.
+--   - 기존 row 는 backfill 로 '{}' 채워짐 (PG ALTER 가 자동 처리).
+--   - helper 가 null/undefined → DEFAULTS 폴백 — 호출 측 분기 0.
+--
+-- 운영 적용 절차 (사용자 수동, 본 PR 미실행):
+--   1. cd Speech-Therapy_App
+--   2. npx prisma migrate status   # 본 migration pending 확인
+--   3. npx prisma migrate deploy   # DIRECT_URL 사용
+--   4. Supabase Studio SQL Editor 검증:
+--        SELECT column_name, data_type, is_nullable, column_default
+--        FROM information_schema.columns
+--        WHERE table_name = 'User' AND column_name = 'notificationPreference';
+--      → 1 row (jsonb, YES, '{}'::jsonb) 노출.
+-- ============================================================================
+
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "notificationPreference" JSONB DEFAULT '{}'::jsonb;

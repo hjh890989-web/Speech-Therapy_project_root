@@ -757,6 +757,24 @@ export type AnalyticsEvent =
         userId: string;
       };
     }
+  // === FR-C-NOTIFICATION-PREFERENCE — /settings/notifications 알림 선호 저장 직후 ===
+  | {
+      // updateNotificationPreference Server Action 성공 직후 호출 측 (NotificationPreferenceForm)
+      // 이 1회 발송.
+      // R4 보호: userId 는 분석 백엔드 자동 해시 가정 — raw 옵션 값 미노출.
+      //   changed 는 사용자가 실제로 _변경한_ 필드 이름 배열만 (no-op 호출은 빈 배열).
+      // 활용 KPI: 어느 알림 종류가 가장 많이 opt-out 되는지 → 마케팅 동의 분리 / 발송 빈도 조정 의사결정.
+      name: "notification_preference_updated";
+      properties: {
+        userId: string;
+        changed: (
+          | "weeklyReportEmail"
+          | "cushionNoteEmail"
+          | "consentReminderEmail"
+          | "parentInviteEmail"
+        )[];
+      };
+    }
   // === FR-NAV-SEARCH — 글로벌 검색 box (admin/teacher/principal 운영자 통합 검색) ===
   | {
       // GlobalSearch client component 가 fetch 응답을 받은 직후 1회 (debounce 300ms 종료 + API 200 후).

@@ -47,6 +47,12 @@ model User {
   /// localStorage 마킹과 동기화되는 canonical 서버 상태 — 다중 디바이스에서도
   /// 동일한 wizard 노출 여부 결정에 사용. null = 미완료 / 미실행.
   onboardingCompletedAt DateTime?
+  /// FR-C-NOTIFICATION-PREFERENCE — 알림 종류별 opt-in/out 선호.
+  /// shape (런타임 Zod 검증, lib/notifications/preference.ts NotificationPreference):
+  ///   { weeklyReportEmail, cushionNoteEmail, consentReminderEmail, parentInviteEmail }
+  /// default '{}' = 모든 키 누락 = opt-out 기반 (helper 가 DEFAULTS 로 merge — default true).
+  /// 트랜잭션성 알림 (계정 변경 / 비밀번호 reset 등) 은 본 컬럼 무관 — 항상 발송.
+  notificationPreference Json?     @default("{}")
   /// 구독 등급. 기본 free.
   subscriptionTier SubscriptionTier @default(free)
   /// 가입 시각.

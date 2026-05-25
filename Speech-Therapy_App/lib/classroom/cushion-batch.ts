@@ -262,6 +262,9 @@ export async function processStudentForBatch(
       noteText,
       senderName: context.senderName?.trim() || undefined,
       institutionName: context.institutionName ?? undefined,
+      // FR-C-NOTIFICATION-PREFERENCE — 학생 (parent user) 의 cushionNoteEmail 옵션 확인.
+      // false 면 sendCushionNoteEmail 가 skipped: 'user_opt_out' 반환 → batch skipped 카운트.
+      recipientUserId: student.userId,
     });
   } catch (err) {
     return {

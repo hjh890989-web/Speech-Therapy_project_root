@@ -67,6 +67,14 @@ const SETTINGS_ENTRIES: ReadonlyArray<SettingsEntry> = [
     description: "이메일 / 가입일 / 데이터 다운로드 / 계정 삭제 등 계정을 관리해요.",
     testId: "settings-card-account",
   },
+  {
+    href: "/settings/notifications",
+    icon: "🔔",
+    title: "알림 선호",
+    description:
+      "주간 리뷰 / 쿠션어 알림장 등 이메일 알림 수신 여부를 항목별로 설정해요.",
+    testId: "settings-card-notifications",
+  },
 ];
 
 export default async function SettingsIndexPage() {
