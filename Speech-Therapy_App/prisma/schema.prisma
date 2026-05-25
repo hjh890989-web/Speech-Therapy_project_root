@@ -440,3 +440,62 @@ model OfflineEntry {
   @@index([userId, observedAt])
   @@index([authorId])
 }
+
+// ============================================================================
+// DB-011 후속 — AuditLog (Prisma 모델 정의, raw SQL migration 으로 이미 DB 존재)
+//
+// 배경:
+//   - `prisma/migrations/20260512123555_enable_rls_policies/migration.sql` 가
+//     `AuditLog` 테이블 + `audit_select_admin` RLS 정책을 raw SQL 로 생성.
+//   - `prisma/migrations/20260522210000_audit_log_triggers/migration.sql` 가
+//     PostgreSQL TRIGGER (`audit_trigger_fn` + `audit_sanitize_jsonb`) 등록.
+//   - 본 모델 정의는 **신규 migration 없이** schema 만 동기 — `npx prisma generate`
+//     실행 시 typed client (`prisma.auditLog`) 가 활성화되어 `/admin/audit`
+//     페이지가 type-safe 하게 조회 가능.
+//   - `npx prisma migrate dev` 는 호출 금지 (DB 와 schema 가 이미 정합).
+//
+// 컬럼 매핑 (raw SQL 대비):
+//   id          UUID PK              → @id @db.Uuid (default DB-side gen_random_uuid)
+//   actorId     TEXT NOT NULL        → String
+//   action      TEXT NOT NULL        → String
+//   tableName   TEXT NOT NULL        → String
+//   rowId       TEXT NULLABLE        → String?
+//   diff        JSONB NULLABLE       → Json?
+//   createdAt   TIMESTAMPTZ NOT NULL → DateTime @default(now())
+//
+// 인덱스:
+//   - raw SQL: `AuditLog_actorId_createdAt_idx` ON ("actorId", "createdAt" DESC)
+//   - 본 schema: actorId / createdAt 단일 조합 인덱스 (Prisma 가 동일 인덱스명으로 mapping).
+//   - tableName + rowId 조회 가속용 인덱스도 함께 정의 (admin 페이지 cursor 페이지네이션).
+//
+// R4 (자녀 식별 정보 보호):
+//   - diff JSONB 는 TRIGGER 측 `audit_sanitize_jsonb` 으로 자동 [REDACTED] 처리됨.
+//   - lib/audit.ts 측 INSERT 는 호출자 책임 — 본 모델은 raw 데이터 그대로 READ.
+//   - admin 페이지가 sanitized 값을 그대로 표시해도 자녀 PII 노출 0건.
+//
+// RLS:
+//   - `audit_select_admin` 정책이 admin role 만 SELECT 허용.
+//   - Prisma는 service_role 키 (RLS 우회) 또는 admin auth session 으로 조회.
+//   - 본 PR 의 admin 페이지는 page-level RBAC + Prisma 의 service_role 분기에 의존.
+// ============================================================================
+
+model AuditLog {
+  /// UUID PK — DB side `gen_random_uuid()` default (raw SQL migration 에 정의).
+  id        String   @id @default(uuid()) @db.Uuid
+  /// 인증 user.id 또는 'anonymous' / 'system' (TRIGGER fallback).
+  actorId   String
+  /// 동작 라벨 — lib/audit.ts 의 AuditAction 또는 TRIGGER 의 `{Table}_{op}` 패턴.
+  action    String
+  /// 감사 대상 테이블명 (예: "ConsentSignature", "User", "HITLQueue").
+  tableName String
+  /// 감사 대상 row id. INSERT pre-validation 실패 등은 null.
+  rowId     String?
+  /// 변경 diff JSONB. TRIGGER 가 자동 sanitize → 자녀 PII 자동 [REDACTED].
+  diff      Json?
+  /// 발생 시각.
+  createdAt DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([actorId])
+  @@index([tableName, rowId])
+}

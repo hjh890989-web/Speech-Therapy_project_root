@@ -839,6 +839,19 @@ export type AnalyticsEvent =
         userId: string;
       };
     }
+  // === DB-011 후속 — /admin/audit AuditLog 조회 페이지 진입 텔레메트리 ===
+  | {
+      // /admin/audit 페이지 RSC mount 직후 1회 (server-side console.log telemetry — Vercel Logs).
+      // filterCount: 사용자가 적용한 활성 필터 개수 (action/actorId/tableName/fromDate/toDate 중 set 된 수).
+      // resultCount: loadAuditLogs 가 반환한 entries.length (현재 페이지 노출 row 수, ≤ 50).
+      // R4 보호: actorId / diff 본문 / 자녀 식별 정보 절대 노출 금지 — 메트릭만.
+      //   admin 만 본 페이지에 진입 가능 (page-level RBAC) — 텔레메트리 자체는 admin 활동 분석용.
+      name: "audit_log_viewed";
+      properties: {
+        filterCount: number;
+        resultCount: number;
+      };
+    }
   // === FR-NAV-SEARCH — 글로벌 검색 box (admin/teacher/principal 운영자 통합 검색) ===
   | {
       // GlobalSearch client component 가 fetch 응답을 받은 직후 1회 (debounce 300ms 종료 + API 200 후).
