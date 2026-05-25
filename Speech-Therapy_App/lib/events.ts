@@ -708,6 +708,33 @@ export type AnalyticsEvent =
         userId: string;
         changedFields: ("childAgeMonths" | "preferredPhonemes")[];
       };
+    }
+  // === FR-C-ACCOUNT — /settings/account 본인 데이터 JSON 다운로드 성공 직후 ===
+  | {
+      // DataExportButton 이 /api/account/export 응답 200 직후 1회 발송.
+      // R4 보호: userId 는 분석 백엔드 자동 해시 가정.
+      //   recordCounts 는 source 별 row 카운트 (Server Action 결과의 recordCounts 매핑) —
+      //   binary download 응답 분리 정책상 client 가 정확한 카운트 회수 어려우면 0 폴백.
+      name: "user_data_exported";
+      properties: {
+        userId: string;
+        recordCounts: {
+          evaluationResults: number;
+          missionSessions: number;
+          rewards: number;
+        };
+      };
+    }
+  // === FR-C-ACCOUNT — /settings/account 계정 삭제 성공 직후 (DB delete 직후, redirect 직전) ===
+  | {
+      // AccountDeleteButton 이 deleteAccount Server Action success 직후 1회 발송.
+      // R4 보호: userId 는 분석 백엔드 자동 해시 가정 (삭제 직후 캡처된 값).
+      //   role 은 Server Action 이 사전 조회한 값 — User row 부재 분기 (멱등) 는 "unknown".
+      name: "account_deleted";
+      properties: {
+        userId: string;
+        role: string;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

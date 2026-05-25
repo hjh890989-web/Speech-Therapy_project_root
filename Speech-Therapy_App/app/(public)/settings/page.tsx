@@ -60,6 +60,13 @@ const SETTINGS_ENTRIES: ReadonlyArray<SettingsEntry> = [
     description: "환경 소음을 측정하고 발음 확인 알림 임계값을 맞춰요.",
     testId: "settings-card-calibration",
   },
+  {
+    href: "/settings/account",
+    icon: "👤",
+    title: "계정 정보",
+    description: "이메일 / 가입일 / 데이터 다운로드 / 계정 삭제 등 계정을 관리해요.",
+    testId: "settings-card-account",
+  },
 ];
 
 export default async function SettingsIndexPage() {
