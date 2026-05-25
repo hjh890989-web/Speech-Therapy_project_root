@@ -34,8 +34,7 @@
 //     기존 전역 UI 의 동작에 0건 영향.
 
 import { MainNavClient, type MainNavItem, type MainNavRole } from "./MainNavClient";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/db";
+import { getCachedUserRoleResult } from "@/lib/auth/cached-get-user";
 
 /** 메뉴 항목 산출 — role 별 분기. 본 함수는 분리 export 하여 단위 테스트 (props snapshot) 가능. */
 export function buildNavItemsForRole(role: MainNavRole): MainNavItem[] {
@@ -102,45 +101,36 @@ export function buildNavItemsForRole(role: MainNavRole): MainNavItem[] {
   }
 }
 
-/** Supabase 인증 + Prisma role 단건 조회. 실패 시 anonymous fallback. */
+/**
+ * Supabase 인증 + Prisma role 단건 조회. 실패 시 anonymous fallback.
+ *
+ * Performance: `getCachedUserRoleResult` 는 React `cache()` 기반 request-scope
+ * 캐시 — (public) layout 의 AuthHeader / OnboardingRedirectShim 등이 동일 request
+ * 안에서 같은 호출을 해도 Supabase auth 왕복 + Prisma User.role SELECT 는 각각 1회로
+ * 합쳐진다. (단일 request 안에서 Supabase 1+ Prisma 1 = 2 RT 절감)
+ */
 export async function fetchCurrentNavRole(): Promise<{
   role: MainNavRole;
   userEmail: string | null;
 }> {
-  let userId: string | null = null;
-  let userEmail: string | null = null;
-  try {
-    const supabase = await getSupabaseServerClient();
-    const { data } = await supabase.auth.getUser();
-    userId = data.user?.id ?? null;
-    userEmail = data.user?.email ?? null;
-  } catch {
-    // env 미설정 / 네트워크 — anonymous fallback (nav 차단 금지).
+  const result = await getCachedUserRoleResult();
+  if (result.status === "anonymous") return { role: "anonymous", userEmail: null };
+  if (result.status === "error") {
+    // DB 오류 — nav 차단 금지, anonymous 로 폴백 (기존 동작 보존).
     return { role: "anonymous", userEmail: null };
   }
-  if (!userId) return { role: "anonymous", userEmail: null };
-
-  try {
-    const row = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true },
-    });
-    const dbRole = row?.role ?? null;
-    if (
-      dbRole === "parent" ||
-      dbRole === "teacher" ||
-      dbRole === "principal" ||
-      dbRole === "expert" ||
-      dbRole === "admin"
-    ) {
-      return { role: dbRole, userEmail };
-    }
-    // role 미설정 / 알 수 없는 값 — parent 폴백 (인증은 되었으므로 anonymous 아님).
-    return { role: "parent", userEmail };
-  } catch {
-    // DB 오류 — nav 차단 금지, anonymous 로 폴백.
-    return { role: "anonymous", userEmail: null };
+  const { role: dbRole, email: userEmail } = result;
+  if (
+    dbRole === "parent" ||
+    dbRole === "teacher" ||
+    dbRole === "principal" ||
+    dbRole === "expert" ||
+    dbRole === "admin"
+  ) {
+    return { role: dbRole, userEmail };
   }
+  // role 미설정 / 알 수 없는 값 — parent 폴백 (인증은 되었으므로 anonymous 아님).
+  return { role: "parent", userEmail };
 }
 
 /** 외부에서 직접 props 주입 가능 (RSC 캐시 / 테스트 우회). 미지정 시 자체 fetch. */

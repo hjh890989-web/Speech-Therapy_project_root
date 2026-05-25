@@ -4,18 +4,15 @@
 // 인증: 사용자 이메일 + "로그아웃" 버튼
 
 import Link from "next/link";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/auth/cached-get-user";
 import { signOut } from "@/app/actions/auth";
 
 export async function AuthHeader() {
-  let userEmail: string | null = null;
-  try {
-    const supabase = await getSupabaseServerClient();
-    const { data } = await supabase.auth.getUser();
-    userEmail = data.user?.email ?? null;
-  } catch {
-    // env 미설정 / 네트워크 오류 — 익명 상태로 폴백.
-  }
+  // Performance 감사 1차 — `getCachedUser` 는 React `cache()` 기반 request-scope
+  // 캐시. 동일 request 안에서 MainNav / OnboardingRedirectShim / page 가 동일하게
+  // 호출해도 Supabase 왕복은 1회만 발생.
+  const user = await getCachedUser();
+  const userEmail = user?.email ?? null;
 
   return (
     <div className="border-b border-gray-200 bg-white/70 backdrop-blur dark:border-gray-800 dark:bg-gray-950/60">

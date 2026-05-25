@@ -59,12 +59,24 @@ export async function aggregateWeeklyScores(
 } | null> {
   const { start, end } = weekBounds(year, week);
 
+  // Performance 감사 1차 — `select` 명시화 (이전엔 모든 컬럼 fetch).
+  //   제외 컬럼: id / sessionId / confidence / hitlReviewed / aiCushionText (큰 텍스트)
+  //   / acousticFeatures (JSON) / childAgeMonths — 본 집계에서 미사용.
+  //   기존 row.targetPhoneme / scores / peerPercentile / createdAt 만 필요.
   const results = await prisma.evaluationResult.findMany({
     where: {
       userId,
       createdAt: { gte: start, lt: end },
     },
     orderBy: { createdAt: "asc" },
+    select: {
+      createdAt: true,
+      targetPhoneme: true,
+      articulationScore: true,
+      linguisticScore: true,
+      acousticScore: true,
+      peerPercentile: true,
+    },
   });
 
   if (results.length === 0) return null;

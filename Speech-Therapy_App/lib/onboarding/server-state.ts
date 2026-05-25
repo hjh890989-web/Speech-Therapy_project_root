@@ -18,7 +18,7 @@
 // CON-04: 본 모듈의 주석에 의료 단정 금칙어 0건.
 
 import { prisma } from "@/lib/db";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/auth/cached-get-user";
 
 /**
  * 서버 측 onboarding 완료 여부 조회.
@@ -31,18 +31,13 @@ export async function hasCompletedOnboardingServerSide(): Promise<
   boolean | null
 > {
   // 1) auth — 비인증이면 즉시 null.
-  let userId: string | null = null;
-  try {
-    const supabase = await getSupabaseServerClient();
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data?.user?.id) {
-      return null;
-    }
-    userId = data.user.id;
-  } catch {
-    // env 누락 / 네트워크 오류 — 미확정 처리 (graceful).
+  // Performance: getCachedUser (React cache()) — layout 안 AuthHeader/MainNav/page 와 dedup.
+  const user = await getCachedUser();
+  if (!user) {
+    // 비인증 또는 env/네트워크 오류 — getCachedUser 가 일괄 graceful null 처리.
     return null;
   }
+  const userId = user.id;
 
   // 2) DB lookup — 본인 row 의 onboardingCompletedAt 만 조회 (cross-read 없음).
   try {

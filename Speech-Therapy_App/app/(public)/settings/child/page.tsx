@@ -23,7 +23,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/db";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/auth/cached-get-user";
 import { ChildProfileForm } from "@/components/settings/ChildProfileForm";
 
 export const metadata = {
@@ -62,21 +62,14 @@ async function loadUserPrefill(userId: string): Promise<UserPrefill> {
 
 export default async function SettingsChildPage() {
   // 1) auth — 비로그인 시 login 으로 next return.
-  let userId: string | null = null;
-  try {
-    const supabase = await getSupabaseServerClient();
-    const { data } = await supabase.auth.getUser();
-    userId = data.user?.id ?? null;
-  } catch {
-    // env 미설정 / 네트워크 — 보수적으로 login redirect.
-    userId = null;
-  }
-  if (!userId) {
+  // Performance: getCachedUser (React cache()) — layout 의 AuthHeader/MainNav 와 dedup.
+  const user = await getCachedUser();
+  if (!user) {
     redirect("/login?next=/settings/child");
   }
 
   // 2) prefill.
-  const prefill = await loadUserPrefill(userId);
+  const prefill = await loadUserPrefill(user.id);
 
   return (
     <main

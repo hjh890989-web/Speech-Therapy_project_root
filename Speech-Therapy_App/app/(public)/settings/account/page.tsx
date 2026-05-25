@@ -23,7 +23,7 @@
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/db";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/auth/cached-get-user";
 import { DataExportButton } from "@/components/settings/DataExportButton";
 import { AccountDeleteButton } from "@/components/settings/AccountDeleteButton";
 
@@ -100,17 +100,12 @@ async function loadAccountInfo(userId: string): Promise<AccountInfo> {
 
 export default async function SettingsAccountPage() {
   // 1) auth — 비로그인 시 login 으로 next return.
-  let userId: string | null = null;
-  try {
-    const supabase = await getSupabaseServerClient();
-    const { data } = await supabase.auth.getUser();
-    userId = data.user?.id ?? null;
-  } catch {
-    userId = null;
-  }
-  if (!userId) {
+  // Performance: getCachedUser (React cache()) — layout 의 AuthHeader/MainNav 와 dedup.
+  const user = await getCachedUser();
+  if (!user) {
     redirect("/login?next=/settings/account");
   }
+  const userId = user.id;
 
   // 2) account info.
   const info = await loadAccountInfo(userId);

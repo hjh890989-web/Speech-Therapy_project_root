@@ -22,12 +22,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getCachedUser } from "@/lib/auth/cached-get-user";
 import { prisma } from "@/lib/db";
 import { loadWeeklyReview } from "@/lib/reports/weekly-review-loader";
 import { getCurrentWeekNumber } from "@/lib/weekly-report";
 
 import { WeeklyReviewSummary } from "@/components/weekly-review/WeeklyReviewSummary";
+// Performance 감사 1차 — Recharts (~80KB gzip) dynamic import 는 본 컴포넌트
+// 내부에서 `next/dynamic` 으로 처리한다 (WeeklyReviewTrend.tsx). page 측은 일반
+// import 로 유지 — 기존 test mock (`vi.mock("@/components/weekly-review/WeeklyReviewTrend")`)
+// 호환성 + 호출 측 단순성 보존.
 import { WeeklyReviewTrend } from "@/components/weekly-review/WeeklyReviewTrend";
 import { WeeklyReviewPrediction } from "@/components/weekly-review/WeeklyReviewPrediction";
 import { WeeklyReviewShareButton } from "@/components/weekly-review/WeeklyReviewShareButton";
@@ -47,16 +51,10 @@ interface CurrentUser {
 }
 
 async function loadCurrentUser(): Promise<CurrentUser | null> {
-  let userId: string | null = null;
-  try {
-    const supabase = await getSupabaseServerClient();
-    const { data } = await supabase.auth.getUser();
-    userId = data.user?.id ?? null;
-  } catch {
-    // env 미설정 / Supabase 일시 장애 → 비로그인 처리.
-    return null;
-  }
-  if (!userId) return null;
+  // Performance: getCachedUser (React cache()) — layout 의 AuthHeader/MainNav 와 dedup.
+  const user = await getCachedUser();
+  if (!user) return null;
+  const userId = user.id;
 
   try {
     const row = await prisma.user.findUnique({
