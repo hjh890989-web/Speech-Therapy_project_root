@@ -52,6 +52,27 @@ vi.mock("@/components/security/DisableTotpFlow", () => ({
   ),
 }));
 
+// MFA 마무리 PR — BackupCodesPanel 은 Client Component, page 가 직접 import.
+const backupPanelPropsCapture = vi.fn();
+vi.mock("@/components/security/BackupCodesPanel", () => ({
+  BackupCodesPanel: (props: { initialRemaining: number }) => {
+    backupPanelPropsCapture(props);
+    return (
+      <div
+        data-testid="backup-codes-panel-stub"
+        data-remaining={props.initialRemaining}
+      >
+        backup panel stub
+      </div>
+    );
+  },
+}));
+
+const getRemainingMock = vi.fn();
+vi.mock("@/lib/security/backup-codes-store", () => ({
+  getRemainingBackupCodesCount: (...args: unknown[]) => getRemainingMock(...args),
+}));
+
 import SettingsSecurityPage from "@/app/(public)/settings/security/page";
 
 const USER_ID = "user-uuid-sec-page-7777";
@@ -83,6 +104,9 @@ beforeEach(() => {
   getCachedUserMock.mockReset();
   listFactorsMock.mockReset();
   redirectMock.mockClear();
+  backupPanelPropsCapture.mockReset();
+  getRemainingMock.mockReset();
+  getRemainingMock.mockResolvedValue(0);
 });
 
 describe("/settings/security — FR-C-SECURITY 보안 / 2단계 인증 페이지", () => {
@@ -157,6 +181,40 @@ describe("/settings/security — FR-C-SECURITY 보안 / 2단계 인증 페이지
     expect(
       container.querySelector("[data-testid='settings-security-disable-card']"),
     ).toBeNull();
+  });
+
+  it("[5a] MFA 마무리 — 등록 사용자에게 BackupCodesPanel + 잔여 카운트 전달", async () => {
+    setUser();
+    setListVerified();
+    getRemainingMock.mockResolvedValueOnce(5);
+
+    const ui = await SettingsSecurityPage();
+    const { container } = render(ui);
+
+    expect(
+      container.querySelector("[data-testid='backup-codes-panel-stub']"),
+    ).not.toBeNull();
+    expect(backupPanelPropsCapture).toHaveBeenCalledWith({
+      initialRemaining: 5,
+    });
+    // 미등록 카드에서는 panel 노출 안 함.
+    expect(
+      container.querySelector("[data-testid='settings-security-disable-card']"),
+    ).not.toBeNull();
+  });
+
+  it("[5b] MFA 마무리 — 미등록 사용자에게 BackupCodesPanel 미노출 + 카운트 조회 0회", async () => {
+    setUser();
+    setListEmpty();
+
+    const ui = await SettingsSecurityPage();
+    const { container } = render(ui);
+
+    expect(
+      container.querySelector("[data-testid='backup-codes-panel-stub']"),
+    ).toBeNull();
+    // 미등록 → 잔여 카운트 조회 자체를 skip (page 가 enrolled 분기일 때만 호출).
+    expect(getRemainingMock).not.toHaveBeenCalled();
   });
 
   it("[5] CON-04 — 의료 금칙어 0건 (미등록 + 등록 양 분기)", async () => {

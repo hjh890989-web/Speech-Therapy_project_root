@@ -24,6 +24,7 @@ import { z } from "zod";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { generateBackupCodes } from "@/lib/security/backup-codes";
+import { storeBackupCodes } from "@/lib/security/backup-codes-store";
 
 /** verify 입력 — factorId (enroll 응답) + 6자리 코드. */
 export interface VerifyTotpEnrollInput {
@@ -205,9 +206,21 @@ export async function verifyTotpEnroll(
     };
   }
 
-  // 5) 성공 — backup codes 1회 생성 후 응답에 포함.
-  //    본 PR 정책: DB 저장 안 함 (사용자가 메모) — 후속 PR 에서 hash 저장 검토.
+  // 5) 성공 — backup codes 1회 생성, hash 저장 후 평문 응답에 포함 (사용자 1회 표시).
+  //    MFA 마무리 PR 정책: sha256 hash 8개를 User.totpBackupCodes 에 저장 →
+  //    로그인 시 인증 앱 분실 fallback 으로 사용 (1회용 제거).
   const backupCodes = generateBackupCodes();
+  try {
+    await storeBackupCodes(userId, backupCodes);
+  } catch (err) {
+    // hash 저장 실패는 enroll 성공 자체를 막지 않음 (TOTP 활성은 이미 완료).
+    // 후속 사용자가 backup code 가 동작 안 함을 경험하면 "재생성" 으로 복구.
+    console.error(
+      `[verify-totp] storeBackupCodes 실패 — userId=${userId} err=${
+        err instanceof Error ? err.message : "unknown"
+      }`,
+    );
+  }
 
   return {
     success: true,

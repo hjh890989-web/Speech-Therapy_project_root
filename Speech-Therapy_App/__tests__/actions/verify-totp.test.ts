@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const getUserMock = vi.fn();
 const challengeMock = vi.fn();
 const verifyMock = vi.fn();
+const storeBackupCodesMock = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   getSupabaseServerClient: async () => ({
@@ -31,6 +32,11 @@ vi.mock("@/lib/supabase/server", () => ({
       },
     },
   }),
+}));
+
+// MFA 마무리 PR — storeBackupCodes mock (DB 호출 격리).
+vi.mock("@/lib/security/backup-codes-store", () => ({
+  storeBackupCodes: (...args: unknown[]) => storeBackupCodesMock(...args),
 }));
 
 import { verifyTotpEnroll } from "@/app/actions/verify-totp";
@@ -64,6 +70,8 @@ beforeEach(() => {
   getUserMock.mockReset();
   challengeMock.mockReset();
   verifyMock.mockReset();
+  storeBackupCodesMock.mockReset();
+  storeBackupCodesMock.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -179,7 +187,7 @@ describe("verifyTotpEnroll — FR-C-SECURITY 2FA 검증 Server Action", () => {
     if (!result.success) expect(result.reason).toBe("expired");
   });
 
-  it("[9] 정상 → success + 8개 backupCodes + analytics.userId", async () => {
+  it("[9] 정상 → success + 8개 backupCodes + analytics.userId + storeBackupCodes 호출", async () => {
     setAuthUser(USER_ID);
     setChallengeOk();
     setVerifyOk();
@@ -200,6 +208,31 @@ describe("verifyTotpEnroll — FR-C-SECURITY 2FA 검증 Server Action", () => {
       challengeId: CHALLENGE_ID,
       code: VALID_CODE,
     });
+    // MFA 마무리 — backup codes hash 저장 호출 검증.
+    expect(storeBackupCodesMock).toHaveBeenCalledTimes(1);
+    expect(storeBackupCodesMock).toHaveBeenCalledWith(
+      USER_ID,
+      result.backupCodes,
+    );
+  });
+
+  it("[9b] 정상 verify 직후 storeBackupCodes throw → 여전히 success (graceful — TOTP 활성 보존)", async () => {
+    setAuthUser(USER_ID);
+    setChallengeOk();
+    setVerifyOk();
+    storeBackupCodesMock.mockImplementationOnce(() => {
+      throw new Error("DB down");
+    });
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const result = await verifyTotpEnroll({
+      factorId: FACTOR_ID,
+      code: VALID_CODE,
+    });
+    errSpy.mockRestore();
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.backupCodes).toHaveLength(8);
+    expect(result.analytics.userId).toBe(USER_ID);
   });
 
   it("[10] CON-04 — 모든 실패 분기 message 에 의료 금칙어 0건", async () => {

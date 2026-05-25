@@ -1,0 +1,53 @@
+-- ============================================================================
+-- FR-C-SECURITY (MFA 마무리) — User.totpBackupCodes TEXT[] 컬럼 추가.
+-- Refs: lib/security/backup-codes-store.ts,
+--       app/actions/verify-totp.ts (enroll 직후 hash 저장),
+--       app/actions/regenerate-backup-codes.ts (재생성),
+--       components/auth/MfaChallengeForm.tsx (로그인 시 fallback 사용).
+-- ============================================================================
+--
+-- 목적:
+--   - 2FA TOTP 활성 사용자에게 발급된 backup codes 의 sha256 hash 8개를 저장.
+--   - 로그인 시 인증 앱 분실/오류 상황에서 1회용 fallback 인증으로 사용.
+--   - 1회 사용 후 array 에서 제거 → 재사용 절대 불가 (DB 레벨 멱등).
+--
+-- 정책:
+--   - 컬럼 타입: TEXT[] — PostgreSQL native array (Prisma String[] 매핑).
+--   - default '{}'::text[] — 빈 배열 (TOTP 미활성 사용자 / 기존 row backfill).
+--   - 각 element: sha256(UPPERCASE(code)) 의 hex digest (64 chars).
+--   - 사용 시 hash 비교 후 array_remove 로 1회용 제거 (Prisma update + set).
+--
+-- 보안 정책 (R4):
+--   - hash 만 저장 — 원본 평문은 사용자 1회 표시 후 폐기 (DB 미보존).
+--   - bcrypt 대신 sha256 채택 근거:
+--       (1) backup code 자체가 random 31^8 ≈ 8.5e11 — pre-image 저항 충분.
+--       (2) bcrypt cost factor 12 기준 ~250ms — 8개 code 비교 ~2초 (UX 저하).
+--       (3) backup code 는 _저장_ 보다 _사용 빈도_ 가 극히 낮음 (앱 분실 등 비상).
+--       (4) salt 가 필요하지 않음 (code 본문 자체가 high entropy + 단일 row 1:1).
+--   - 운영자/DB admin 도 평문 복호화 불가 — code 사용 시 사용자 입력으로만 매칭.
+--
+-- 라이프사이클:
+--   - INSERT: verifyTotpEnroll Server Action 성공 시 storeBackupCodes() 호출.
+--   - SELECT: useBackupCode / getRemainingBackupCodesCount (본인 userId 만).
+--   - UPDATE: useBackupCode 가 사용 hash 1개 제거 (array_remove).
+--   - DELETE: regenerateBackupCodes 가 전부 무효화 후 새 8개로 교체.
+--
+-- CON-04: 본 컬럼 / 주석에 "치료/진단/장애" 금칙어 0건.
+--
+-- nullable 정책:
+--   - non-nullable + DEFAULT '{}' — 기존 row 는 backfill 로 빈 배열 채워짐.
+--   - Prisma String[] = TEXT[] non-null array — null 분기 0 (helper 가 length 0 처리).
+--
+-- 운영 적용 절차 (사용자 수동, 본 PR 미실행):
+--   1. cd Speech-Therapy_App
+--   2. npx prisma migrate status   # 본 migration pending 확인
+--   3. npx prisma migrate deploy   # DIRECT_URL 사용
+--   4. Supabase Studio SQL Editor 검증:
+--        SELECT column_name, data_type, is_nullable, column_default
+--        FROM information_schema.columns
+--        WHERE table_name = 'User' AND column_name = 'totpBackupCodes';
+--      → 1 row (ARRAY, NO, '{}'::text[]) 노출.
+-- ============================================================================
+
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "totpBackupCodes" TEXT[] NOT NULL DEFAULT '{}'::text[];

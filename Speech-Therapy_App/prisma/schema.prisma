@@ -53,6 +53,13 @@ model User {
   /// default '{}' = 모든 키 누락 = opt-out 기반 (helper 가 DEFAULTS 로 merge — default true).
   /// 트랜잭션성 알림 (계정 변경 / 비밀번호 reset 등) 은 본 컬럼 무관 — 항상 발송.
   notificationPreference Json?     @default("{}")
+  /// FR-C-SECURITY (MFA 마무리) — TOTP 활성 시 발급된 backup codes 의 sha256 hash 리스트.
+  /// 정책 (lib/security/backup-codes-store.ts):
+  ///   - 1회 사용 후 array 에서 제거 (재사용 불가 — DB 레벨로 멱등 보장).
+  ///   - 사용자 표시는 enroll verify 직후 평문 1회만 — 그 후 hash 만 DB 보존.
+  ///   - "재생성" 시 기존 hash 전부 무효화 + 새 8개 생성.
+  /// R4: hash 만 저장 (원본 평문 불가역) — 데이터 유출 시에도 backup code 자체 비공개.
+  totpBackupCodes String[] @default([])
   /// 구독 등급. 기본 free.
   subscriptionTier SubscriptionTier @default(free)
   /// 가입 시각.

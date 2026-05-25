@@ -26,6 +26,8 @@ import { getCachedUser } from "@/lib/auth/cached-get-user";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { EnrollTotpFlow } from "@/components/security/EnrollTotpFlow";
 import { DisableTotpFlow } from "@/components/security/DisableTotpFlow";
+import { BackupCodesPanel } from "@/components/security/BackupCodesPanel";
+import { getRemainingBackupCodesCount } from "@/lib/security/backup-codes-store";
 
 export const metadata = {
   title: "보안 설정 — Speech-Therapy",
@@ -68,6 +70,12 @@ export default async function SettingsSecurityPage() {
   // 2) TOTP factor 등록 여부 조회.
   const enrolled = await hasVerifiedTotpFactor();
 
+  // 2b) MFA 마무리 — TOTP 활성 사용자에게 backup codes 잔여 카운트 조회.
+  //     graceful: 실패 시 0 (BackupCodesPanel 이 "재생성 권장" 노출).
+  const remainingBackupCodes = enrolled
+    ? await getRemainingBackupCodesCount(user.id)
+    : 0;
+
   return (
     <main
       data-testid="settings-security-page"
@@ -98,6 +106,14 @@ export default async function SettingsSecurityPage() {
               2단계 인증 관리
             </h2>
             <DisableTotpFlow />
+
+            {/* MFA 마무리 — Backup codes 잔여 카운트 + 재생성 패널. */}
+            <div className="mt-6">
+              <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                백업 코드
+              </h3>
+              <BackupCodesPanel initialRemaining={remainingBackupCodes} />
+            </div>
           </article>
         ) : (
           // ---- 미등록 → 활성화 카드 ----

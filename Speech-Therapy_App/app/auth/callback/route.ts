@@ -72,6 +72,31 @@ export async function GET(request: Request) {
     await migrateAnonymousData(anonymousUserId, authUserId);
   }
 
+  // FR-C-SECURITY (MFA 마무리) — AAL 체크: TOTP 등록된 사용자는 /auth/mfa-challenge 로 우회.
+  // 정책:
+  //   - nextLevel === 'aal2' && currentLevel === 'aal1' → MFA 필수 (challenge 페이지로).
+  //   - 그 외 (미등록 / 이미 AAL2) → 정상 returnTo redirect.
+  //   - AAL 조회 실패 → graceful 정상 흐름 (회귀 0건 — 후속 PR 에서 strict 검토).
+  try {
+    const aalResp = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const currentLevel =
+      (aalResp.data as { currentLevel?: string } | null)?.currentLevel ?? null;
+    const nextLevel =
+      (aalResp.data as { nextLevel?: string } | null)?.nextLevel ?? null;
+    if (currentLevel === "aal1" && nextLevel === "aal2") {
+      const mfaTarget = new URL(`${origin}/auth/mfa-challenge`);
+      // returnTo 가 외부 URL 일 가능성은 위에서 차단 안 했지만 internal default("/rewards") 가
+      // 일반 경로 — MfaChallengePage 가 다시 sanitize 한다.
+      mfaTarget.searchParams.set("next", returnTo);
+      return NextResponse.redirect(mfaTarget);
+    }
+  } catch (err) {
+    console.warn(
+      "auth/callback: getAuthenticatorAssuranceLevel 실패 — graceful 정상 흐름",
+      err instanceof Error ? err.message : "unknown",
+    );
+  }
+
   // 리다이렉트 URL 에 signin 플래그 부착 — 목적지 페이지의 client beacon 이 trackEvent 발송.
   const redirectUrl = new URL(`${origin}${returnTo}`);
   redirectUrl.searchParams.set("signin", "ok");

@@ -808,6 +808,37 @@ export type AnalyticsEvent =
         userId: string;
       };
     }
+  | {
+      // MfaChallengeForm (로그인 시) 가 verifyMfaChallenge Server Action success 직후 1회 발송.
+      // R4 보호: userId 는 분석 백엔드 자동 해시 가정 — code 본문/factorId 절대 노출 금지.
+      // mode: 'totp' (인증 앱) | 'backup' (백업 코드 fallback).
+      // KPI 활용: backup code 사용 빈도 → 인증 앱 분실 / UX 마찰 측정.
+      name: "mfa_challenge_succeeded";
+      properties: {
+        userId: string;
+        mode: "totp" | "backup";
+      };
+    }
+  | {
+      // MfaChallengeForm 이 invalid_code / expired / rate_limited / supabase_error 직후 1회 발송.
+      // R4 보호: 동일 — userId 해시 가정, code 본문 미노출.
+      // reason: 'wrong_code' | 'expired' | 'rate_limited' | 'supabase_error'.
+      name: "mfa_challenge_failed";
+      properties: {
+        userId: string;
+        mode: "totp" | "backup";
+        reason: "wrong_code" | "expired" | "rate_limited" | "supabase_error";
+      };
+    }
+  | {
+      // BackupCodesPanel 의 "재생성" 성공 직후 1회 발송 (regenerateBackupCodes Server Action).
+      // R4 보호: userId 해시 가정 — code 평문 절대 노출 금지.
+      // KPI 활용: 재생성 빈도 → 사용자 분실/혼동 패턴 진단.
+      name: "totp_backup_codes_regenerated";
+      properties: {
+        userId: string;
+      };
+    }
   // === FR-NAV-SEARCH — 글로벌 검색 box (admin/teacher/principal 운영자 통합 검색) ===
   | {
       // GlobalSearch client component 가 fetch 응답을 받은 직후 1회 (debounce 300ms 종료 + API 200 후).
