@@ -148,8 +148,12 @@ export async function fetchCurrentNavRole(): Promise<{
  *
  * 정책:
  *   - admin/principal/teacher/expert 의 "HITL 큐" (/admin/hitl) 항목 → counts.hitlPending
- *   - parent / anonymous : badge 없음 (메뉴 자체에 /admin/hitl 부재)
+ *   - parent / teacher / principal / admin 의 "미션" (/missions) 항목 → counts.missionPendingToday
+ *     (실제로 missionPendingToday > 0 가 발생하는 role 은 parent — getNavBadgeCounts 가 그 외 role 에
+ *      대해서는 항상 0 을 반환하여 다른 role 의 미션 menu 에 badge 가 표시되지 않음.)
+ *   - anonymous : badge 없음 (메뉴 자체 부재)
  *   - 0 일 경우 badgeCount 미설정 (UI 시각 노이즈 최소화 — Client 에서 > 0 만 렌더)
+ *   - 둘 다 0 이면 items identity 반환 (zero-allocation 최적화 — 기존 회귀 0건 보장).
  *
  * 본 helper 는 pure (Prisma 호출 없음) — caller 가 미리 counts 를 fetch 하여 주입.
  */
@@ -157,12 +161,18 @@ export function applyBadgeCounts(
   items: MainNavItem[],
   counts: NavBadgeCounts,
 ): MainNavItem[] {
-  if (counts.hitlPending <= 0) return items;
-  return items.map((item) =>
-    item.href === "/admin/hitl"
-      ? { ...item, badgeCount: counts.hitlPending }
-      : item,
-  );
+  const hasHitl = counts.hitlPending > 0;
+  const hasMission = counts.missionPendingToday > 0;
+  if (!hasHitl && !hasMission) return items;
+  return items.map((item) => {
+    if (hasHitl && item.href === "/admin/hitl") {
+      return { ...item, badgeCount: counts.hitlPending };
+    }
+    if (hasMission && item.href === "/missions") {
+      return { ...item, badgeCount: counts.missionPendingToday };
+    }
+    return item;
+  });
 }
 
 /** 외부에서 직접 props 주입 가능 (RSC 캐시 / 테스트 우회). 미지정 시 자체 fetch. */
@@ -183,15 +193,18 @@ export async function MainNav(props: MainNavProps = {}) {
     if (userEmail === undefined) userEmail = fetched.userEmail;
   }
 
-  // FR-NAV-BADGE — admin/principal/teacher/expert 에 한해 HITL 미처리 카운트 fetch.
-  //   - anonymous/parent 는 메뉴 자체에 /admin/hitl 부재 → query skip.
-  //   - institutionId 조회 + badge count fetch 를 Promise.all 로 병렬화.
+  // FR-NAV-BADGE — 인증된 role 에 한해 badge 카운트 fetch.
+  //   - admin/principal/teacher/expert : HITL 미처리 카운트 (hitlPending)
+  //   - parent                          : 오늘 미완료 미션 카운트 (missionPendingToday, KST 자정 기준)
+  //   - anonymous                        : 메뉴 자체 부재 → query skip
+  //   - institutionId 는 principal/teacher 만 의미 — parent/admin/expert 는 null 가능.
   //   - 모든 단계 graceful (helper 내부 try/catch + 0 fallback) — nav 차단 금지.
   const needsBadge =
     role === "admin" ||
     role === "principal" ||
     role === "teacher" ||
-    role === "expert";
+    role === "expert" ||
+    role === "parent";
 
   let items = buildNavItemsForRole(role);
   if (needsBadge && userId) {

@@ -209,3 +209,117 @@ describe("MainNavClient — badge UI 렌더", () => {
     expect(hitlBadge!.textContent).toBe("2");
   });
 });
+
+describe("applyBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)", () => {
+  it("[m1] parent items + missionPendingToday=2 → /missions item.badgeCount=2", () => {
+    const base = buildNavItemsForRole("parent");
+    const decorated = applyBadgeCounts(base, {
+      hitlPending: 0,
+      missionPendingToday: 2,
+    });
+    const mission = decorated.find((i) => i.href === "/missions");
+    expect(mission).toBeTruthy();
+    expect(mission!.badgeCount).toBe(2);
+    // 다른 parent 메뉴 (weekly-review / rewards / settings 등) 에는 badge 영향 없음.
+    for (const item of decorated) {
+      if (item.href !== "/missions") {
+        expect(item.badgeCount).toBeUndefined();
+      }
+    }
+  });
+
+  it("[m2] parent + 둘 다 0 → identity 반환 (zero-allocation)", () => {
+    const base = buildNavItemsForRole("parent");
+    const decorated = applyBadgeCounts(base, {
+      hitlPending: 0,
+      missionPendingToday: 0,
+    });
+    expect(decorated).toBe(base);
+  });
+
+  it("[m3] admin + missionPendingToday>0 → /missions 에도 badge 적용 (decorator pure — getNavBadgeCounts 가 admin role 에 missionPendingToday=0 보장)", () => {
+    // applyBadgeCounts 는 pure decorator — 입력 counts 를 기계적으로 적용.
+    // 실 production 에서는 getNavBadgeCounts 가 admin role 에 대해 missionPendingToday=0 을 반환하여
+    // 본 케이스는 발생하지 않음 (정책 layering — fetch 단에서 0 보장).
+    const base = buildNavItemsForRole("admin");
+    const decorated = applyBadgeCounts(base, {
+      hitlPending: 0,
+      missionPendingToday: 4,
+    });
+    const mission = decorated.find((i) => i.href === "/missions");
+    expect(mission!.badgeCount).toBe(4);
+  });
+});
+
+describe("MainNavClient — parent 미션 badge UI 렌더", () => {
+  it("[m4] parent + 미완료 2건 → 데스크탑 카운트 + aria-label '2건 미처리'", () => {
+    usePathnameMock.mockReturnValue("/");
+    const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
+      hitlPending: 0,
+      missionPendingToday: 2,
+    });
+    render(<MainNavClient items={items} role="parent" userEmail={null} />);
+
+    const desktop = screen.getByTestId("main-nav-desktop");
+    const missionLink = Array.from(desktop.querySelectorAll("a")).find(
+      (a) => a.getAttribute("href") === "/missions",
+    );
+    expect(missionLink).toBeTruthy();
+    expect(missionLink!.getAttribute("aria-label")).toBe(
+      "미션 도전, 2건 미처리",
+    );
+    const badge = missionLink!.querySelector(
+      "[data-testid='main-nav-badge-/missions']",
+    );
+    expect(badge).toBeTruthy();
+    expect(badge!.textContent).toBe("2");
+
+    // 모바일 dot 노출.
+    const mobile = screen.getByTestId("main-nav-mobile-list");
+    const mobileBadge = mobile.querySelector(
+      "[data-testid='main-nav-mobile-badge-/missions']",
+    );
+    expect(mobileBadge).toBeTruthy();
+  });
+
+  it("[m5] parent + 미완료 0건 → /missions badge 미노출", () => {
+    usePathnameMock.mockReturnValue("/");
+    const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
+      hitlPending: 0,
+      missionPendingToday: 0,
+    });
+    render(<MainNavClient items={items} role="parent" userEmail={null} />);
+    expect(
+      screen.queryByTestId("main-nav-badge-/missions"),
+    ).toBeNull();
+    expect(
+      screen.queryByTestId("main-nav-mobile-badge-/missions"),
+    ).toBeNull();
+    // aria-label 은 카운트 없는 평문.
+    const desktop = screen.getByTestId("main-nav-desktop");
+    const missionLink = Array.from(desktop.querySelectorAll("a")).find(
+      (a) => a.getAttribute("href") === "/missions",
+    );
+    expect(missionLink!.getAttribute("aria-label")).toBe("미션 도전");
+  });
+
+  it("[m6] CON-04 — parent 미션 badge DOM 텍스트 + aria-label 금칙어 0건", () => {
+    usePathnameMock.mockReturnValue("/");
+    const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
+      hitlPending: 0,
+      missionPendingToday: 7,
+    });
+    render(<MainNavClient items={items} role="parent" userEmail={null} />);
+    const nav = screen.getByTestId("main-nav");
+    const text = nav.textContent ?? "";
+    expect(containsBannedTerms(text)).toBe(false);
+    const links = Array.from(nav.querySelectorAll("a"));
+    for (const link of links) {
+      const label = link.getAttribute("aria-label") ?? "";
+      expect(
+        containsBannedTerms(label),
+        `aria-label="${label}" 가 금칙어 매칭됨`,
+      ).toBe(false);
+    }
+  });
+});
