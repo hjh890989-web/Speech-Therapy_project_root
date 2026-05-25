@@ -248,6 +248,10 @@ model WeeklyReport {
   peerPercentileAvg    Float
   sessionCount         Int
   generatedAt          DateTime @default(now())
+  /// FR-WEEKLY-UNREAD — 부모가 /weekly-review 페이지를 열어 본 시각.
+  /// null = 미열람 (parent nav badge "📅 우리 아이 주간 리뷰" 옆 dot 노출 조건).
+  /// 한 번 set 되면 cron 으로 새 row 가 생기기 전까지 유지.
+  viewedAt             DateTime?
 
   @@unique([userId, year, weekNumber])
   @@index([userId, generatedAt])

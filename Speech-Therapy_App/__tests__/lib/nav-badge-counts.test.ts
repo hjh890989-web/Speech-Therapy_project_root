@@ -27,6 +27,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const hitlCountMock = vi.fn();
 const userFindUniqueMock = vi.fn();
 
+const weeklyReportCountMock = vi.fn().mockResolvedValue(0);
+
 vi.mock("@/lib/db", () => ({
   prisma: {
     hITLQueue: {
@@ -34,6 +36,9 @@ vi.mock("@/lib/db", () => ({
     },
     user: {
       findUnique: (...args: unknown[]) => userFindUniqueMock(...args),
+    },
+    weeklyReport: {
+      count: (...args: unknown[]) => weeklyReportCountMock(...args),
     },
   },
 }));
@@ -46,6 +51,8 @@ import {
 beforeEach(() => {
   hitlCountMock.mockReset();
   userFindUniqueMock.mockReset();
+  weeklyReportCountMock.mockReset();
+  weeklyReportCountMock.mockResolvedValue(0);
 });
 
 afterEach(() => {
@@ -60,7 +67,7 @@ describe("getNavBadgeCounts — role 별 HITL 카운트 매트릭스", () => {
       institutionId: null,
       userId: "admin-user-1",
     });
-    expect(out).toEqual({ hitlPending: 7, missionPendingToday: 0 });
+    expect(out).toEqual({ hitlPending: 7, missionPendingToday: 0, weeklyReportUnread: 0 });
     // where 절: status in [pending, in_review] 만, user.institutionId 필터 없음.
     const args = hitlCountMock.mock.calls[0]![0] as {
       where: { status: { in: string[] }; user?: unknown };
@@ -119,13 +126,15 @@ describe("getNavBadgeCounts — role 별 HITL 카운트 매트릭스", () => {
     expect(args.where.status.in).toEqual(["pending", "in_review"]);
   });
 
-  it("[5] parent → 0 (메뉴 자체 미노출, query 미호출)", async () => {
+  it("[5] parent → HITL 메뉴 미노출 (HITL query 미호출, weeklyReport+sessionLog 만 호출)", async () => {
+    // parent 분기는 sessionLog.count + weeklyReport.count 만 호출 (HITL 미호출).
+    // 본 파일 mock 은 sessionLog 가 없어 missionPendingToday=0 graceful, weeklyReportUnread=0.
     const out = await getNavBadgeCounts({
       role: "parent",
       institutionId: "inst-A",
       userId: "parent-1",
     });
-    expect(out).toEqual({ hitlPending: 0, missionPendingToday: 0 });
+    expect(out.hitlPending).toBe(0);
     expect(hitlCountMock).not.toHaveBeenCalled();
   });
 
@@ -136,7 +145,9 @@ describe("getNavBadgeCounts — role 별 HITL 카운트 매트릭스", () => {
       userId: null,
     });
     expect(out.hitlPending).toBe(0);
+    expect(out.weeklyReportUnread).toBe(0);
     expect(hitlCountMock).not.toHaveBeenCalled();
+    expect(weeklyReportCountMock).not.toHaveBeenCalled();
   });
 
   it("[7] principal + institutionId=null → 0 graceful (query skip)", async () => {
@@ -156,7 +167,11 @@ describe("getNavBadgeCounts — role 별 HITL 카운트 매트릭스", () => {
       institutionId: null,
       userId: "admin-2",
     });
-    expect(out).toEqual({ hitlPending: 0, missionPendingToday: 0 });
+    expect(out).toEqual({
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+    });
   });
 
   it("[9] 같은 인자 2회 호출 → 결과 동등 (React cache() 는 RSC request-scope 만 dedup, vitest 환경은 미적용)", async () => {

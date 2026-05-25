@@ -1,0 +1,37 @@
+-- ============================================================================
+-- FR-WEEKLY-UNREAD — WeeklyReport.viewedAt 컬럼 추가.
+-- Refs: app/(public)/weekly-review/page.tsx, lib/nav/badge-counts.ts,
+--       components/nav/MainNav.tsx.
+-- ============================================================================
+--
+-- 목적:
+--   - 부모가 /weekly-review 페이지를 실제로 열어 본 시각 기록.
+--   - parent nav badge ("📅 우리 아이 주간 리뷰") 옆 "안 본 새 리뷰 있음" dot
+--     노출 여부 산출. WeeklyReport row 중 viewedAt IS NULL 카운트 > 0 → badge ON.
+--
+-- 정책:
+--   - DateTime nullable (null = 미열람).
+--   - 한 번 set 되면 weekly cron 으로 새 row 가 생성되기 전까지 유지.
+--   - 첫 페이지 진입 시 (latest.viewedAt IS NULL 일 때) 단일 UPDATE 1회.
+--   - R4: 본인 user.id 의 row 만 update — 호출 측 (page) Supabase auth.id 책임.
+--
+-- 마이그레이션 안전성:
+--   - 기존 row 는 NULL 로 backfill — 첫 페이지 열람 시 timestamp 기록.
+--   - cron / aggregator 측에서 새 row 생성 시 default 미설정 (Prisma 기본 NULL).
+--
+-- R4 (자녀 보호):
+--   - timestamp 1개 — 자녀 식별 정보 0건.
+--
+-- 운영 적용 절차 (사용자 수동, 본 PR 미실행):
+--   1. cd Speech-Therapy_App
+--   2. npx prisma migrate status   # 본 migration pending 확인
+--   3. npx prisma migrate deploy   # DIRECT_URL 사용
+--   4. Supabase Studio SQL Editor 검증:
+--        SELECT column_name, data_type, is_nullable
+--        FROM information_schema.columns
+--        WHERE table_name = 'WeeklyReport' AND column_name = 'viewedAt';
+--      → 1 row (timestamp, YES) 노출.
+-- ============================================================================
+
+ALTER TABLE "WeeklyReport"
+  ADD COLUMN IF NOT EXISTS "viewedAt" TIMESTAMP(3);

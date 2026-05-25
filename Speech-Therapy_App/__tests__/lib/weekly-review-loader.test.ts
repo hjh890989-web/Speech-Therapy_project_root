@@ -40,6 +40,8 @@ function makeRow(overrides: Partial<{ id: string; sessionCount: number; weekNumb
     predictedNextScore: 78,
     predictionConfidence: 0.85,
     generatedAt: new Date("2026-05-24T00:00:00Z"),
+    // FR-WEEKLY-UNREAD — loader 자체는 viewedAt 을 그대로 pass-through. mock row 는 null/Date 둘 다 OK.
+    viewedAt: null as Date | null,
     scoreTrend: [],
   };
 }

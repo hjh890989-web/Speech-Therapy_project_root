@@ -76,6 +76,23 @@ export default async function WeeklyReviewPage() {
   }
 
   const data = await loadWeeklyReview(me.userId);
+
+  // FR-WEEKLY-UNREAD — 첫 열람 시각 기록. latest.viewedAt === null 일 때만 1회 UPDATE.
+  // - R4: 본인 user.id + latest.id 만 사용 (page 단에서 보장).
+  // - graceful: UPDATE 실패해도 페이지 렌더 차단 0 (badge 가 다음 요청에 다시 떴다가 다시 갱신될 뿐).
+  // - parent 외 role 도 이 페이지에 들어올 수 있으나, nav badge 는 parent 만 — 다른 role 의 viewedAt 갱신은
+  //   사이드이펙트 무해 (UPDATE 1건). cross-user 0건 (latest.userId === me.userId 가정).
+  if (data.latest !== null && data.latest.viewedAt === null) {
+    try {
+      await prisma.weeklyReport.update({
+        where: { id: data.latest.id },
+        data: { viewedAt: new Date() },
+      });
+    } catch (err) {
+      console.error("weekly-review: viewedAt update failed (graceful)", err);
+    }
+  }
+
   const { year: currentYear, week: currentWeek } = getCurrentWeekNumber();
   const displayWeekNumber = data.latest?.weekNumber ?? currentWeek;
   const displayYear = data.latest?.year ?? currentYear;

@@ -40,6 +40,9 @@ export interface WeeklyReviewRow {
   predictedNextScore: number | null;
   predictionConfidence: number | null;
   generatedAt: Date;
+  /// FR-WEEKLY-UNREAD — 부모가 /weekly-review 페이지를 열어 본 시각. null = 미열람.
+  /// page 측이 latest.viewedAt === null 분기에서 UPDATE 트리거 + nav badge dot 산출.
+  viewedAt: Date | null;
   /// JsonValue — UI 측 ScoreTrend 로 narrow.
   scoreTrend: unknown;
 }

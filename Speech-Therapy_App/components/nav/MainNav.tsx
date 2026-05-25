@@ -151,9 +151,11 @@ export async function fetchCurrentNavRole(): Promise<{
  *   - parent / teacher / principal / admin 의 "미션" (/missions) 항목 → counts.missionPendingToday
  *     (실제로 missionPendingToday > 0 가 발생하는 role 은 parent — getNavBadgeCounts 가 그 외 role 에
  *      대해서는 항상 0 을 반환하여 다른 role 의 미션 menu 에 badge 가 표시되지 않음.)
+ *   - parent 의 "우리 아이 주간 리뷰" (/weekly-review) 항목 → counts.weeklyReportUnread
+ *     (FR-WEEKLY-UNREAD — viewedAt IS NULL 인 본인 WeeklyReport 카운트. parent 외 role 0.)
  *   - anonymous : badge 없음 (메뉴 자체 부재)
  *   - 0 일 경우 badgeCount 미설정 (UI 시각 노이즈 최소화 — Client 에서 > 0 만 렌더)
- *   - 둘 다 0 이면 items identity 반환 (zero-allocation 최적화 — 기존 회귀 0건 보장).
+ *   - 세 가지 모두 0 이면 items identity 반환 (zero-allocation 최적화 — 기존 회귀 0건 보장).
  *
  * 본 helper 는 pure (Prisma 호출 없음) — caller 가 미리 counts 를 fetch 하여 주입.
  */
@@ -163,13 +165,17 @@ export function applyBadgeCounts(
 ): MainNavItem[] {
   const hasHitl = counts.hitlPending > 0;
   const hasMission = counts.missionPendingToday > 0;
-  if (!hasHitl && !hasMission) return items;
+  const hasWeeklyUnread = counts.weeklyReportUnread > 0;
+  if (!hasHitl && !hasMission && !hasWeeklyUnread) return items;
   return items.map((item) => {
     if (hasHitl && item.href === "/admin/hitl") {
       return { ...item, badgeCount: counts.hitlPending };
     }
     if (hasMission && item.href === "/missions") {
       return { ...item, badgeCount: counts.missionPendingToday };
+    }
+    if (hasWeeklyUnread && item.href === "/weekly-review") {
+      return { ...item, badgeCount: counts.weeklyReportUnread };
     }
     return item;
   });

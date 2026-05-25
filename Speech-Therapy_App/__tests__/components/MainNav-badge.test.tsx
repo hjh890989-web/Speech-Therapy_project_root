@@ -66,6 +66,7 @@ describe("applyBadgeCounts — pure decorator", () => {
     const decorated = applyBadgeCounts(base, {
       hitlPending: 3,
       missionPendingToday: 0,
+      weeklyReportUnread: 0,
     });
     const hitl = decorated.find((i) => i.href === "/admin/hitl");
     expect(hitl).toBeTruthy();
@@ -80,6 +81,7 @@ describe("applyBadgeCounts — pure decorator", () => {
     const decorated = applyBadgeCounts(base, {
       hitlPending: 0,
       missionPendingToday: 0,
+      weeklyReportUnread: 0,
     });
     expect(decorated).toBe(base); // 동일 reference (zero-allocation 최적화)
     for (const item of decorated) {
@@ -92,6 +94,7 @@ describe("applyBadgeCounts — pure decorator", () => {
     const decorated = applyBadgeCounts(base, {
       hitlPending: 5,
       missionPendingToday: 0,
+      weeklyReportUnread: 0,
     });
     // parent 메뉴엔 /admin/hitl 자체가 없음 → 모든 item.badgeCount 미설정.
     for (const item of decorated) {
@@ -108,6 +111,7 @@ describe("MainNavClient — badge UI 렌더", () => {
     const items = applyBadgeCounts(buildNavItemsForRole("admin"), {
       hitlPending: 3,
       missionPendingToday: 0,
+      weeklyReportUnread: 0,
     });
     render(<MainNavClient items={items} role="admin" userEmail={null} />);
 
@@ -137,6 +141,7 @@ describe("MainNavClient — badge UI 렌더", () => {
     const items = applyBadgeCounts(buildNavItemsForRole("admin"), {
       hitlPending: 0,
       missionPendingToday: 0,
+      weeklyReportUnread: 0,
     });
     render(<MainNavClient items={items} role="admin" userEmail={null} />);
     expect(
@@ -158,6 +163,7 @@ describe("MainNavClient — badge UI 렌더", () => {
     const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
       hitlPending: 999,
       missionPendingToday: 0,
+      weeklyReportUnread: 0,
     });
     render(<MainNavClient items={items} role="parent" userEmail={null} />);
     const desktop = screen.getByTestId("main-nav-desktop");
@@ -177,6 +183,7 @@ describe("MainNavClient — badge UI 렌더", () => {
     const items = applyBadgeCounts(buildNavItemsForRole("admin"), {
       hitlPending: 3,
       missionPendingToday: 0,
+      weeklyReportUnread: 0,
     });
     render(<MainNavClient items={items} role="admin" userEmail={null} />);
     const nav = screen.getByTestId("main-nav");
@@ -198,6 +205,7 @@ describe("MainNavClient — badge UI 렌더", () => {
     const items = applyBadgeCounts(buildNavItemsForRole("expert"), {
       hitlPending: 2,
       missionPendingToday: 0,
+      weeklyReportUnread: 0,
     });
     render(<MainNavClient items={items} role="expert" userEmail={null} />);
 
@@ -216,6 +224,7 @@ describe("applyBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)"
     const decorated = applyBadgeCounts(base, {
       hitlPending: 0,
       missionPendingToday: 2,
+      weeklyReportUnread: 0,
     });
     const mission = decorated.find((i) => i.href === "/missions");
     expect(mission).toBeTruthy();
@@ -228,11 +237,12 @@ describe("applyBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)"
     }
   });
 
-  it("[m2] parent + 둘 다 0 → identity 반환 (zero-allocation)", () => {
+  it("[m2] parent + 셋 다 0 → identity 반환 (zero-allocation)", () => {
     const base = buildNavItemsForRole("parent");
     const decorated = applyBadgeCounts(base, {
       hitlPending: 0,
       missionPendingToday: 0,
+      weeklyReportUnread: 0,
     });
     expect(decorated).toBe(base);
   });
@@ -245,6 +255,7 @@ describe("applyBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)"
     const decorated = applyBadgeCounts(base, {
       hitlPending: 0,
       missionPendingToday: 4,
+      weeklyReportUnread: 0,
     });
     const mission = decorated.find((i) => i.href === "/missions");
     expect(mission!.badgeCount).toBe(4);
@@ -257,6 +268,7 @@ describe("MainNavClient — parent 미션 badge UI 렌더", () => {
     const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
       hitlPending: 0,
       missionPendingToday: 2,
+      weeklyReportUnread: 0,
     });
     render(<MainNavClient items={items} role="parent" userEmail={null} />);
 
@@ -287,6 +299,7 @@ describe("MainNavClient — parent 미션 badge UI 렌더", () => {
     const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
       hitlPending: 0,
       missionPendingToday: 0,
+      weeklyReportUnread: 0,
     });
     render(<MainNavClient items={items} role="parent" userEmail={null} />);
     expect(
@@ -308,11 +321,133 @@ describe("MainNavClient — parent 미션 badge UI 렌더", () => {
     const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
       hitlPending: 0,
       missionPendingToday: 7,
+      weeklyReportUnread: 0,
     });
     render(<MainNavClient items={items} role="parent" userEmail={null} />);
     const nav = screen.getByTestId("main-nav");
     const text = nav.textContent ?? "";
     expect(containsBannedTerms(text)).toBe(false);
+    const links = Array.from(nav.querySelectorAll("a"));
+    for (const link of links) {
+      const label = link.getAttribute("aria-label") ?? "";
+      expect(
+        containsBannedTerms(label),
+        `aria-label="${label}" 가 금칙어 매칭됨`,
+      ).toBe(false);
+    }
+  });
+});
+
+// ============================================================================
+// FR-WEEKLY-UNREAD — parent weekly-review 미열람 badge.
+// ============================================================================
+describe("applyBadgeCounts — parent weeklyReportUnread (FR-WEEKLY-UNREAD)", () => {
+  it("[wb1] parent + weeklyReportUnread=1 → /weekly-review item.badgeCount=1", () => {
+    const base = buildNavItemsForRole("parent");
+    const decorated = applyBadgeCounts(base, {
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 1,
+    });
+    const weekly = decorated.find((i) => i.href === "/weekly-review");
+    expect(weekly).toBeTruthy();
+    expect(weekly!.badgeCount).toBe(1);
+    // 다른 parent 메뉴는 영향 없음.
+    for (const item of decorated) {
+      if (item.href !== "/weekly-review") {
+        expect(item.badgeCount).toBeUndefined();
+      }
+    }
+  });
+
+  it("[wb2] parent + 세 카운트 모두 양수 → /weekly-review + /missions 둘 다 badge", () => {
+    const base = buildNavItemsForRole("parent");
+    const decorated = applyBadgeCounts(base, {
+      hitlPending: 0,
+      missionPendingToday: 2,
+      weeklyReportUnread: 1,
+    });
+    expect(decorated.find((i) => i.href === "/weekly-review")!.badgeCount).toBe(1);
+    expect(decorated.find((i) => i.href === "/missions")!.badgeCount).toBe(2);
+  });
+
+  it("[wb3] admin (weekly-review 메뉴 있음) + weeklyReportUnread>0 → admin 메뉴에도 badge 적용 (decorator pure)", () => {
+    // applyBadgeCounts 는 pure decorator. 실 production 에서는 getNavBadgeCounts 가 admin role 에 대해
+    // weeklyReportUnread=0 을 반환하여 admin 의 /weekly-review 메뉴에는 badge 가 안 뜸 (정책 layering).
+    const base = buildNavItemsForRole("admin");
+    const decorated = applyBadgeCounts(base, {
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 3,
+    });
+    const weekly = decorated.find((i) => i.href === "/weekly-review");
+    expect(weekly!.badgeCount).toBe(3);
+  });
+});
+
+describe("MainNavClient — parent weekly-review badge UI 렌더", () => {
+  it("[wb4] parent + weeklyReportUnread=1 → 데스크탑 카운트 + aria-label '1건 미처리'", () => {
+    usePathnameMock.mockReturnValue("/");
+    const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 1,
+    });
+    render(<MainNavClient items={items} role="parent" userEmail={null} />);
+
+    const desktop = screen.getByTestId("main-nav-desktop");
+    const weeklyLink = Array.from(desktop.querySelectorAll("a")).find(
+      (a) => a.getAttribute("href") === "/weekly-review",
+    );
+    expect(weeklyLink).toBeTruthy();
+    expect(weeklyLink!.getAttribute("aria-label")).toBe(
+      "우리 아이 주간 리뷰, 1건 미처리",
+    );
+    const badge = weeklyLink!.querySelector(
+      "[data-testid='main-nav-badge-/weekly-review']",
+    );
+    expect(badge).toBeTruthy();
+    expect(badge!.textContent).toBe("1");
+
+    // 모바일 dot 노출.
+    const mobile = screen.getByTestId("main-nav-mobile-list");
+    const mobileBadge = mobile.querySelector(
+      "[data-testid='main-nav-mobile-badge-/weekly-review']",
+    );
+    expect(mobileBadge).toBeTruthy();
+  });
+
+  it("[wb5] parent + 미열람 0건 → /weekly-review badge 미노출", () => {
+    usePathnameMock.mockReturnValue("/");
+    const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+    });
+    render(<MainNavClient items={items} role="parent" userEmail={null} />);
+    expect(
+      screen.queryByTestId("main-nav-badge-/weekly-review"),
+    ).toBeNull();
+    expect(
+      screen.queryByTestId("main-nav-mobile-badge-/weekly-review"),
+    ).toBeNull();
+    const desktop = screen.getByTestId("main-nav-desktop");
+    const weeklyLink = Array.from(desktop.querySelectorAll("a")).find(
+      (a) => a.getAttribute("href") === "/weekly-review",
+    );
+    expect(weeklyLink!.getAttribute("aria-label")).toBe("우리 아이 주간 리뷰");
+  });
+
+  it("[wb6] CON-04 — weekly-review badge DOM 텍스트 + aria-label 금칙어 0건", () => {
+    usePathnameMock.mockReturnValue("/");
+    const items = applyBadgeCounts(buildNavItemsForRole("parent"), {
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 2,
+    });
+    render(<MainNavClient items={items} role="parent" userEmail={null} />);
+    const nav = screen.getByTestId("main-nav");
+    expect(containsBannedTerms(nav.textContent ?? "")).toBe(false);
     const links = Array.from(nav.querySelectorAll("a"));
     for (const link of links) {
       const label = link.getAttribute("aria-label") ?? "";

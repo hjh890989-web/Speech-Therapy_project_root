@@ -22,6 +22,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sessionLogCountMock = vi.fn();
 const hitlCountMock = vi.fn();
+const weeklyReportCountMock = vi.fn().mockResolvedValue(0);
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -34,6 +35,9 @@ vi.mock("@/lib/db", () => ({
     sessionLog: {
       count: (...args: unknown[]) => sessionLogCountMock(...args),
     },
+    weeklyReport: {
+      count: (...args: unknown[]) => weeklyReportCountMock(...args),
+    },
   },
 }));
 
@@ -43,6 +47,8 @@ import { kstStartOfDay } from "@/lib/timeline/tz";
 beforeEach(() => {
   sessionLogCountMock.mockReset();
   hitlCountMock.mockReset();
+  weeklyReportCountMock.mockReset();
+  weeklyReportCountMock.mockResolvedValue(0);
 });
 
 afterEach(() => {
@@ -57,7 +63,11 @@ describe("getNavBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)
       institutionId: null,
       userId: "parent-1",
     });
-    expect(out).toEqual({ hitlPending: 0, missionPendingToday: 3 });
+    expect(out).toEqual({
+      hitlPending: 0,
+      missionPendingToday: 3,
+      weeklyReportUnread: 0,
+    });
     expect(sessionLogCountMock).toHaveBeenCalledTimes(1);
   });
 
@@ -78,19 +88,29 @@ describe("getNavBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)
       institutionId: null,
       userId: null,
     });
-    expect(out).toEqual({ hitlPending: 0, missionPendingToday: 0 });
+    expect(out).toEqual({
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+    });
     expect(sessionLogCountMock).not.toHaveBeenCalled();
+    expect(weeklyReportCountMock).not.toHaveBeenCalled();
   });
 
   it("[4] parent + DB error → 0 graceful (count throws)", async () => {
     sessionLogCountMock.mockRejectedValueOnce(new Error("db down"));
+    weeklyReportCountMock.mockRejectedValueOnce(new Error("db down"));
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const out = await getNavBadgeCounts({
       role: "parent",
       institutionId: null,
       userId: "parent-err",
     });
-    expect(out).toEqual({ hitlPending: 0, missionPendingToday: 0 });
+    expect(out).toEqual({
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+    });
     expect(errSpy).toHaveBeenCalled();
   });
 
@@ -168,8 +188,136 @@ describe("getNavBadgeCounts — parent missionPendingToday (FR-NAV-BADGE 후속)
       institutionId: null,
       userId: null,
     });
-    expect(out).toEqual({ hitlPending: 0, missionPendingToday: 0 });
+    expect(out).toEqual({
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 0,
+    });
     expect(sessionLogCountMock).not.toHaveBeenCalled();
     expect(hitlCountMock).not.toHaveBeenCalled();
+    expect(weeklyReportCountMock).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+// FR-WEEKLY-UNREAD — parent weeklyReportUnread badge 단위 테스트.
+// ============================================================================
+//
+// 검증 시나리오 (8건):
+//   [w1] parent + 미열람 WeeklyReport 2건 → weeklyReportUnread=2
+//   [w2] parent + 미열람 0건 → 0
+//   [w3] parent + userId=null → 0 + weeklyReport.count 미호출
+//   [w4] parent + weeklyReport.count error → 0 graceful (mission count 영향 X)
+//   [w5] parent + 양쪽 정상 — sessionLog + weeklyReport 둘 다 호출 (Promise.all)
+//   [w6] non-parent role → weeklyReportUnread=0 + weeklyReport.count 미호출
+//   [w7] anonymous → weeklyReport.count 미호출
+//   [w8] where clause 매핑 — userId + viewedAt: null
+describe("getNavBadgeCounts — parent weeklyReportUnread (FR-WEEKLY-UNREAD)", () => {
+  it("[w1] parent + 미열람 2건 → weeklyReportUnread=2", async () => {
+    sessionLogCountMock.mockResolvedValueOnce(0);
+    weeklyReportCountMock.mockResolvedValueOnce(2);
+    const out = await getNavBadgeCounts({
+      role: "parent",
+      institutionId: null,
+      userId: "parent-w1",
+    });
+    expect(out).toEqual({
+      hitlPending: 0,
+      missionPendingToday: 0,
+      weeklyReportUnread: 2,
+    });
+  });
+
+  it("[w2] parent + 미열람 0건 → 0", async () => {
+    sessionLogCountMock.mockResolvedValueOnce(0);
+    weeklyReportCountMock.mockResolvedValueOnce(0);
+    const out = await getNavBadgeCounts({
+      role: "parent",
+      institutionId: null,
+      userId: "parent-w2",
+    });
+    expect(out.weeklyReportUnread).toBe(0);
+  });
+
+  it("[w3] parent + userId=null → 0 + weeklyReport.count 미호출", async () => {
+    const out = await getNavBadgeCounts({
+      role: "parent",
+      institutionId: null,
+      userId: null,
+    });
+    expect(out.weeklyReportUnread).toBe(0);
+    expect(weeklyReportCountMock).not.toHaveBeenCalled();
+  });
+
+  it("[w4] parent + weeklyReport.count error → 0 graceful (mission count 영향 X)", async () => {
+    sessionLogCountMock.mockResolvedValueOnce(3);
+    weeklyReportCountMock.mockRejectedValueOnce(new Error("db down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const out = await getNavBadgeCounts({
+      role: "parent",
+      institutionId: null,
+      userId: "parent-w4",
+    });
+    // missionPendingToday 는 정상 (3), weeklyReportUnread 만 graceful 0.
+    expect(out.missionPendingToday).toBe(3);
+    expect(out.weeklyReportUnread).toBe(0);
+    expect(errSpy).toHaveBeenCalled();
+  });
+
+  it("[w5] parent + 양쪽 정상 — sessionLog + weeklyReport 둘 다 호출 (Promise.all)", async () => {
+    sessionLogCountMock.mockResolvedValueOnce(2);
+    weeklyReportCountMock.mockResolvedValueOnce(1);
+    const out = await getNavBadgeCounts({
+      role: "parent",
+      institutionId: null,
+      userId: "parent-w5",
+    });
+    expect(out).toEqual({
+      hitlPending: 0,
+      missionPendingToday: 2,
+      weeklyReportUnread: 1,
+    });
+    expect(sessionLogCountMock).toHaveBeenCalledTimes(1);
+    expect(weeklyReportCountMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("[w6] non-parent role (admin/teacher/principal/expert) → weeklyReportUnread=0 + weeklyReport.count 미호출", async () => {
+    hitlCountMock.mockResolvedValue(0);
+    for (const role of ["admin", "teacher", "principal", "expert"] as const) {
+      weeklyReportCountMock.mockReset();
+      weeklyReportCountMock.mockResolvedValue(0);
+      const out = await getNavBadgeCounts({
+        role,
+        institutionId: "inst-X",
+        userId: "user-x",
+      });
+      expect(out.weeklyReportUnread).toBe(0);
+      expect(weeklyReportCountMock).not.toHaveBeenCalled();
+    }
+  });
+
+  it("[w7] anonymous → weeklyReport.count 미호출", async () => {
+    const out = await getNavBadgeCounts({
+      role: "anonymous",
+      institutionId: null,
+      userId: null,
+    });
+    expect(out.weeklyReportUnread).toBe(0);
+    expect(weeklyReportCountMock).not.toHaveBeenCalled();
+  });
+
+  it("[w8] where clause 매핑 — userId + viewedAt: null", async () => {
+    sessionLogCountMock.mockResolvedValueOnce(0);
+    weeklyReportCountMock.mockResolvedValueOnce(1);
+    await getNavBadgeCounts({
+      role: "parent",
+      institutionId: null,
+      userId: "parent-w8",
+    });
+    const args = weeklyReportCountMock.mock.calls[0]![0] as {
+      where: { userId: string; viewedAt: null };
+    };
+    expect(args.where.userId).toBe("parent-w8");
+    expect(args.where.viewedAt).toBeNull();
   });
 });

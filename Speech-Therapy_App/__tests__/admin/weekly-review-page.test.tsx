@@ -28,10 +28,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
 
 const userFindUniqueMock = vi.fn();
+const weeklyReportUpdateMock = vi.fn().mockResolvedValue({});
 vi.mock("@/lib/db", () => ({
   prisma: {
     user: {
       findUnique: (...args: unknown[]) => userFindUniqueMock(...args),
+    },
+    weeklyReport: {
+      // FR-WEEKLY-UNREAD — page 가 latest.viewedAt===null 분기에서 호출.
+      update: (...args: unknown[]) => weeklyReportUpdateMock(...args),
     },
   },
 }));
@@ -117,6 +122,7 @@ function makeRow(
     peerPercentileAvg: number | null;
     predictedNextScore: number | null;
     predictionConfidence: number | null;
+    viewedAt: Date | null;
   }> = {},
 ) {
   return {
@@ -135,6 +141,9 @@ function makeRow(
     predictionConfidence:
       overrides.predictionConfidence === undefined ? 0.85 : overrides.predictionConfidence,
     generatedAt: new Date("2026-05-24T00:00:00Z"),
+    // FR-WEEKLY-UNREAD — 기본은 이미 viewed 로 둠 (page 의 viewedAt UPDATE 분기 진입 방지).
+    // 명시적으로 null 을 주면 page 가 weeklyReport.update 를 호출.
+    viewedAt: overrides.viewedAt === undefined ? new Date("2026-05-24T00:00:00Z") : overrides.viewedAt,
     scoreTrend: [],
   };
 }
@@ -152,6 +161,8 @@ beforeEach(() => {
   getUserMock.mockReset();
   loadWeeklyReviewMock.mockReset();
   redirectMock.mockClear();
+  weeklyReportUpdateMock.mockReset();
+  weeklyReportUpdateMock.mockResolvedValue({});
 });
 
 describe("/weekly-review — FR-Q-WEEKLY-REVIEW 부모용 주간 리뷰 페이지", () => {
@@ -392,5 +403,80 @@ describe("/weekly-review — FR-Q-WEEKLY-REVIEW 부모용 주간 리뷰 페이�
     const mission = container.querySelector("[data-testid='weekly-review-mission-cta']");
     expect(mission).not.toBeNull();
     expect(mission?.getAttribute("href")).toBe("/missions");
+  });
+
+  // ============================================================================
+  // FR-WEEKLY-UNREAD — viewedAt UPDATE 분기 검증 (4건).
+  // ============================================================================
+  it("[u1] latest.viewedAt === null → weeklyReport.update 1회 호출 (id + viewedAt:Date)", async () => {
+    setAuthUser(USER_ME);
+    userFindUniqueMock.mockResolvedValueOnce({ childAgeMonths: 48 });
+    loadWeeklyReviewMock.mockResolvedValueOnce({
+      latest: makeRow({ id: "wr-unread-1", viewedAt: null }),
+      history: [],
+      wAurAchieved: true,
+      hasData: true,
+    });
+
+    await WeeklyReviewPage();
+
+    expect(weeklyReportUpdateMock).toHaveBeenCalledTimes(1);
+    const callArgs = weeklyReportUpdateMock.mock.calls[0]?.[0] as {
+      where: { id: string };
+      data: { viewedAt: Date };
+    };
+    expect(callArgs.where.id).toBe("wr-unread-1");
+    expect(callArgs.data.viewedAt).toBeInstanceOf(Date);
+  });
+
+  it("[u2] latest.viewedAt 이미 set → weeklyReport.update 미호출 (zero-write)", async () => {
+    setAuthUser(USER_ME);
+    userFindUniqueMock.mockResolvedValueOnce({ childAgeMonths: 48 });
+    loadWeeklyReviewMock.mockResolvedValueOnce({
+      latest: makeRow({ viewedAt: new Date("2026-05-25T10:00:00Z") }),
+      history: [],
+      wAurAchieved: true,
+      hasData: true,
+    });
+
+    await WeeklyReviewPage();
+
+    expect(weeklyReportUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("[u3] hasData=false (latest=null) → weeklyReport.update 미호출", async () => {
+    setAuthUser(USER_ME);
+    userFindUniqueMock.mockResolvedValueOnce({ childAgeMonths: null });
+    loadWeeklyReviewMock.mockResolvedValueOnce({
+      latest: null,
+      history: [],
+      wAurAchieved: false,
+      hasData: false,
+    });
+
+    await WeeklyReviewPage();
+
+    expect(weeklyReportUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("[u4] viewedAt UPDATE 실패 → page 정상 렌더 (graceful, 차단 0)", async () => {
+    setAuthUser(USER_ME);
+    userFindUniqueMock.mockResolvedValueOnce({ childAgeMonths: 48 });
+    loadWeeklyReviewMock.mockResolvedValueOnce({
+      latest: makeRow({ id: "wr-err", viewedAt: null }),
+      history: [],
+      wAurAchieved: true,
+      hasData: true,
+    });
+    weeklyReportUpdateMock.mockRejectedValueOnce(new Error("db down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const ui = await WeeklyReviewPage();
+    const { container } = render(ui);
+
+    // page 는 정상 렌더 — summary + waur 등 표시.
+    expect(container.querySelector("[data-testid='weekly-review-page']")).not.toBeNull();
+    expect(container.querySelector("[data-testid='weekly-review-summary']")).not.toBeNull();
+    expect(errSpy).toHaveBeenCalled();
   });
 });
