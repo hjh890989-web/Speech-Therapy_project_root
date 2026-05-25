@@ -13,7 +13,13 @@
 
 import { trackEvent } from "./analytics";
 
-export type ShareSurface = "result" | "reward" | "weekly_report";
+// surface enum — events.ts share_clicked.properties.surface 와 정합 필수.
+//   "search_result" : FR-NAV-SEARCH — GlobalSearch 결과 row 의 share/copy 액션.
+export type ShareSurface =
+  | "result"
+  | "reward"
+  | "weekly_report"
+  | "search_result";
 
 export type ShareMethod = "web_share" | "clipboard" | "unsupported";
 

@@ -232,7 +232,9 @@ export type AnalyticsEvent =
         method: "web_share" | "clipboard" | "unsupported";
         // user cancel (AbortError) 시 false. 폴백/성공 모두 true.
         succeeded: boolean;
-        surface: "result" | "reward" | "weekly_report";
+        // FR-NAV-SEARCH (search_result) — admin 운영자가 GlobalSearch 결과 row 의 share/copy 액션 클릭.
+        //   surface 별로 KPI 측정 — "공유 가장 많이 발생하는 surface" 분기.
+        surface: "result" | "reward" | "weekly_report" | "search_result";
       };
     }
   // === FR-Q-011 — ROI 시뮬레이터 (Issue #52 / REQ-FUNC-048) ===

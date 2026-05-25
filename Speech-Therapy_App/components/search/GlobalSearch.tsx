@@ -27,6 +27,8 @@ import { useRouter } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
 import type { SearchResult } from "@/lib/search/global";
 
+import { ShareResultButton } from "./ShareResultButton";
+
 export interface GlobalSearchProps {
   /** 검색 호출자 role — 분석 이벤트 발송 시 라벨. anonymous / parent / expert 면 input 미렌더. */
   role: "admin" | "principal" | "teacher";
@@ -291,21 +293,25 @@ export function GlobalSearch({ role }: GlobalSearchProps) {
                       const flatIdx = results.indexOf(item);
                       const isActive = flatIdx === activeIdx;
                       return (
-                        <li key={`${item.kind}:${item.id}`}>
+                        <li
+                          key={`${item.kind}:${item.id}`}
+                          role="option"
+                          aria-selected={isActive}
+                          data-active={isActive ? "true" : "false"}
+                          data-testid={`global-search-result-row-${item.kind}-${item.id}`}
+                          onMouseEnter={() => setActiveIdx(flatIdx)}
+                          className={[
+                            "flex w-full items-center gap-1 pr-1 text-sm",
+                            isActive
+                              ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
+                              : "text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800",
+                          ].join(" ")}
+                        >
                           <button
                             type="button"
-                            role="option"
-                            aria-selected={isActive}
-                            data-active={isActive ? "true" : "false"}
                             data-testid={`global-search-result-${item.kind}-${item.id}`}
                             onClick={() => navigateTo(item.href)}
-                            onMouseEnter={() => setActiveIdx(flatIdx)}
-                            className={[
-                              "flex w-full flex-col gap-0.5 px-3 py-2 text-left text-sm",
-                              isActive
-                                ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                                : "text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800",
-                            ].join(" ")}
+                            className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-2 text-left"
                           >
                             <span className="truncate font-medium">{item.label}</span>
                             {item.subtitle ? (
@@ -314,6 +320,7 @@ export function GlobalSearch({ role }: GlobalSearchProps) {
                               </span>
                             ) : null}
                           </button>
+                          <ShareResultButton result={item} />
                         </li>
                       );
                     })}
