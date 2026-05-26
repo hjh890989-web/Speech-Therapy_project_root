@@ -122,9 +122,10 @@ jobs:
           fail=0
           for name in $PATHS; do
             url="$BASE/api/cron/$name"
-            echo "→ POST $url"
+            echo "→ GET $url"
+            # Vercel Cron 호출 규약: GET 메서드. lib/cron-auth.ts verifyCronSecret 도 Request 표준 사용.
+            # (POST 사용 시 route handler 가 405 Method Not Allowed 응답 — 5/27 1차 fire 시 학습)
             status=$(curl -s -L -o /tmp/resp.txt -w "%{http_code}" \
-              -X POST \
               -H "Authorization: Bearer $CRON_SECRET" \
               --max-time 60 \
               "$url" || echo "TIMEOUT")
