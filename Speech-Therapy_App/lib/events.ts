@@ -897,6 +897,18 @@ export type AnalyticsEvent =
         institutionId: string | null;
         role: "principal" | "teacher";
       };
+    }
+  // === FR-CONSENT-REMINDER-UI — /settings/consent 부모 self-service 재발송 ===
+  | {
+      // ConsentResendButton 이 resendConsentReminder Server Action success 직후 1회 발송.
+      // R4 보호: userId 는 분석 백엔드 자동 해시 가정 — parentEmail / childNickname 절대 노출 X.
+      //   consentSignatureId 만 노출 (ConsentSignature.id UUID).
+      // KPI 활용: 부모 self-service 재발송 빈도 → 자동 cron 의존도 vs 수동 재발송 분기 측정.
+      name: "consent_reminder_resent";
+      properties: {
+        userId: string;
+        consentSignatureId: string;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

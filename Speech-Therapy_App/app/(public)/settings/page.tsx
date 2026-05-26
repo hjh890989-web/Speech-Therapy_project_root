@@ -82,6 +82,16 @@ const SETTINGS_ENTRIES: ReadonlyArray<SettingsEntry> = [
     description: "TOTP 인증 앱으로 로그인 보안을 강화해요.",
     testId: "settings-card-security",
   },
+  {
+    // FR-CONSENT-REMINDER-UI — dca2aee 의 consent badge 가 /settings 로 진입한 부모를 위해
+    // 본 카드에서 self-service 동의서 관리 페이지로 한 클릭에 이동.
+    href: "/settings/consent",
+    icon: "📝",
+    title: "동의서 관리",
+    description:
+      "서명이 필요한 동의서를 확인하고 안내 메일을 다시 보낼 수 있어요.",
+    testId: "settings-card-consent",
+  },
 ];
 
 export default async function SettingsIndexPage() {
