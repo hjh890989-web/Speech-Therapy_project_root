@@ -14,32 +14,8 @@
       "schedule": "0 0 * * *"
     },
     {
-      "path": "/api/cron/audio-cleanup",
-      "schedule": "0 3 * * 0"
-    },
-    {
       "path": "/api/cron/weekly-reports",
       "schedule": "0 3 * * 0"
-    },
-    {
-      "path": "/api/cron/consent-reminder",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/consent-expire",
-      "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/error-monitor",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/hitl-escalation",
-      "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/cron/funnel-alert",
-      "schedule": "0 0 * * *"
     }
   ]
 }
