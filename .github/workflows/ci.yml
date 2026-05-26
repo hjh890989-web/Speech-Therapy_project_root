@@ -6,11 +6,19 @@
 #
 # 검증 범위:
 #   quality-gate  : tsc --noEmit + eslint + vitest run
+#   next-build    : next build (Turbopack chunking / "use server" 룰 위반 사전 차단)
 #   prisma-drift  : prisma migrate status (DB 연결 — secrets 필요)
 #
 # 범위 외 (의도적 제외):
-#   - next build / playwright e2e — Vercel CI 가 책임 (이중 비용 회피)
-#   - 로컬 next build 는 E: 드라이브 filesystem 한계로 실패 (Linux runner 는 정상)
+#   - playwright e2e — Vercel preview deploy 후 별도 워크플로
+#
+# next-build job 추가 사유 (2026-05-25 §16 sub-session 학습):
+#   - vitest + tsc + lint 모두 통과해도 `next build` 가 깨질 수 있음.
+#   - 발견 사례: Next.js 16 + Turbopack 의 strict "use server" 룰 (async function 외
+#     export 금지) 위반 21건이 vitest + tsc 통과 + main push 까지 무사 통과 → bundle
+#     analyze 시도 시점에 발견. Vercel deploy 시 같은 사고 재발 위험.
+#   - 비용 trade-off: build job ≈ 2~3분 × 2~3 push/일 = 미미. 사고 1회 = sub-session
+#     1~2시간 소요. CI 비용이 압도적으로 저렴.
 #
 # 트리거:
 #   - main / develop 브랜치 push (직접 푸시 후 회귀 검증)
@@ -83,6 +91,59 @@ jobs:
 
       - name: Vitest (단위 + 통합 전체)
         run: npm test
+
+  # ---------------------------------------------------------------------------
+  # next-build — Turbopack chunking 룰 / "use server" 룰 / client bundle 누출 검증.
+  #
+  # vitest 가 못 잡는 사고 유형:
+  #   - "use server" 파일의 non-async export (const / interface / class) — Turbopack
+  #     이 "no exports at all" + chunking failure 로 거부. 2026-05-25 §16 에서 21건
+  #     적발.
+  #   - Client Component 가 Prisma 를 transitively import (lib/db.ts 가 client bundle
+  #     로 끌려가 `node:module` 외부 모듈 미지원 chunking error).
+  #   - Server Action 의 type-only re-export 위반 등.
+  #
+  # 환경:
+  #   - 런타임 secret 부재 (dummy 만) — 본 단계는 _컴파일 + chunking_ 만 검증.
+  #   - 실 DB / API 호출은 발생 안 함 (모든 page 가 dynamic = "force-dynamic" / RSC
+  #     fetch 는 build 시점 실행 안 함).
+  #   - prerender 도 dummy env 로 통과 가능 (현 코드 베이스 기준 — 정적 prerender 페이지
+  #     중 환경 의존 RSC 없음).
+  # ---------------------------------------------------------------------------
+  next-build:
+    name: next-build (Turbopack 룰 + chunking 검증)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: Speech-Therapy_App
+
+    env:
+      DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+      DIRECT_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+      GOOGLE_GENERATIVE_AI_API_KEY: "ci-dummy-key"
+      # Supabase client 모듈이 build 시점에 URL 형식 검증할 수 있어 valid URL shape 제공.
+      NEXT_PUBLIC_SUPABASE_URL: "https://ci-dummy.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-dummy-anon-key"
+      NEXT_PUBLIC_BASE_URL: "https://ci-dummy.example"
+      NEXT_PUBLIC_SITE_URL: "https://ci-dummy.example"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24 + npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: Speech-Therapy_App/package-lock.json
+
+      - name: Install dependencies (npm ci, postinstall prisma generate)
+        run: npm ci
+
+      - name: Next build (Turbopack — chunking / "use server" 룰 검증)
+        run: npx next build
 
   # ---------------------------------------------------------------------------
   # prisma-drift — schema.prisma 와 운영 DB 의 migration history 일치 검증.
