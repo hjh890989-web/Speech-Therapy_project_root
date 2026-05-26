@@ -67,6 +67,12 @@ export function buildNavItemsForRole(role: MainNavRole): MainNavItem[] {
     label: "HITL 큐",
     emoji: "🧭",
   };
+  // FR-2FA-RECOVERY — admin 전용 2FA 초기화 (부모 lockout 복구) — admin role 만 노출.
+  const ADMIN_TOTP_RESET: MainNavItem = {
+    href: "/admin/security/totp-reset",
+    label: "2FA 초기화",
+    emoji: "🔐",
+  };
   // 설정 — 모든 인증 role 공통. anonymous 만 제외.
   // active path 강조는 isPathActive prefix 매칭으로 /settings/calibration / /settings/child 등 sub-route 포함.
   const SETTINGS: MainNavItem = {
@@ -94,7 +100,14 @@ export function buildNavItemsForRole(role: MainNavRole): MainNavItem[] {
     case "principal":
       return [...PARENT_BASE, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, SETTINGS];
     case "admin":
-      return [...PARENT_BASE, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, HITL_QUEUE, SETTINGS];
+      return [
+        ...PARENT_BASE,
+        PRINCIPAL_DASHBOARD,
+        TEACHER_DASHBOARD,
+        HITL_QUEUE,
+        ADMIN_TOTP_RESET,
+        SETTINGS,
+      ];
     case "expert":
       return [PARENT_BASE[0]!, PARENT_BASE[1]!, PARENT_BASE[2]!, HITL_QUEUE, SETTINGS];
     default: {

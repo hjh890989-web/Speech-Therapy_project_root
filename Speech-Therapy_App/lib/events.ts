@@ -909,6 +909,16 @@ export type AnalyticsEvent =
         userId: string;
         consentSignatureId: string;
       };
+    }
+  // === FR-2FA-RECOVERY — admin 이 다른 사용자의 TOTP 를 강제 해제 (부모 lockout 복구) ===
+  | {
+      // AdminTotpResetForm 이 adminResetTotp Server Action success 직후 1회 발송.
+      // 시나리오: 부모(또는 임의 user) 의 authenticator 분실 + backup codes 8개 모두 소진 시
+      //   영구 lockout 회피용 "support ticket reset" 패턴 — admin 만 호출 가능.
+      // R4 보호: 두 uuid 모두 분석 백엔드 자동 해시 가정 — 자녀 식별 정보 0건.
+      // 본 이벤트는 critical Slack alert (totp_disabled) 와 별개의 클라이언트 텔레메트리.
+      name: "admin_totp_reset";
+      properties: { adminUserId: string; targetUserId: string };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

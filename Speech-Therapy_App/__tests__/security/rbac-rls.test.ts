@@ -228,6 +228,7 @@ describe("SEC-002 — RBAC + RLS + Audit Log 통합", () => {
       "app/api/cron/audio-cleanup/route.ts", // FR-C-004 음성 폐기 Cron.
       "lib/audit.ts", // SEC-002 (DB-011 후속) — AuditLog INSERT helper. RLS INSERT default deny 우회 필수.
       "app/actions/delete-account.ts", // FR-C-ACCOUNT — GDPR 계정 삭제. Supabase auth.admin.deleteUser 호출 (auth.users 는 RLS 미적용 + service_role 필수).
+      "app/actions/admin-reset-totp.ts", // FR-2FA-RECOVERY — admin 만 진입. Supabase auth.admin.mfa.{listFactors, deleteFactor} 호출 (auth.users.factors 는 service_role 필수). caller role 'admin' 교차 검증 후에만 SDK 진입.
     ];
 
     it("getSupabaseAdmin import 사용처가 화이트리스트 안에만 존재", () => {
