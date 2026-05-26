@@ -7,7 +7,8 @@
 // exchangeCodeForSession 이 Magic Link 와 OAuth code 둘 다 처리.
 
 import { useState } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+// FR-PERF-4-DYNAMIC-IMPORT — Supabase browser client (~212KB) 는 submit/OAuth 클릭
+// 시점에 lazy load. /login 첫 진입 LCP 영향 0 (form/button 만 critical UI).
 import { trackEvent } from "@/lib/analytics";
 
 type Status = "idle" | "magic_sending" | "magic_sent" | "oauth_redirecting" | "error";
@@ -23,6 +24,7 @@ export function LoginForm() {
     setStatus("magic_sending");
     setErrorMessage(null);
     try {
+      const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
       const supabase = getSupabaseBrowserClient();
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const { error } = await supabase.auth.signInWithOtp({
@@ -48,6 +50,7 @@ export function LoginForm() {
     setErrorMessage(null);
     trackEvent("auth_signin_started", { provider: "google" });
     try {
+      const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
       const supabase = getSupabaseBrowserClient();
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const { error } = await supabase.auth.signInWithOAuth({

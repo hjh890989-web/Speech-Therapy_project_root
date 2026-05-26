@@ -23,11 +23,11 @@
 
 import { useMemo, useRef, useState } from "react";
 
-import {
-  parseStudentBuffer,
-  validateStudentRows,
-  type ImportErrorRow,
-  type StudentImportRow,
+// FR-PERF-4-DYNAMIC-IMPORT — student-bulk-import parser (~291KB unique chunk) 를
+// 파일 업로드 시점까지 defer. type-only import 는 erased — 초기 bundle 영향 0.
+import type {
+  ImportErrorRow,
+  StudentImportRow,
 } from "@/lib/admin/student-bulk-import";
 import { submitBulkImport } from "@/app/actions/student-bulk-import";
 import { trackEvent } from "@/lib/analytics";
@@ -149,6 +149,10 @@ export function StudentBulkImportClient({
     if (!file) return;
     setPhase({ state: "parsing" });
     try {
+      // FR-PERF-4-DYNAMIC-IMPORT — 파일 업로드 시점에 lazy load (~291KB chunk).
+      const { parseStudentBuffer, validateStudentRows } = await import(
+        "@/lib/admin/student-bulk-import"
+      );
       const buffer = await file.arrayBuffer();
       const { rows: parsedRows, parseErrors } = parseStudentBuffer(
         buffer,
@@ -186,7 +190,12 @@ export function StudentBulkImportClient({
     );
   }
 
-  function handleRevalidate() {
+  async function handleRevalidate() {
+    // 재검증은 파싱 직후에만 의미 — handleFileChange 가 lazy load 했으므로 캐시 hit.
+    // 보수적으로 동일 dynamic import (캐시) 사용.
+    const { validateStudentRows } = await import(
+      "@/lib/admin/student-bulk-import"
+    );
     const rawRows = rows.map((r) => editableToRaw(r, institutionId));
     const { errors: validationErrors } = validateStudentRows(rawRows, {
       institutionId,

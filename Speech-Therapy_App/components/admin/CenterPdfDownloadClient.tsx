@@ -20,10 +20,9 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import {
-  generateCenterReportPdf,
-  type CenterReportInput,
-} from "@/lib/pdf/center-report";
+// FR-PERF-4-DYNAMIC-IMPORT — jsPDF (~417KB unique chunk) 를 다운로드 클릭 시점까지 defer.
+// type-only import 는 erased — 초기 bundle 영향 0.
+import type { CenterReportInput } from "@/lib/pdf/center-report";
 import { trackEvent } from "@/lib/analytics";
 
 export interface CenterPdfDownloadClientProps {
@@ -69,6 +68,8 @@ export function CenterPdfDownloadClient({
   const handleDownload = useCallback(async () => {
     setPhase({ state: "generating" });
     try {
+      // FR-PERF-4-DYNAMIC-IMPORT — jsPDF lazy load (다운로드 버튼 클릭 시점).
+      const { generateCenterReportPdf } = await import("@/lib/pdf/center-report");
       const result = await generateCenterReportPdf(input, {
         englishFallback: englishFallback ?? false,
       });

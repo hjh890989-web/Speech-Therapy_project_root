@@ -18,7 +18,8 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+// FR-PERF-4-DYNAMIC-IMPORT — Supabase browser client (~212KB) 는 submit 클릭
+// 시점에 lazy load. /auth/reset-password 첫 진입 LCP 영향 0.
 
 /** 새 비밀번호 검증 정책 — 최소 8자 + (영문+숫자 권장 — 권장만, blocking 아님). */
 const MIN_LENGTH = 8;
@@ -82,6 +83,7 @@ export function NewPasswordForm({
     setStatus("submitting");
     setErrorMessage(null);
     try {
+      const { getSupabaseBrowserClient } = await import("@/lib/supabase/client");
       const supabase = getSupabaseBrowserClient();
       const { error } = await supabase.auth.updateUser({ password });
       if (error) {
