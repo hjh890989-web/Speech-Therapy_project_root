@@ -177,6 +177,9 @@ jobs:
     steps:
       - name: Guard — secrets 미설정 시 조기 종료 (정상)
         id: guard
+        # working-directory: . — defaults 의 Speech-Therapy_App/ 이 Checkout 전 존재
+        # 안 함. Guard 는 cd 불필요한 단순 bash 라 root 에서 실행 (2026-05-26 §16 학습).
+        working-directory: .
         run: |
           if [ -z "${{ secrets.DATABASE_URL }}" ] || [ -z "${{ secrets.DIRECT_URL }}" ]; then
             echo "::warning::DATABASE_URL / DIRECT_URL secret 미설정 → prisma-drift skip. README CI 섹션 참조하여 등록 후 활성화 가능."
