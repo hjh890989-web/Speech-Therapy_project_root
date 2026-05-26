@@ -20,11 +20,13 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { trackEvent } from "@/lib/analytics";
+// FR-PERF-3-CLIENT-LEAK-GUARD — Client Component 는 prisma 비의존 shape 모듈만 import.
+// `@/lib/notifications/preference` (server-only, prisma 의존) 직접 import 시 build 실패.
 import {
   NOTIFICATION_PREFERENCE_KEYS,
   type NotificationPreference,
   type NotificationPreferenceKey,
-} from "@/lib/notifications/preference";
+} from "@/lib/notifications/preference-shape";
 import { updateNotificationPreference } from "@/app/actions/update-notification-preference";
 
 /** prefill 입력 — Server Component (page.tsx) 가 preference helper 호출 후 전달. */

@@ -1,4 +1,4 @@
-// FR-Q-013 후속 — OfflineEntry Prisma 액세스 helper.
+// FR-Q-013 후속 — OfflineEntry Prisma 액세스 helper (SERVER-ONLY).
 //
 // 책임 (Server-side only):
 //   - createOfflineEntry: withActor(authorId, ...) 트랜잭션 — audit_trigger_fn 의
@@ -16,49 +16,33 @@
 //         DB IO 만, sanitize/validation 미수행.
 //
 // 성능: listOfflineEntriesForUser 의 default limit 20 (UI 표시 한도).
+//
+// FR-PERF-3-CLIENT-LEAK-GUARD — 순수 shape (타입/상수) 는 `./types` 으로 분리되어
+// Client Component 가 안전하게 import. 본 파일은 prisma 의존 server-only helper.
 
 import type { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { withActor } from "@/lib/db/with-actor";
 
-/** OfflineEntry 의 application-side type — Prisma 모델과 동일 shape. */
-export interface OfflineEntry {
-  id: string;
-  userId: string;
-  authorId: string;
-  kind: string;
-  note: string;
-  observedAt: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  institutionId: string | null;
-}
+import {
+  OFFLINE_ENTRY_KINDS,
+  OFFLINE_ENTRY_NOTE_MAX_LENGTH,
+  OFFLINE_ENTRY_DEFAULT_LIMIT,
+  type CreateOfflineEntryInput,
+  type OfflineEntry,
+  type OfflineEntryKind,
+} from "./types";
 
-/** 허용 kind — Server Action Zod 와 정합. */
-export const OFFLINE_ENTRY_KINDS = ["practice", "observation", "note"] as const;
-export type OfflineEntryKind = (typeof OFFLINE_ENTRY_KINDS)[number];
-
-/** note 본문 최대 길이 — Zod 검증 표면과 동일. */
-export const OFFLINE_ENTRY_NOTE_MAX_LENGTH = 500;
-
-/** listOfflineEntriesForUser 의 default limit — UI 표시 한도 (최근 N건). */
-export const OFFLINE_ENTRY_DEFAULT_LIMIT = 20;
-
-/** createOfflineEntry 입력. */
-export interface CreateOfflineEntryInput {
-  /// 자녀(보호자) User.id — partition key.
-  userId: string;
-  /// 입력 teacher/admin User.id — audit actor 와 동일.
-  authorId: string;
-  /// 활동 유형.
-  kind: OfflineEntryKind;
-  /// 짧은 메모 (max 500자, CON-04 통과 가정).
-  note: string;
-  /// 실 활동 발생 시각 (default now).
-  observedAt?: Date;
-  /// B2B 다중 테넌트 — author 의 institution scope.
-  institutionId?: string | null;
-}
+// 기존 import path 호환 — server-only callers (lib/timeline, Server Action, RSC page,
+// tests) 가 변경 없이 본 파일에서 types/상수를 계속 import 할 수 있도록 re-export.
+export {
+  OFFLINE_ENTRY_KINDS,
+  OFFLINE_ENTRY_NOTE_MAX_LENGTH,
+  OFFLINE_ENTRY_DEFAULT_LIMIT,
+  type CreateOfflineEntryInput,
+  type OfflineEntry,
+  type OfflineEntryKind,
+};
 
 /**
  * 오프라인 entry 1건 INSERT.

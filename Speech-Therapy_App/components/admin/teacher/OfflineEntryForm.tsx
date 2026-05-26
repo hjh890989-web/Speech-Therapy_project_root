@@ -19,11 +19,13 @@ import {
   submitOfflineEntry,
   type SubmitOfflineEntryResult,
 } from "@/app/actions/offline-entry";
+// FR-PERF-3-CLIENT-LEAK-GUARD — Client Component 는 prisma 비의존 types 모듈만 import.
+// `@/lib/offline-entry/repo` (server-only, prisma 의존) 직접 import 시 build 실패.
 import {
   OFFLINE_ENTRY_KINDS,
   OFFLINE_ENTRY_NOTE_MAX_LENGTH,
   type OfflineEntryKind,
-} from "@/lib/offline-entry/repo";
+} from "@/lib/offline-entry/types";
 
 export interface OfflineEntryFormProps {
   /// 대상 자녀(보호자) User.id. 본 컴포넌트는 본문에 노출하지 않음 (data-* 만).
