@@ -21,14 +21,15 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { trackEvent } from "@/lib/analytics";
+import { updateChildProfile } from "@/app/actions/update-child-profile";
+// FR-PERF-3-USE-SERVER-REFACTOR — const/type 은 shape 모듈 (non-"use server") 에서.
 import {
   ALLOWED_PHONEMES,
   CHILD_AGE_MAX_MONTHS,
   CHILD_AGE_MIN_MONTHS,
   PREFERRED_PHONEMES_MAX,
-  updateChildProfile,
   type AllowedPhoneme,
-} from "@/app/actions/update-child-profile";
+} from "@/app/actions/update-child-profile-shape";
 
 /** prefill 입력 — Server Component (page.tsx) 가 user row 조회 후 전달. */
 export interface ChildProfileFormProps {

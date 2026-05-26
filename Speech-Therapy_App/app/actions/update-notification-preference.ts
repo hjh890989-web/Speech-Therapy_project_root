@@ -29,30 +29,12 @@ import {
   type NotificationPreferenceKey,
 } from "@/lib/notifications/preference";
 
-/** Server Action 입력 — Partial (사용자가 변경한 키만 전달, 나머지는 DB 유지). */
-export type UpdateNotificationPreferenceInput = Partial<NotificationPreference>;
-
-/** Server Action 결과 — graceful (throw 없음). */
-export type UpdateNotificationPreferenceResult =
-  | {
-      success: true;
-      /** merge + normalize 된 최종 preference (UI prefill 갱신용). */
-      preference: NotificationPreference;
-      /** 분석 이벤트 발송용 메타. R4: userId 는 분석 백엔드 자동 해시 가정. */
-      analytics: {
-        userId: string;
-        changed: NotificationPreferenceKey[];
-      };
-    }
-  | {
-      success: false;
-      reason:
-        | "unauthorized"
-        | "invalid_input"
-        | "no_change"
-        | "db_failed";
-      message: string;
-    };
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports (type) 는
+// ./update-notification-preference-shape 으로 분리.
+import type {
+  UpdateNotificationPreferenceInput,
+  UpdateNotificationPreferenceResult,
+} from "./update-notification-preference-shape";
 
 /**
  * 알림 선호 변경 — /settings/notifications 의 NotificationPreferenceForm 에서 호출.

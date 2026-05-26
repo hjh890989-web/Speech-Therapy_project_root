@@ -29,42 +29,17 @@
 import { withActor } from "@/lib/db/with-actor";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-/** 허용 음소 — onboarding-save-child 의 ALLOWED_PHONEMES 와 동일. */
-export const ALLOWED_PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
-export type AllowedPhoneme = (typeof ALLOWED_PHONEMES)[number];
-
-/** 자녀 월령 허용 범위 (만 2~7세). */
-export const CHILD_AGE_MIN_MONTHS = 24;
-export const CHILD_AGE_MAX_MONTHS = 84;
-
-/** preferredPhonemes 최대 선택 개수. */
-export const PREFERRED_PHONEMES_MAX = 5;
-
-/** Server Action 입력 — 가입한 부모가 변경하려는 자녀 프로필. */
-export interface UpdateChildProfileInput {
-  /** 자녀 월령 (24~84). */
-  childAgeMonths: number;
-  /** 관심 음소 (0~5개, 빈 배열 허용 = 시스템 자동 추천). */
-  preferredPhonemes: ReadonlyArray<AllowedPhoneme>;
-}
-
-/** Server Action 결과 — graceful (throw 없음). */
-export type UpdateChildProfileResult =
-  | {
-      success: true;
-      userId: string;
-      childAgeMonths: number;
-      preferredPhonemes: ReadonlyArray<AllowedPhoneme>;
-    }
-  | {
-      success: false;
-      reason:
-        | "unauthorized"
-        | "invalid_age"
-        | "invalid_phonemes"
-        | "db_failed";
-      message: string;
-    };
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports (const / type / interface) 는
+// ./update-child-profile-shape 으로 분리.
+import {
+  ALLOWED_PHONEMES,
+  CHILD_AGE_MIN_MONTHS,
+  CHILD_AGE_MAX_MONTHS,
+  PREFERRED_PHONEMES_MAX,
+  type AllowedPhoneme,
+  type UpdateChildProfileInput,
+  type UpdateChildProfileResult,
+} from "./update-child-profile-shape";
 
 /**
  * 자녀 프로필 변경 — /settings/child 에서 부모가 저장 버튼 클릭 시 호출.

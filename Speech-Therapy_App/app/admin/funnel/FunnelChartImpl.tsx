@@ -20,11 +20,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+// FR-PERF-3-USE-SERVER-REFACTOR 후속 — Client Component 는 prisma 비의존 shape 모듈만 import.
+// `@/lib/analytics/funnel` (server-only, prisma 의존) 직접 import 시 build 실패.
 import {
   FUNNEL_STEP_LABEL,
   FUNNEL_STEP_ORDER,
   type FunnelSummary,
-} from "@/lib/analytics/funnel";
+} from "@/lib/analytics/funnel-shape";
 
 interface Props {
   days: FunnelSummary[];

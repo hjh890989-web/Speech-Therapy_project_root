@@ -31,31 +31,11 @@ import { withActor } from "@/lib/db/with-actor";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { verifyParentInviteToken } from "@/lib/auth/parent-invite";
 
-/// Server Action 입력.
-export interface CompleteParentSignupInput {
-  /// 초대 메일 link 의 token query param.
-  token: string;
-  /// 부모가 입력한 password (8자 이상).
-  password: string;
-}
-
-/// Server Action 결과.
-export type CompleteParentSignupResult =
-  | {
-      success: true;
-      userId: string;
-      message: string;
-    }
-  | {
-      success: false;
-      reason:
-        | "invalid_token"
-        | "invalid_password"
-        | "auth_failed"
-        | "child_mismatch"
-        | "db_failed";
-      message: string;
-    };
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports 는 ./complete-parent-signup-shape 으로 분리.
+import type {
+  CompleteParentSignupInput,
+  CompleteParentSignupResult,
+} from "./complete-parent-signup-shape";
 
 const PASSWORD_MIN_LENGTH = 8;
 

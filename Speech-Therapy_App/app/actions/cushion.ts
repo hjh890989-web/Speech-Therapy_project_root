@@ -22,15 +22,12 @@ import { sanitizeUserFacingText } from "@/lib/text-safety";
 
 const SAFE_CUSHION_FALLBACK = "오늘도 즐겁게 발음 연습을 해 보아요. 부담 갖지 말고 천천히.";
 
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports 는 ./cushion-shape 으로 분리.
+import type { GenerateCushionResult } from "./cushion-shape";
+
 const InputSchema = z.object({
   sessionId: z.string().uuid(),
 });
-
-export interface GenerateCushionResult {
-  aiCushionText: string;
-  /** 캐시 히트 (DB 에 이미 채워져 있어 Gemini 미호출) 여부. */
-  fromCache: boolean;
-}
 
 export async function generateCushion(rawInput: unknown): Promise<GenerateCushionResult> {
   const { sessionId } = InputSchema.parse(rawInput);

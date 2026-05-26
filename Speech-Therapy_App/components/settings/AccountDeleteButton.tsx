@@ -19,10 +19,9 @@
 import { useCallback, useState } from "react";
 
 import { trackEvent } from "@/lib/analytics";
-import {
-  ACCOUNT_DELETE_CONFIRMATION_TEXT,
-  deleteAccount,
-} from "@/app/actions/delete-account";
+import { deleteAccount } from "@/app/actions/delete-account";
+// FR-PERF-3-USE-SERVER-REFACTOR — const 는 shape 모듈 (non-"use server") 에서.
+import { ACCOUNT_DELETE_CONFIRMATION_TEXT } from "@/app/actions/delete-account-shape";
 
 /** 삭제 머신. */
 type DeleteStatus = "idle" | "expanded" | "deleting" | "error";

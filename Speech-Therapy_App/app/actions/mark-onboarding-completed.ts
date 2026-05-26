@@ -28,13 +28,8 @@
 import { withActor } from "@/lib/db/with-actor";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-/** Server Action 결과 — 호출 측이 graceful 분기. */
-export interface MarkOnboardingCompletedResult {
-  /** true: DB 동기화 성공. false: 비인증 / DB 오류 등 graceful 실패. */
-  success: boolean;
-  /** 실패 사유 (디버깅/분석용). 성공 시 undefined. */
-  reason?: "unauthorized" | "db_failed";
-}
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports 는 ./mark-onboarding-completed-shape 으로 분리.
+import type { MarkOnboardingCompletedResult } from "./mark-onboarding-completed-shape";
 
 /**
  * 서버 측 onboarding 완료 마킹 — wizard Step 4 완료 시 호출.

@@ -39,42 +39,16 @@ import {
 } from "@/lib/offline-entry/repo";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports 는 ./offline-entry-shape 으로 분리.
+import type {
+  SubmitOfflineEntryInput,
+  SubmitOfflineEntryResult,
+} from "./offline-entry-shape";
+
 /// 본 Action 허용 role — teacher / principal / admin.
 /// expert / parent 차단.
 const SUBMIT_ALLOWED_ROLES = ["admin", "principal", "teacher"] as const;
 type AllowedRole = (typeof SUBMIT_ALLOWED_ROLES)[number];
-
-/** Server Action 입력 — Zod 검증 표면. */
-export interface SubmitOfflineEntryInput {
-  /** 자녀(보호자) User.id — RBAC + cross-tenant 검증 대상. */
-  userId: string;
-  /** 활동 유형 — 'practice' | 'observation' | 'note'. */
-  kind: OfflineEntryKind;
-  /** 짧은 메모 (max 500자, CON-04 통과 필수). */
-  note: string;
-  /** (선택) 실 활동 발생 시각 — ISO string. default = 서버 now. */
-  observedAt?: string;
-}
-
-/** Server Action 결과 — graceful 분기 포함. */
-export type SubmitOfflineEntryResult =
-  | {
-      success: true;
-      entryId: string;
-      observedAt: string;
-    }
-  | {
-      success: false;
-      reason:
-        | "unauthorized"
-        | "forbidden"
-        | "invalid_input"
-        | "invalid_target"
-        | "cross_institution"
-        | "banned_term"
-        | "db_failed";
-      message: string;
-    };
 
 /** Zod schema — Server Action 진입 시 강제. */
 const InputSchema = z.object({

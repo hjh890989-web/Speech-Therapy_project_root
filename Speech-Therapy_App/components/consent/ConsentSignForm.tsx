@@ -12,7 +12,9 @@
 // R4: childName 은 부모가 보는 한정 컨텍스트 — 부모용 페이지이므로 표시 허용.
 
 import { useState, useTransition } from "react";
-import { submitConsentSignature, type ConsentSignActionResult } from "@/app/actions/consent-sign";
+import { submitConsentSignature } from "@/app/actions/consent-sign";
+// FR-PERF-3-USE-SERVER-REFACTOR — type-only import 는 shape 모듈 (non-"use server") 에서.
+import type { ConsentSignActionResult } from "@/app/actions/consent-sign-shape";
 
 export interface ConsentSignFormProps {
   /// 동의서 token (UUID).

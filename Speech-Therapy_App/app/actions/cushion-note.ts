@@ -19,14 +19,19 @@ import { prisma } from "@/lib/db";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
   generateCushionNote,
-  type CushionSource,
-  type CushionFallbackReason,
   type TargetPhoneme,
 } from "@/lib/cushion/generate";
+import { sendCushionNoteEmail } from "@/lib/cushion/email";
+
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports (interface / class) 는
+// ./cushion-note-shape 으로 분리. CushionAuthError 는 _runtime 값_ (class) 이라
+// 본 Server Action 에서 import 후 사용 + throw — Client 측은 일반적으로 instanceof
+// 검사 안 함 (Server Action 결과 객체 만으로 분기).
 import {
-  sendCushionNoteEmail,
-  type CushionEmailResult,
-} from "@/lib/cushion/email";
+  CushionAuthError,
+  type GenerateCushionNoteResult,
+  type SendCushionNoteToParentResult,
+} from "./cushion-note-shape";
 
 const InputSchema = z.object({
   evaluationResultId: z.string().min(1),
@@ -34,23 +39,6 @@ const InputSchema = z.object({
 });
 
 const ALLOWED_ROLES = ["admin", "principal", "expert", "parent"] as const;
-
-export interface GenerateCushionNoteResult {
-  text: string;
-  source: CushionSource;
-  fallbackReason: CushionFallbackReason | null;
-  evaluationResultId: string;
-}
-
-export class CushionAuthError extends Error {
-  constructor(
-    message: string,
-    public readonly status: 401 | 403 | 404,
-  ) {
-    super(message);
-    this.name = "CushionAuthError";
-  }
-}
 
 const ALLOWED_PHONEMES = new Set<TargetPhoneme>(["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"]);
 
@@ -176,10 +164,6 @@ const SendInputSchema = z.object({
   /// (선택) 발신자 이름 — 원장이 직접 입력. 서명 line.
   senderName: z.string().max(40).optional(),
 });
-
-export interface SendCushionNoteToParentResult extends CushionEmailResult {
-  evaluationResultId: string;
-}
 
 /**
  * 쿠션어 알림장을 부모 이메일로 발송 (Server Action).

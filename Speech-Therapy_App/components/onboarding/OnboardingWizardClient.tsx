@@ -40,13 +40,14 @@ import {
   markOnboardingSkipped,
   setOnboardingStep,
 } from "@/lib/onboarding/state";
+import { saveChildInfo } from "@/app/actions/onboarding-save-child";
+// FR-PERF-3-USE-SERVER-REFACTOR — const/type 은 shape 모듈 (non-"use server") 에서.
 import {
   ALLOWED_PHONEMES,
   CHILD_AGE_MAX_MONTHS,
   CHILD_AGE_MIN_MONTHS,
-  saveChildInfo,
   type AllowedPhoneme,
-} from "@/app/actions/onboarding-save-child";
+} from "@/app/actions/onboarding-save-child-shape";
 import { markOnboardingCompletedInDb } from "@/app/actions/mark-onboarding-completed";
 
 /** 본 컴포넌트가 외부로부터 받는 props. */

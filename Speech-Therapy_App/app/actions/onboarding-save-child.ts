@@ -22,39 +22,16 @@
 import { withActor } from "@/lib/db/with-actor";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-/** 허용 음소 — 발음 확인/미션 카탈로그 (FR-Q-001 / FR-Q-003) 와 정합. */
-export const ALLOWED_PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
-export type AllowedPhoneme = (typeof ALLOWED_PHONEMES)[number];
-
-/** 자녀 월령 허용 범위 (만 2~7세). */
-export const CHILD_AGE_MIN_MONTHS = 24;
-export const CHILD_AGE_MAX_MONTHS = 84;
-
-/** wizard Step 2 입력. */
-export interface SaveChildInfoInput {
-  /** 자녀 월령 (24~84). */
-  childAgeMonths: number;
-  /** 관심 타겟 음소 (1~2개). */
-  targetPhonemes: ReadonlyArray<AllowedPhoneme>;
-}
-
-/** Server Action 결과. */
-export type SaveChildInfoResult =
-  | {
-      success: true;
-      userId: string;
-      childAgeMonths: number;
-      targetPhonemes: ReadonlyArray<AllowedPhoneme>;
-    }
-  | {
-      success: false;
-      reason:
-        | "unauthorized"
-        | "invalid_age"
-        | "invalid_phonemes"
-        | "db_failed";
-      message: string;
-    };
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports (const / type / interface) 는
+// ./onboarding-save-child-shape 으로 분리.
+import {
+  ALLOWED_PHONEMES,
+  CHILD_AGE_MIN_MONTHS,
+  CHILD_AGE_MAX_MONTHS,
+  type AllowedPhoneme,
+  type SaveChildInfoInput,
+  type SaveChildInfoResult,
+} from "./onboarding-save-child-shape";
 
 /**
  * 자녀 정보 저장 — wizard Step 2 완료 시 호출.

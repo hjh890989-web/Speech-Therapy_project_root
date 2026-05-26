@@ -24,22 +24,8 @@
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-/** Server Action 결과 — graceful (throw 없음). */
-export type RequestPasswordResetResult =
-  | {
-      success: true;
-      /** Supabase 가 reset 링크를 발송한 _현재_ 이메일 주소 (UI 표시용). */
-      sentToEmail: string;
-      /** 분석 이벤트 발송용 메타. */
-      analytics: {
-        userId: string;
-      };
-    }
-  | {
-      success: false;
-      reason: "unauthorized" | "no_email" | "supabase_error";
-      message: string;
-    };
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports 는 ./request-password-reset-shape 으로 분리.
+import type { RequestPasswordResetResult } from "./request-password-reset-shape";
 
 /** reset link redirect 의 BASE_URL 결정. 환경변수 부재 시 폴백. */
 function getResetRedirectUrl(): string {

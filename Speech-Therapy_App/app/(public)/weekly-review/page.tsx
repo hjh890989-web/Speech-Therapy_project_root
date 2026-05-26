@@ -151,6 +151,10 @@ export default async function WeeklyReviewPage() {
       predictionConfidence: latest.predictionConfidence,
       generatedAt: latest.generatedAt,
       scoreTrend: latest.scoreTrend,
+      // FR-PERF-3-USE-SERVER-REFACTOR — pre-existing 타입 회귀 보정 (viewedAt 누락).
+      // 본 chartWeeks 합성 시점에 latest 의 viewedAt 가 누락되어 WeeklyReviewRow 타입 어긋남.
+      // 0121bc3 (viewedAt 컬럼 추가) 이후 본 literal 미동기화 — 본 PR 의 build 회복 위해 보정.
+      viewedAt: latest.viewedAt ?? null,
     },
   ]);
 

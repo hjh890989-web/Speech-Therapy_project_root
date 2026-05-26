@@ -18,26 +18,18 @@
 //   - 본 Action 은 metric / 로그에 token 마지막 4자리만 노출.
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { headers } from "next/headers";
 
 import { markConsentSigned, daysSince } from "@/lib/consent/repo";
 
-const InputSchema = z.object({
-  token: z.string().uuid("INVALID_TOKEN"),
-  /// (선택) 추후 자녀 이름 재확인 / signature image base64 등 필드 확장 슬롯.
-  signatureName: z.string().min(1).max(50).optional(),
-});
-
-export type ConsentSignActionInput = z.infer<typeof InputSchema>;
-
-export interface ConsentSignActionResult {
-  ok: boolean;
-  /// 'signed' (성공) / 'already_signed' (멱등) / 'expired' / 'not_found' / 'invalid_input' / 'internal_error'.
-  reason: string;
-  /// 멱등 / 성공 시 마지막 4자리 token suffix — UI 친화 메시지에 사용 가능.
-  tokenSuffix?: string;
-}
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports (Zod schema / type / interface) 는
+// ./consent-sign-shape 으로 분리. Zod schema (ConsentSignInputSchema) 는 runtime 값이라
+// shape 모듈로 이동 → 본 Server Action 은 import 만.
+import {
+  ConsentSignInputSchema,
+  type ConsentSignActionInput,
+  type ConsentSignActionResult,
+} from "./consent-sign-shape";
 
 /// IP/UA 추출 (서명 법적 효력 보존). best-effort — 헤더 부재 시 null.
 async function extractClientMeta(): Promise<{ ip: string | null; ua: string | null }> {
@@ -57,7 +49,7 @@ export async function submitConsentSignature(
 ): Promise<ConsentSignActionResult> {
   let parsed: ConsentSignActionInput;
   try {
-    parsed = InputSchema.parse(rawInput);
+    parsed = ConsentSignInputSchema.parse(rawInput);
   } catch {
     return { ok: false, reason: "invalid_input" };
   }

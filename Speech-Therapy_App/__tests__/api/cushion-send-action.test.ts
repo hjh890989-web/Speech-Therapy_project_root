@@ -54,10 +54,9 @@ vi.mock("@/lib/cushion/generate", async () => {
   };
 });
 
-import {
-  sendCushionNoteToParent,
-  CushionAuthError,
-} from "@/app/actions/cushion-note";
+import { sendCushionNoteToParent } from "@/app/actions/cushion-note";
+// FR-PERF-3-USE-SERVER-REFACTOR — class 는 shape 모듈 (non-"use server") 에서.
+import { CushionAuthError } from "@/app/actions/cushion-note-shape";
 
 const VIEWER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const EVAL_ID = "eval-abc-123";

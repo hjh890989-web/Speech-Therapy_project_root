@@ -24,32 +24,12 @@ import { z } from "zod";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-/** Server Action 입력 — 새 이메일 주소만. user id 는 auth 에서. */
-export interface ChangeEmailInput {
-  /** 사용자가 입력한 새 이메일 주소 — Zod email + max 254 (RFC 5321) 검증. */
-  newEmail: string;
-}
-
-/** Server Action 결과 — graceful (throw 없음). */
-export type ChangeEmailResult =
-  | {
-      success: true;
-      /** Supabase 가 confirmation 링크를 발송한 _새_ 이메일 주소 (UI 표시용). */
-      pendingEmail: string;
-      /** 분석 이벤트 발송용 메타 — Client Component 가 trackEvent 호출 시 사용. */
-      analytics: {
-        userId: string;
-      };
-    }
-  | {
-      success: false;
-      reason:
-        | "unauthorized"
-        | "invalid_email"
-        | "same_as_current"
-        | "supabase_error";
-      message: string;
-    };
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports (interface/type) 는 ./change-email-shape 으로 분리.
+// 호출 측은 type 만 필요할 경우 `@/app/actions/change-email-shape` 에서 직접 import.
+import type {
+  ChangeEmailInput,
+  ChangeEmailResult,
+} from "./change-email-shape";
 
 /** 새 이메일 입력 검증 — RFC 5321 형식 + 길이 제한. */
 const NewEmailSchema = z

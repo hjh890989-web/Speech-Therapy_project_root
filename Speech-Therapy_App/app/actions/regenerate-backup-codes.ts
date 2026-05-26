@@ -27,27 +27,8 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { generateBackupCodes } from "@/lib/security/backup-codes";
 import { storeBackupCodes } from "@/lib/security/backup-codes-store";
 
-/** Server Action 결과 — graceful (throw 없음). */
-export type RegenerateBackupCodesResult =
-  | {
-      success: true;
-      /** 사용자에게 1회 표시할 새 backup codes (8자 8개) — 화면 닫으면 다시 못 봄. */
-      backupCodes: string[];
-      analytics: {
-        userId: string;
-      };
-    }
-  | {
-      success: false;
-      reason:
-        | "unauthorized"
-        | "not_enrolled"
-        | "supabase_error";
-      message: string;
-      analytics?: {
-        userId: string;
-      };
-    };
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports 는 ./regenerate-backup-codes-shape 으로 분리.
+import type { RegenerateBackupCodesResult } from "./regenerate-backup-codes-shape";
 
 /**
  * Backup codes 재생성 — /settings/security 의 BackupCodesPanel "재생성" 버튼에서 호출.

@@ -26,35 +26,11 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { generateBackupCodes } from "@/lib/security/backup-codes";
 import { storeBackupCodes } from "@/lib/security/backup-codes-store";
 
-/** verify 입력 — factorId (enroll 응답) + 6자리 코드. */
-export interface VerifyTotpEnrollInput {
-  factorId: string;
-  code: string;
-}
-
-/** Server Action 결과 — graceful (throw 없음). */
-export type VerifyTotpEnrollResult =
-  | {
-      success: true;
-      /** 사용자에게 1회 표시할 backup codes (8자 8개) — 본 PR 단순 표시, DB 저장 X. */
-      backupCodes: string[];
-      analytics: {
-        userId: string;
-      };
-    }
-  | {
-      success: false;
-      reason:
-        | "unauthorized"
-        | "invalid_input"
-        | "invalid_code"
-        | "expired"
-        | "supabase_error";
-      message: string;
-      analytics?: {
-        userId: string;
-      };
-    };
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports 는 ./verify-totp-shape 으로 분리.
+import type {
+  VerifyTotpEnrollInput,
+  VerifyTotpEnrollResult,
+} from "./verify-totp-shape";
 
 /** 입력 검증 — factorId 는 빈문자열 차단, code 는 6자리 숫자만. */
 const InputSchema = z.object({

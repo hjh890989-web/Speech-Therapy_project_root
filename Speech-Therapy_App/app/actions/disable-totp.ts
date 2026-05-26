@@ -25,32 +25,11 @@ import { z } from "zod";
 
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-/** disable 입력 — 현재 TOTP 코드만 (재인증). factorId 는 내부 회수. */
-export interface DisableTotpInput {
-  totpCode: string;
-}
-
-/** Server Action 결과 — graceful (throw 없음). */
-export type DisableTotpResult =
-  | {
-      success: true;
-      analytics: {
-        userId: string;
-      };
-    }
-  | {
-      success: false;
-      reason:
-        | "unauthorized"
-        | "invalid_input"
-        | "not_enrolled"
-        | "invalid_code"
-        | "supabase_error";
-      message: string;
-      analytics?: {
-        userId: string;
-      };
-    };
+// FR-PERF-3-USE-SERVER-REFACTOR — non-async exports 는 ./disable-totp-shape 으로 분리.
+import type {
+  DisableTotpInput,
+  DisableTotpResult,
+} from "./disable-totp-shape";
 
 /** 입력 검증 — 6자리 숫자만. */
 const InputSchema = z.object({

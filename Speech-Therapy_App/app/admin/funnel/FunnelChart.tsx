@@ -16,7 +16,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { FunnelSummary } from "@/lib/analytics/funnel";
+// FR-PERF-3-USE-SERVER-REFACTOR 후속 — Client Component 는 prisma 비의존 shape 모듈만 import.
+import type { FunnelSummary } from "@/lib/analytics/funnel-shape";
 
 interface Props {
   days: FunnelSummary[];

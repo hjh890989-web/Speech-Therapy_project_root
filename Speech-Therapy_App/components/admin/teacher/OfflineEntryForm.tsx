@@ -15,10 +15,9 @@
 import { useCallback, useId, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
-import {
-  submitOfflineEntry,
-  type SubmitOfflineEntryResult,
-} from "@/app/actions/offline-entry";
+import { submitOfflineEntry } from "@/app/actions/offline-entry";
+// FR-PERF-3-USE-SERVER-REFACTOR — type-only import 는 shape 모듈 (non-"use server") 에서.
+import type { SubmitOfflineEntryResult } from "@/app/actions/offline-entry-shape";
 // FR-PERF-3-CLIENT-LEAK-GUARD — Client Component 는 prisma 비의존 types 모듈만 import.
 // `@/lib/offline-entry/repo` (server-only, prisma 의존) 직접 import 시 build 실패.
 import {
