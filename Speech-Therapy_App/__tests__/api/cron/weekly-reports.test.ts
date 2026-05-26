@@ -27,6 +27,12 @@ const upsertWeeklyReportMock = vi.fn();
 const sendSlackMessageMock = vi.fn();
 const sendWeeklyReportEmailMock = vi.fn();
 const findUniqueMock = vi.fn();
+// FR-PERF-2-TAG-INVALIDATE — cron 이 upsert 후 institution dashboard tag 무효화 검증용.
+const revalidateTagMock = vi.fn();
+
+vi.mock("next/cache", () => ({
+  revalidateTag: (...args: unknown[]) => revalidateTagMock(...args),
+}));
 
 vi.mock("@/lib/cron-auth", () => ({
   verifyCronSecret: (...args: unknown[]) => verifyCronSecretMock(...args),
@@ -82,6 +88,7 @@ beforeEach(() => {
   sendSlackMessageMock.mockReset();
   sendWeeklyReportEmailMock.mockReset();
   findUniqueMock.mockReset();
+  revalidateTagMock.mockReset();
 
   // 기본: 인증 통과.
   verifyCronSecretMock.mockReturnValue({ ok: true });
@@ -90,7 +97,11 @@ beforeEach(() => {
   sendSlackMessageMock.mockResolvedValue({ ok: true });
   // 본 파일은 이메일 발송 분기 검증 X — 항상 noop sent: true 로 응답.
   sendWeeklyReportEmailMock.mockResolvedValue({ sent: true, skipped: false });
-  findUniqueMock.mockResolvedValue({ email: "parent@example.com" });
+  // institutionId 도 같이 노출 — FR-PERF-2-TAG-INVALIDATE 의 revalidateTag 검증용.
+  findUniqueMock.mockResolvedValue({
+    email: "parent@example.com",
+    institutionId: null,
+  });
 });
 
 afterEach(() => {
@@ -308,6 +319,135 @@ describe("FR-C-010 cron route — Slack alert (≥ 5건 실패)", () => {
     expect(res.status).toBe(200);
     expect(sendSlackMessageMock).not.toHaveBeenCalled();
     expect(consoleErrorSpy).toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+// 시나리오 12~15: FR-PERF-2-TAG-INVALIDATE — institution dashboard tag 무효화
+// ============================================================================
+describe("FR-PERF-2-TAG-INVALIDATE — institution dashboard cache 무효화", () => {
+  it("[t1] 성공 upsert 1명 (institutionId=inst-A) → revalidateTag('institution:inst-A:dashboard') 1회 호출 + revalidatedTagsCount=1", async () => {
+    getActiveUsersMock.mockResolvedValue(["user-a"]);
+    aggregateWeeklyReportMock.mockResolvedValue(makeAggData("user-a", 5, true));
+    findUniqueMock.mockResolvedValue({
+      email: "a@example.com",
+      institutionId: "inst-A",
+    });
+
+    const res = await GET(makeRequest());
+    expect(res.status).toBe(200);
+    expect(revalidateTagMock).toHaveBeenCalledTimes(1);
+    // Next.js 16 — revalidateTag(tag, profile) 2-arg signature.
+    expect(revalidateTagMock).toHaveBeenCalledWith(
+      "institution:inst-A:dashboard",
+      "default",
+    );
+    const body = (await res.json()) as { revalidatedTagsCount: number };
+    expect(body.revalidatedTagsCount).toBe(1);
+  });
+
+  it("[t2] 같은 institution N user → 1회 invalidate (Set dedup)", async () => {
+    getActiveUsersMock.mockResolvedValue(["u1", "u2", "u3"]);
+    aggregateWeeklyReportMock
+      .mockResolvedValueOnce(makeAggData("u1", 5, true))
+      .mockResolvedValueOnce(makeAggData("u2", 5, true))
+      .mockResolvedValueOnce(makeAggData("u3", 5, true));
+    // 3명 모두 같은 institution.
+    findUniqueMock.mockResolvedValue({
+      email: "x@example.com",
+      institutionId: "inst-shared",
+    });
+
+    await GET(makeRequest());
+
+    // institution dedup → 1회만 호출.
+    expect(revalidateTagMock).toHaveBeenCalledTimes(1);
+    expect(revalidateTagMock).toHaveBeenCalledWith(
+      "institution:inst-shared:dashboard",
+      "default",
+    );
+  });
+
+  it("[t3] 서로 다른 institution 3명 → 3회 invalidate (각 unique tag)", async () => {
+    getActiveUsersMock.mockResolvedValue(["uA", "uB", "uC"]);
+    aggregateWeeklyReportMock
+      .mockResolvedValueOnce(makeAggData("uA", 5, true))
+      .mockResolvedValueOnce(makeAggData("uB", 5, true))
+      .mockResolvedValueOnce(makeAggData("uC", 5, true));
+    findUniqueMock
+      .mockResolvedValueOnce({ email: "a@e.com", institutionId: "inst-A" })
+      .mockResolvedValueOnce({ email: "b@e.com", institutionId: "inst-B" })
+      .mockResolvedValueOnce({ email: "c@e.com", institutionId: "inst-C" });
+
+    const res = await GET(makeRequest());
+    const body = (await res.json()) as { revalidatedTagsCount: number };
+    expect(body.revalidatedTagsCount).toBe(3);
+    expect(revalidateTagMock).toHaveBeenCalledTimes(3);
+    const calls = revalidateTagMock.mock.calls.map((c) => c[0]).sort();
+    expect(calls).toEqual([
+      "institution:inst-A:dashboard",
+      "institution:inst-B:dashboard",
+      "institution:inst-C:dashboard",
+    ]);
+    // 모든 호출이 2-arg signature ('default' profile).
+    for (const call of revalidateTagMock.mock.calls) {
+      expect(call[1]).toBe("default");
+    }
+  });
+
+  it("[t4] institutionId=null (개인 parent, B2B 미가입) → revalidateTag 0회", async () => {
+    getActiveUsersMock.mockResolvedValue(["user-personal"]);
+    aggregateWeeklyReportMock.mockResolvedValue(
+      makeAggData("user-personal", 5, true),
+    );
+    findUniqueMock.mockResolvedValue({
+      email: "personal@example.com",
+      institutionId: null,
+    });
+
+    await GET(makeRequest());
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+  });
+
+  it("[t5] revalidateTag throw → graceful (cron 응답 정상 + console.error)", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    getActiveUsersMock.mockResolvedValue(["user-r"]);
+    aggregateWeeklyReportMock.mockResolvedValue(makeAggData("user-r", 5, true));
+    findUniqueMock.mockResolvedValue({
+      email: "r@e.com",
+      institutionId: "inst-fail",
+    });
+    revalidateTagMock.mockImplementationOnce(() => {
+      throw new Error("revalidateTag down");
+    });
+
+    const res = await GET(makeRequest());
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { revalidatedTagsCount: number };
+    expect(body.revalidatedTagsCount).toBe(0);
+    expect(errSpy).toHaveBeenCalled();
+  });
+
+  it("[t6] findUnique throw → graceful (이메일 skip + institutionId 누락 + cron 정상)", async () => {
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    getActiveUsersMock.mockResolvedValue(["user-fu"]);
+    aggregateWeeklyReportMock.mockResolvedValue(
+      makeAggData("user-fu", 5, true),
+    );
+    findUniqueMock.mockRejectedValueOnce(new Error("user fetch down"));
+
+    const res = await GET(makeRequest());
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      successCount: number;
+      revalidatedTagsCount: number;
+    };
+    // upsert 는 성공 — successCount 증가.
+    expect(body.successCount).toBe(1);
+    // findUnique 실패 → institutionId 누락 → revalidateTag 0.
+    expect(body.revalidatedTagsCount).toBe(0);
+    expect(revalidateTagMock).not.toHaveBeenCalled();
+    expect(errSpy).toHaveBeenCalled();
   });
 });
 

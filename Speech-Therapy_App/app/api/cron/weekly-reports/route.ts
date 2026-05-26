@@ -25,6 +25,9 @@
 // lib/email/weekly-report-email.ts.
 
 import { NextResponse } from "next/server";
+// FR-PERF-2-TAG-INVALIDATE — cron 이 새 WeeklyReport 생성 시 principal/teacher
+// dashboard 의 `institution:<id>:dashboard` 캐시를 즉시 무효화 → 60s TTL 대기 X.
+import { revalidateTag } from "next/cache";
 import { verifyCronSecret } from "@/lib/cron-auth";
 import { getCurrentWeekNumber } from "@/lib/weekly-report";
 import {
@@ -102,6 +105,10 @@ export async function GET(request: Request) {
   let emailSkippedCount = 0;
   let emailFailedCount = 0;
 
+  // FR-PERF-2-TAG-INVALIDATE — 성공 upsert user 들의 institutionId 누적 (중복 제거).
+  // 루프 종료 후 institution 별 1회씩 revalidateTag — 같은 기관 N user 면 1 invalidate.
+  const institutionIdsToRevalidate = new Set<string>();
+
   const dashboardLink = getDashboardLink();
 
   for (const userId of userIds) {
@@ -119,18 +126,34 @@ export async function GET(request: Request) {
           `predicted=${data.predictedNextScore ?? "null"}`,
       );
 
+      // R4: parentEmail + institutionId 만 select — 그 외 PII 미조회.
+      // institutionId 는 FR-PERF-2-TAG-INVALIDATE 의 dashboard 캐시 무효화에 사용.
+      // sendEmails 비활성 시에도 fetch — institutionId 누적 → 루프 후 revalidateTag.
+      // findUnique 실패는 graceful (이메일/태그 둘 다 skip, cron 전체 차단 X).
+      let parentEmail = "";
+      try {
+        const userRow = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, institutionId: true },
+        });
+        parentEmail = userRow?.email ?? "";
+        if (userRow?.institutionId) {
+          institutionIdsToRevalidate.add(userRow.institutionId);
+        }
+      } catch (userFetchErr) {
+        console.error(
+          "weekly-reports: user fetch 실패 (graceful)",
+          userId,
+          userFetchErr,
+        );
+      }
+
       // FR-C-NOTIFICATION-PREFERENCE — upsert 직후 weekly_report 이메일 발송.
       // 본 실행이 sendEmails=false / WEEKLY_REPORT_EMAIL_DISABLED=1 일 때만 skip.
       if (!sendEmailsEnabled) {
         continue;
       }
       try {
-        // R4: parentEmail 만 select — 그 외 PII 미조회.
-        const userRow = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { email: true },
-        });
-        const parentEmail = userRow?.email ?? "";
         const emailResult = await sendWeeklyReportEmail({
           userId,
           parentEmail,
@@ -168,6 +191,26 @@ export async function GET(request: Request) {
     }
   }
 
+  // FR-PERF-2-TAG-INVALIDATE — 루프 후 institution 별 dashboard 캐시 무효화.
+  // 각 revalidateTag 는 graceful — 실패해도 cron 응답에 영향 X (60s TTL fallback).
+  // tag 패턴은 lib/admin/principal-aggregator.ts / teacher-aggregator.ts 의
+  // `institution:<id>:dashboard` 와 정합. 동일 institution N user 면 1회 invalidate.
+  let revalidatedTagsCount = 0;
+  for (const institutionId of institutionIdsToRevalidate) {
+    try {
+      // Next.js 16 — revalidateTag(tag, profile) 2-arg signature. 'default' profile
+      // 은 lib/admin/principal-aggregator.ts 의 unstable_cache 와 정합.
+      revalidateTag(`institution:${institutionId}:dashboard`, "default");
+      revalidatedTagsCount += 1;
+    } catch (tagErr) {
+      console.error(
+        "weekly-reports: revalidateTag 실패 (graceful)",
+        institutionId,
+        tagErr,
+      );
+    }
+  }
+
   const durationMs = Date.now() - start;
 
   if (failureCount >= SLACK_ALERT_THRESHOLD) {
@@ -188,6 +231,7 @@ export async function GET(request: Request) {
     emailSentCount,
     emailSkippedCount,
     emailFailedCount,
+    revalidatedTagsCount,
     durationMs,
   });
 }

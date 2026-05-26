@@ -202,7 +202,9 @@ describe("FR-C-010 cron route — weekly_report 이메일 발송 path", () => {
     // upsert 는 진행 — 이메일만 skip.
     expect(upsertWeeklyReportMock).toHaveBeenCalledTimes(2);
     expect(sendWeeklyReportEmailMock).not.toHaveBeenCalled();
-    expect(findUniqueMock).not.toHaveBeenCalled();
+    // FR-PERF-2-TAG-INVALIDATE — findUnique 는 institutionId 수집을 위해 sendEmails
+    // 무관 항상 호출. 단 이메일 발송은 skip (sendEmailsEnabled flag 가 별도 가드).
+    expect(findUniqueMock).toHaveBeenCalledTimes(2);
     expect(body.emailSentCount).toBe(0);
     expect(body.emailSkippedCount).toBe(0);
     expect(body.emailFailedCount).toBe(0);
