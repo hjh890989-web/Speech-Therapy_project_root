@@ -64,10 +64,17 @@ jobs:
 
     # prisma generate / Server Action 코드가 환경변수 참조 — dummy 로 만족시키되,
     # 실 DB 연결은 발생하지 않음 (테스트는 prisma mock).
+    #
+    # TZ=Asia/Seoul — 본 프로젝트의 timeline/weekly-report/funnel 등 다수 테스트가
+    # local Date 생성자 (`new Date(2026, 4, 23, 14, 30)`) 를 사용하면서 KST 자정 기준
+    # `kstStartOfDay` 와 비교. ubuntu-latest 기본 TZ 가 UTC 라 9h offset 으로 today/
+    # yesterday 분기가 어긋남 (2026-05-25 §16 sub-session 학습 — timeline-aggregator
+    # 테스트 2건 회귀). TZ 고정으로 local Date 가 KST 로 해석되어 일관.
     env:
       DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
       DIRECT_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
       GOOGLE_GENERATIVE_AI_API_KEY: "ci-dummy-key"
+      TZ: "Asia/Seoul"
 
     steps:
       - name: Checkout
@@ -127,6 +134,9 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-dummy-anon-key"
       NEXT_PUBLIC_BASE_URL: "https://ci-dummy.example"
       NEXT_PUBLIC_SITE_URL: "https://ci-dummy.example"
+      # TZ 고정 (KST) — quality-gate 와 동일 사유 (build prerender 에서도 TZ 의존
+      # 모듈이 평가될 수 있어 안전 측 일관 설정).
+      TZ: "Asia/Seoul"
 
     steps:
       - name: Checkout
