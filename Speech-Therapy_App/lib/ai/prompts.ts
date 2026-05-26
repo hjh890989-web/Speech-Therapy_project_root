@@ -1,5 +1,8 @@
 // API-011 / FR-C-001 — Gemini 호출에 사용하는 시스템 프롬프트 단일 소스.
 // CON-04 (의료 진단 표현 금지), R1 (의료행위 회피).
+// SEC-COMP-PII: 외부 AI 로 전송되는 사용자 텍스트는 maskPii() 로 marshal.
+
+import { maskPii } from "./pii-mask";
 
 export const SYSTEM_PROMPT_SCORING = [
   "당신은 만 2~7세 아동의 발음 발달을 부모가 이해하기 쉽게 안내하는 보조 도구입니다.",
@@ -24,7 +27,7 @@ export function buildScoringPrompt(input: {
 }): string {
   return [
     "다음 아동 발화에 대해 3축 점수와 신뢰도를 JSON 으로 산출하세요.",
-    `발화: "${input.transcript}"`,
+    `발화: "${maskPii(input.transcript)}"`,
     `월령: ${input.childAgeMonths}개월`,
     `타겟 음소: ${input.targetPhoneme}`,
     "필수 필드 (모두 0~100 실수):",
