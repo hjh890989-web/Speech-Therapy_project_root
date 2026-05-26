@@ -1,0 +1,142 @@
+# external-crons — Vercel Hobby plan cron 한도 (2개 + ≤ daily) 초과로 vercel.json
+# 에서 제거된 6 cron 의 GitHub Actions 기반 외부 실행기.
+#
+# 배경 (5/26→5/27 sub-session 학습):
+#   - 5/22 까지 vercel.json 에 cron 8개 등록 → Hobby 한도 위반 → push 마다 deploy 실패
+#   - 5/27 수정 PR (`25bd785`): vercel.json 에 2 critical cron (hitl-monitor / weekly-reports) 만 유지
+#   - 본 워크플로는 제거된 6 cron 의 자동화 복구 — 단 schedule precision 은 일부 완화
+#
+# 인증:
+#   - 본 워크플로의 curl 은 `Authorization: Bearer ${CRON_SECRET}` 헤더 송신
+#   - 대상 endpoint 는 lib/cron-auth.ts 의 verifyCronSecret() 로 검증
+#   - GitHub repo secret `CRON_SECRET` 은 Vercel 환경 변수와 동일 값이어야 함
+#
+# 필수 설정 (1회):
+#   1. Vercel Dashboard → Settings → Environment Variables → CRON_SECRET 값 확인 (또는 신규 생성)
+#   2. GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+#      - Name: CRON_SECRET, Value: (위 1번 값)
+#      - Name: KEEP_WARM_URL, Value: https://speech-therapy-project-root.vercel.app (이미 등록됨)
+#
+# 비용:
+#   - GitHub Actions: public repo 무료 / private 월 2,000분 무료
+#   - 본 워크플로 합산: 약 200분/월 미만 (5min cron 의 error-monitor 가 90% 점유)
+#
+# Schedule 완화 (Vercel → GitHub Actions 이전 시 변경):
+#   - error-monitor: every 5min → every 15min (GitHub Actions cron 부하 + MVP 정밀도)
+#   - hitl-escalation: hourly → every 2h (HITL 큐 적체 위험 vs Actions 비용)
+#   - 나머지 4 cron 은 schedule 동일 (daily / weekly)
+#
+# 향후 (MVP 후):
+#   - Vercel Pro 업그레이드 시 본 워크플로 삭제 + vercel.json 8 cron 복귀
+#   - 또는 Upstash QStash / Cloudflare Workers Cron 등 대안 검토
+
+name: external-crons
+
+on:
+  schedule:
+    # error-monitor — MON-002 STT/Gemini 에러율 sliding window + Slack alert (REQ-NF-021/024).
+    # 원래 vercel.json: `*/5 * * * *` → GitHub Actions 부하 + MVP 단계 정밀도 고려 15분으로 완화.
+    - cron: "*/15 * * * *"
+    # hitl-escalation — FR-C-014 HITL 24h 자동 에스컬레이션 Cron + Slack 재알림.
+    # 원래 vercel.json: `0 * * * *` (hourly) → 2시간 간격으로 완화 (24h SLA 영향 미미).
+    - cron: "0 */2 * * *"
+    # funnel-alert — MON-001 퍼널 CVR ±20% 일간 Alert (#64).
+    # vercel.json 과 동일 — daily 0AM UTC.
+    - cron: "0 0 * * *"
+    # consent-reminder — FR-C-018 동의서 D+3 리마인더.
+    # vercel.json 과 동일 — daily 1AM UTC.
+    - cron: "0 1 * * *"
+    # consent-expire — FR-C-018 7일 만료 자동 정리.
+    # vercel.json 과 동일 — daily 2AM UTC.
+    - cron: "0 2 * * *"
+    # audio-cleanup — SEC-001 / FR-C-004 D6 음성 7일 폐기 (PIPA 준수).
+    # vercel.json 과 동일 — weekly Sun 3AM UTC.
+    - cron: "0 3 * * 0"
+  # 수동 trigger — Actions 탭 Run workflow 에서 특정 cron 만 호출 가능.
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "수동 실행할 cron path (예: audio-cleanup). 'all' 시 6개 모두."
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - error-monitor
+          - hitl-escalation
+          - funnel-alert
+          - consent-reminder
+          - consent-expire
+          - audio-cleanup
+
+jobs:
+  fire-cron:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.KEEP_WARM_URL }}" ]; then
+            echo "::warning::KEEP_WARM_URL secret 미설정 → 종료."
+            exit 0
+          fi
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "::warning::CRON_SECRET secret 미설정 → cron endpoint 401 예상. Vercel env CRON_SECRET 값을 GitHub Actions secret 으로도 등록 필요."
+          fi
+
+      - name: Determine cron paths
+        id: which
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          MANUAL: ${{ github.event.inputs.target }}
+        run: |
+          # schedule → 단일 cron path 매핑
+          declare -A SCHED_MAP=(
+            ["*/15 * * * *"]="error-monitor"
+            ["0 */2 * * *"]="hitl-escalation"
+            ["0 0 * * *"]="funnel-alert"
+            ["0 1 * * *"]="consent-reminder"
+            ["0 2 * * *"]="consent-expire"
+            ["0 3 * * 0"]="audio-cleanup"
+          )
+          if [ -n "$SCHEDULE" ]; then
+            paths="${SCHED_MAP[$SCHEDULE]:-}"
+          elif [ "$MANUAL" = "all" ] || [ -z "$MANUAL" ]; then
+            paths="error-monitor hitl-escalation funnel-alert consent-reminder consent-expire audio-cleanup"
+          else
+            paths="$MANUAL"
+          fi
+          echo "paths=$paths" >> "$GITHUB_OUTPUT"
+          echo "→ 실행 대상: $paths"
+
+      - name: Fire cron endpoints
+        env:
+          BASE: ${{ secrets.KEEP_WARM_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          PATHS: ${{ steps.which.outputs.paths }}
+        run: |
+          if [ -z "$PATHS" ]; then
+            echo "::warning::매핑된 cron 없음 (schedule mismatch). 종료."
+            exit 0
+          fi
+          fail=0
+          for name in $PATHS; do
+            url="$BASE/api/cron/$name"
+            echo "→ POST $url"
+            status=$(curl -s -L -o /tmp/resp.txt -w "%{http_code}" \
+              -X POST \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              --max-time 60 \
+              "$url" || echo "TIMEOUT")
+            echo "   status: $status"
+            # 200/204 만 성공 — 그 외 (401/500/timeout) 는 warning (다른 cron 진행 차단 X)
+            if [ "$status" = "200" ] || [ "$status" = "204" ]; then
+              echo "   ✅ $name OK"
+            else
+              echo "::warning::❌ $name failed (status=$status)"
+              fail=$((fail+1))
+            fi
+          done
+          if [ "$fail" -gt 0 ]; then
+            echo "::warning::총 $fail 건 실패 — Actions 자체는 success 처리 (다음 cycle 재시도)."
+          fi
