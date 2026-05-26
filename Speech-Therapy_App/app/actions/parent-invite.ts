@@ -193,13 +193,26 @@ export async function sendParentInvite(
   }
 
   // 5) signup link + 이메일 본문 생성.
+  // FR-EMAIL-REACT-TEMPLATE — buildParentInviteEmail 이 React Email 컴포넌트 기반으로
+  // 변경되어 async 가 됨. JWT secret 미설정 등 graceful 분기는 위에서 이미 처리.
   const signupLink = `${getBaseUrl()}/signup/parent?token=${encodeURIComponent(token)}`;
-  const tpl = buildParentInviteEmail({
-    institutionName,
-    signupLink,
-    childName: input.childName,
-    senderName: input.senderName,
-  });
+  let tpl;
+  try {
+    tpl = await buildParentInviteEmail({
+      institutionName,
+      signupLink,
+      childName: input.childName,
+      senderName: input.senderName,
+    });
+  } catch {
+    // React Email render 실패 — graceful (token 은 발급된 상태 + 발송만 실패).
+    return {
+      sent: false,
+      skipped: true,
+      reason: "email_failed",
+      tokenIssued: true,
+    };
+  }
 
   // 6) Resend 발송 — graceful (env 미설정 / 5xx / 금칙어 등 모두 skipped 분기).
   //    FR-C-NOTIFICATION-PREFERENCE: 이미 가입한 부모는 parentInviteEmail opt-out 시 skipped.

@@ -919,6 +919,18 @@ export type AnalyticsEvent =
       // 본 이벤트는 critical Slack alert (totp_disabled) 와 별개의 클라이언트 텔레메트리.
       name: "admin_totp_reset";
       properties: { adminUserId: string; targetUserId: string };
+    }
+  // === FR-EMAIL-REACT-TEMPLATE — parent_invite 이메일 React Email 렌더 텔레메트리 (pilot) ===
+  | {
+      // buildParentInviteEmail (lib/email/templates.ts) 가 @react-email/render 로 HTML
+      // 본문 생성에 성공한 직후 1회 — 호출 측 (Server Action) 텔레메트리에서 발송.
+      // 본 이벤트는 _렌더_ 단계 메트릭 (sendEmail 호출 전) — 발송 결과는 기존
+      // 'parent_invite_sent' 가 별도 분기. React Email 렌더 실패율 / cost / 분기 관찰용.
+      // R4 보호: parentEmail / childName / token 절대 노출 금지 — institutionId 만 (또는 null).
+      name: "parent_invite_email_rendered";
+      properties: {
+        institutionId: string | null;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

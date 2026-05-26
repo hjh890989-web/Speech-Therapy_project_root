@@ -288,8 +288,14 @@ describe("sendParentInvite — 정상 흐름 + graceful", () => {
       childName: "지우",
       senderName: "홍길동",
     });
-    const sendInput = sendEmailMock.mock.calls[0]![0] as { html: string };
+    const sendInput = sendEmailMock.mock.calls[0]![0] as {
+      html: string;
+      text: string;
+    };
+    // FR-EMAIL-REACT-TEMPLATE — childName 은 React Email 컴포넌트의 인사말에 표시.
     expect(sendInput.html).toContain("지우 부모님께");
-    expect(sendInput.html).toContain("홍길동 드림");
+    // senderName 은 plain text 본문에서만 "{institution} {sender} 드림" 으로 유지
+    // (React 컴포넌트는 institutionName 만 헤더에 노출 — 디자인 단순화).
+    expect(sendInput.text).toContain("행복어린이집 홍길동 드림");
   });
 });

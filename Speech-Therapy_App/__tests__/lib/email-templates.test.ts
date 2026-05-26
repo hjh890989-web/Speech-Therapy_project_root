@@ -39,34 +39,41 @@ describe("buildParentInviteEmail", () => {
     signupLink: "https://speech-therapy.app/invite?token=abc",
   };
 
-  it("subject/html/text 모두 반환 + 비어있지 않음", () => {
-    const tpl = buildParentInviteEmail(baseInput);
+  // FR-EMAIL-REACT-TEMPLATE — 본 describe 첫 호출은 @react-email/render 의 dynamic
+  // import + 의존성 로딩 (prettier / html-to-text) 비용이 발생. happy-dom 환경에서
+  // 5s default 타임아웃을 초과할 수 있어 본 첫 테스트에만 30s 부여 (이후 warm cache).
+  it("subject/html/text 모두 반환 + 비어있지 않음", { timeout: 30000 }, async () => {
+    const tpl = await buildParentInviteEmail(baseInput);
     expect(tpl.subject).toContain("행복어린이집");
     expect(tpl.html.length).toBeGreaterThan(100);
     expect(tpl.text.length).toBeGreaterThan(50);
-    expect(tpl.html).toContain("<!DOCTYPE html>");
+    // FR-EMAIL-REACT-TEMPLATE — React Email render() 결과는 표준 HTML 문서
+    // (DOCTYPE / <html> / <body> 포함).
+    expect(tpl.html.toLowerCase()).toContain("<!doctype html");
   });
 
-  it("institutionName HTML escape (<script> 무효화)", () => {
-    const tpl = buildParentInviteEmail({
+  it("institutionName HTML escape (<script> 무효화)", async () => {
+    const tpl = await buildParentInviteEmail({
       ...baseInput,
       institutionName: `<script>alert(1)</script>`,
     });
+    // React 의 자동 escape — raw <script> 절대 본문에 노출되지 않음.
     expect(tpl.html).not.toContain("<script>alert(1)</script>");
     expect(tpl.html).toContain("&lt;script&gt;");
   });
 
-  it("signupLink HTML escape (URL 안의 위험 문자)", () => {
-    const tpl = buildParentInviteEmail({
+  it("signupLink HTML escape (URL 안의 위험 문자)", async () => {
+    const tpl = await buildParentInviteEmail({
       ...baseInput,
       signupLink: `https://x/y?z=<script>`,
     });
+    // React Email Button/Link 가 href 와 visible text 모두 자동 escape.
     expect(tpl.html).not.toContain("<script>");
     expect(tpl.html).toContain("&lt;script&gt;");
   });
 
-  it("childName 있을 때 → 인사말에 자녀 이름 포함", () => {
-    const tpl = buildParentInviteEmail({
+  it("childName 있을 때 → 인사말에 자녀 이름 포함", async () => {
+    const tpl = await buildParentInviteEmail({
       ...baseInput,
       childName: "지우",
     });
@@ -74,23 +81,24 @@ describe("buildParentInviteEmail", () => {
     expect(tpl.text).toContain("지우 부모님께");
   });
 
-  it("childName 없을 때 → 기본 인사말 ('부모님께')", () => {
-    const tpl = buildParentInviteEmail(baseInput);
+  it("childName 없을 때 → 기본 인사말 ('부모님께')", async () => {
+    const tpl = await buildParentInviteEmail(baseInput);
     expect(tpl.html).toContain("부모님께");
     expect(tpl.text).toMatch(/^부모님께/);
   });
 
-  it("senderName 있을 때 → 서명 line 에 포함", () => {
-    const tpl = buildParentInviteEmail({
+  it("senderName 있을 때 → text 본문 서명 line 에 포함", async () => {
+    // FR-EMAIL-REACT-TEMPLATE — React Email 컴포넌트는 institutionName 만 헤더에 표시.
+    //   sender 정보는 plain text 본문에서만 "{institution} {sender} 드림" 으로 유지.
+    const tpl = await buildParentInviteEmail({
       ...baseInput,
       senderName: "홍길동",
     });
-    expect(tpl.html).toContain("행복어린이집 홍길동 드림");
     expect(tpl.text).toContain("행복어린이집 홍길동 드림");
   });
 
-  it("CON-04 금칙어 0건 (subject/html/text 모두)", () => {
-    const tpl = buildParentInviteEmail({
+  it("CON-04 금칙어 0건 (subject/html/text 모두)", async () => {
+    const tpl = await buildParentInviteEmail({
       ...baseInput,
       childName: "지우",
       senderName: "홍길동",
@@ -100,8 +108,10 @@ describe("buildParentInviteEmail", () => {
     expect(hasBannedTerm(tpl.text)).toBe(false);
   });
 
-  it("의료 disclaimer 포함 — '의료 서비스가 아닌' 명시 (CON-04 §2.1 후속)", () => {
-    const tpl = buildParentInviteEmail(baseInput);
+  it("의료 disclaimer 포함 — '의학적 평가가 아닙니다' / '의료 서비스가 아닌' 명시 (CON-04)", async () => {
+    const tpl = await buildParentInviteEmail(baseInput);
+    // React Email 컴포넌트의 disclaimer 카피 + plain text 본문 양쪽 검증.
+    expect(tpl.html).toContain("의학적 평가가 아닙니다");
     expect(tpl.html).toContain("의료 서비스가 아닌");
     expect(tpl.text).toContain("의료 서비스가 아닌");
   });
