@@ -60,6 +60,15 @@ model User {
   ///   - "재생성" 시 기존 hash 전부 무효화 + 새 8개 생성.
   /// R4: hash 만 저장 (원본 평문 불가역) — 데이터 유출 시에도 backup code 자체 비공개.
   totpBackupCodes String[] @default([])
+  /// SEC-COMP-PIPA — PIPA §22-6 만 14세 미만 부모 대리 동의 일시 (Grill #3A A1).
+  /// null = 미동의. 본 컬럼이 null 인 parent 는 자녀 진단 / 발화 데이터 처리 차단.
+  /// 본 동의는 자녀의 개인정보 처리 (음성 transcript, 월령, 발달 점수) 의 법정대리인 동의 근거.
+  /// /settings/privacy-consent 페이지에서 사용자가 직접 체크 → 일시 기록.
+  pipaUnderageConsentAt DateTime?
+  /// SEC-COMP-PIPA — PIPA §17 개인정보 국외 이전 동의 일시 (Grill #3A A2).
+  /// null = 미동의. 본 컬럼이 null 이면 STT (Google Cloud Speech US) / Gemini API (US/global) 호출 차단.
+  /// 대상: Google Cloud Speech (Web Speech API 경유) + Google AI Studio (Gemini) 의 미국 / 글로벌 위치.
+  overseasTransferConsentAt DateTime?
   /// 구독 등급. 기본 free.
   subscriptionTier SubscriptionTier @default(free)
   /// 가입 시각.

@@ -83,6 +83,15 @@ const SETTINGS_ENTRIES: ReadonlyArray<SettingsEntry> = [
     testId: "settings-card-security",
   },
   {
+    // SEC-COMP-PIPA (Grill #3A A1+A2) — 만 14세 미만 자녀 정보 + 국외 이전 동의 페이지.
+    href: "/settings/privacy-consent",
+    icon: "🛡️",
+    title: "개인정보 동의",
+    description:
+      "만 14세 미만 자녀 정보 처리 + Google Cloud / Gemini 국외 이전 동의를 관리해요.",
+    testId: "settings-card-privacy-consent",
+  },
+  {
     // FR-CONSENT-REMINDER-UI — dca2aee 의 consent badge 가 /settings 로 진입한 부모를 위해
     // 본 카드에서 self-service 동의서 관리 페이지로 한 클릭에 이동.
     href: "/settings/consent",
