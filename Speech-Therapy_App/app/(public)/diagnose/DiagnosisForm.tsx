@@ -591,6 +591,15 @@ function DiagnosisFormInner({
           </p>
         ) : (
           <>
+            {/* SEC-COMP-PIPA A4 — 발화 시작 직전 음성 국외 이전 안내 (사용자가 onboarding /
+                inline 동의로 이미 체크했지만, 실 음성 발화 직전 추가 layer). */}
+            <p
+              data-testid="diagnose-stt-overseas-hint"
+              className="rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-900 dark:bg-blue-950/30 dark:text-blue-200"
+            >
+              🌐 발화 시작 시 음성은 <strong>미국 Google Cloud Speech 서버</strong> 로 전송되어
+              텍스트로 변환돼요 (PIPA §17 국외 이전).
+            </p>
             <div className="flex items-center gap-3">
               <button
                 type="button"

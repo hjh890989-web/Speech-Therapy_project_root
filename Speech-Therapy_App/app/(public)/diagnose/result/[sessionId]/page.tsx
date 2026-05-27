@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { getCachedUser } from "@/lib/auth/cached-get-user";
 import { mockSuccessHigh, mockSuccessLow } from "@/lib/mocks/diagnosis";
 import type { DiagnosisOutput } from "@/lib/schemas/diagnosis";
 import { RewardOnMount } from "./RewardOnMount";
@@ -74,6 +75,28 @@ function getNudgeCopy(peerPercentile: number): string {
   return "조금 더 연습하면 좋아져요.";
 }
 
+/// peerPercentile 의 시각 분기 — emerald (high) / sky (mid) / amber (low).
+/// 의료 단정 표현 회피 — 점수 자체보다 격려 톤 강조 (CON-04).
+function getBandStyles(peerPercentile: number): { bar: string; copy: string; emoji: string } {
+  if (peerPercentile >= 80)
+    return {
+      bar: "bg-emerald-500",
+      copy: "text-emerald-700 dark:text-emerald-300",
+      emoji: "🌟",
+    };
+  if (peerPercentile >= 40)
+    return {
+      bar: "bg-sky-500",
+      copy: "text-sky-700 dark:text-sky-300",
+      emoji: "👍",
+    };
+  return {
+    bar: "bg-amber-500",
+    copy: "text-amber-700 dark:text-amber-300",
+    emoji: "🌱",
+  };
+}
+
 export default async function DiagnosisResultPage({ params, searchParams }: PageProps) {
   const { sessionId } = await params;
   const sp = await searchParams;
@@ -86,7 +109,13 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
   if (!fetched) notFound();
   const result = fetched.output;
 
+  // 익명 / 인증 분기 — Supabase auth.uid 만 신뢰. mock 또는 비로그인 = 익명.
+  // 익명 user 에게는 회원가입 안내 + 별 영구 보존 카피 노출.
+  const authUser = await getCachedUser();
+  const isAuthenticated = authUser !== null;
+
   const nudgeCopy = getNudgeCopy(result.peerPercentile);
+  const band = getBandStyles(result.peerPercentile);
   const heardWord = result.heardWord ?? transcript;
   const displayIntended = result.intendedWord ?? intendedWord;
   const isPerfectMatch =
@@ -159,10 +188,20 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
       <section className="mb-6 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
         <div className="mb-2 flex items-baseline justify-between">
           <p className="text-sm">또래 백분위</p>
-          <p className="text-3xl font-bold tabular-nums">{Math.round(result.peerPercentile)}%</p>
+          <p className={`text-3xl font-bold tabular-nums ${band.copy}`}>
+            {Math.round(result.peerPercentile)}%
+          </p>
         </div>
-        <PercentileBar value={result.peerPercentile} />
-        <p className="mt-3 text-sm font-medium">{nudgeCopy}</p>
+        <PercentileBar value={result.peerPercentile} barClassName={band.bar} />
+        <p
+          data-testid="result-nudge-copy"
+          className={`mt-3 text-sm font-medium ${band.copy}`}
+        >
+          <span className="mr-1" aria-hidden>
+            {band.emoji}
+          </span>
+          {nudgeCopy}
+        </p>
         <CushionAsync sessionId={sessionId} initialText={fetched.cushionFromDb} />
         <p
           data-testid="disclaimer"
@@ -184,13 +223,34 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
           오늘의 발음에 맞춘 데일리 미션으로 차근차근 즐겁게 이어갈 수 있어요.
         </p>
-        <TrackedCTALink
-          href="/missions"
-          cta="weekly_mission"
-          className="mt-4 inline-block rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-        >
-          주간 미션 시작하기
-        </TrackedCTALink>
+        {/* 익명 user — 회원가입 안내 (별 / 결과 영구 보존). */}
+        {!isAuthenticated && (
+          <p
+            data-testid="result-anonymous-signup-hint"
+            className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+          >
+            💡 <strong>회원가입하면 별 ⭐ 과 결과가 영구 보존</strong>돼요. 다음 진단 시 자녀
+            정보도 자동으로 불러와요.
+          </p>
+        )}
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          {!isAuthenticated && (
+            <TrackedCTALink
+              href="/login?next=/missions"
+              cta="auth_signin"
+              className="inline-block rounded-md border border-emerald-600 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800"
+            >
+              회원가입 / 로그인
+            </TrackedCTALink>
+          )}
+          <TrackedCTALink
+            href="/missions"
+            cta="weekly_mission"
+            className="inline-block rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            주간 미션 시작하기
+          </TrackedCTALink>
+        </div>
       </section>
 
       <Link
@@ -220,7 +280,14 @@ function ScoreCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function PercentileBar({ value }: { value: number }) {
+function PercentileBar({
+  value,
+  barClassName = "bg-emerald-500",
+}: {
+  value: number;
+  /// score band 별 색상 차별화 (getBandStyles 반환의 bar). default emerald.
+  barClassName?: string;
+}) {
   const clamped = Math.max(0, Math.min(100, value));
   return (
     <div
@@ -229,7 +296,7 @@ function PercentileBar({ value }: { value: number }) {
       aria-label={`또래 백분위 ${Math.round(clamped)} 퍼센트`}
     >
       <div
-        className="h-full rounded-full bg-emerald-500 transition-all"
+        className={`h-full rounded-full transition-all ${barClassName}`}
         style={{ width: `${clamped}%` }}
       />
     </div>
