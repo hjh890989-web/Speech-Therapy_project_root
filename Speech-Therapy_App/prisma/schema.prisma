@@ -514,6 +514,48 @@ model AuditLog {
 }
 
 // ============================================================================
+// DB-017 (V07 신규) — F11 부모 음성 클로닝 모델 메타데이터
+//
+// Refs: V07 §4.1 F11, REQ-FUNC-036/037, ADR-03 (7일 폐기), ADR-09 (윤리 차단).
+//
+// 책임:
+//   - ElevenLabs TTS 클로닝 API 가 발급한 modelHash 와 사용 제약을 보관.
+//   - 7일 만료 Cron 이 expiresAt < now AND deletedAt IS NULL 조회 → ElevenLabs DELETE
+//     + deletedAt UPDATE.
+//   - appliedContentTypes — storybook / lullaby 화이트리스트 (교정 0건 자동 검증).
+//
+// R4 (자녀 보호):
+//   - userId 는 부모 user.id — 자녀 식별 아님.
+//   - modelHash 는 ElevenLabs 내부 ID — PII 자체는 아님 (음성 자체는 ElevenLabs 측 저장).
+//   - audit_log_triggers 자동 capture (User 변경은 추적, voice_models 자체는 별도 TRIGGER 미적용 — 본 PR 범위 외).
+//
+// F10 정합:
+//   - 본 PR 은 ADR-09 윤리 차단 만 — F10 동의 Tier 필요 시 별도 PR.
+// ============================================================================
+
+model VoiceModel {
+  id                   String   @id @default(uuid()) @db.Uuid
+  /// 부모 user.id (FK).
+  userId               String
+  /// ElevenLabs API 가 발급한 voice ID (clone API response).
+  modelHash            String   @unique
+  /// 모델 라벨 (UI 표시용 — "엄마 목소리" 등). 자녀 식별 정보 미포함.
+  label                String?
+  /// 생성 시각.
+  createdAt            DateTime @default(now())
+  /// 만료 시각 (createdAt + 7일, ADR-03).
+  expiresAt            DateTime
+  /// 화이트리스트 — ADR-09 윤리 (storybook / lullaby 만 허용, exercise 금지).
+  appliedContentTypes  String[] @default([])
+  /// 7일 만료 Cron 이 DELETE 후 marker. 본 컬럼 not-NULL = soft deleted.
+  deletedAt            DateTime?
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([userId, deletedAt])
+}
+
+// ============================================================================
 // DB-016 (V07 신규) — HITL 재학습 데이터 적재 테이블
 //
 // Refs: V07 §5.3 (재학습 파이프라인), REQ-FUNC-HITL-005, ADR-11.

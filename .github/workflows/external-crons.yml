@@ -56,11 +56,15 @@ on:
     # 직전 7일 cohort 의 diffPct + cumulative + HHI 검증 후 외부 ML 위탁 알림.
     # daily 3:30AM UTC (audio-cleanup 와 분리 — 동일 시간 자원 경합 회피).
     - cron: "30 3 * * *"
+    # voice-model-cleanup — FR-C-027 (V07 §4.1 F11) 부모 음성 7일 폐기 (ADR-03).
+    # expiresAt < now AND deletedAt IS NULL → ElevenLabs DELETE + soft delete.
+    # daily 4AM UTC (hitl-retraining-gate 와 분리).
+    - cron: "0 4 * * *"
   # 수동 trigger — Actions 탭 Run workflow 에서 특정 cron 만 호출 가능.
   workflow_dispatch:
     inputs:
       target:
-        description: "수동 실행할 cron path (예: audio-cleanup). 'all' 시 7개 모두."
+        description: "수동 실행할 cron path (예: audio-cleanup). 'all' 시 8개 모두."
         required: true
         default: "all"
         type: choice
@@ -73,6 +77,7 @@ on:
           - consent-expire
           - audio-cleanup
           - hitl-retraining-gate
+          - voice-model-cleanup
 
 jobs:
   fire-cron:
@@ -104,11 +109,12 @@ jobs:
             ["0 2 * * *"]="consent-expire"
             ["0 3 * * 0"]="audio-cleanup"
             ["30 3 * * *"]="hitl-retraining-gate"
+            ["0 4 * * *"]="voice-model-cleanup"
           )
           if [ -n "$SCHEDULE" ]; then
             paths="${SCHED_MAP[$SCHEDULE]:-}"
           elif [ "$MANUAL" = "all" ] || [ -z "$MANUAL" ]; then
-            paths="error-monitor hitl-escalation funnel-alert consent-reminder consent-expire audio-cleanup hitl-retraining-gate"
+            paths="error-monitor hitl-escalation funnel-alert consent-reminder consent-expire audio-cleanup hitl-retraining-gate voice-model-cleanup"
           else
             paths="$MANUAL"
           fi
