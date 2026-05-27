@@ -1,5 +1,6 @@
-// MOCK-002 — 데일리 미션 12개 정적 픽스처 (음소 ㅅ ㅈ ㄱ ㄴ × 난이도 1~3).
+// MOCK-002 — 데일리 미션 15개 정적 픽스처 (음소 ㄱ ㄴ ㅅ ㅈ ㄹ × 난이도 1~3).
 // DB-006 의 실제 시드와는 독립 (FE 선개발 전용). 콘텐츠 금칙어 0건.
+// (2026-05-27 fix — ㄹ 누락 회귀 해소. 사용자 진단의 5 자모와 정합.)
 
 export type MissionFixture = {
   id: string;
@@ -12,7 +13,8 @@ export type MissionFixture = {
   ageRangeMax: number;
 };
 
-const PHONEMES = ["ㅅ", "ㅈ", "ㄱ", "ㄴ"] as const;
+// 한국어 음운론 위계 순서 (seed.ts 와 일치): 파열음(ㄱ) → 비음(ㄴ) → 마찰음(ㅅ) → 파찰음(ㅈ) → 유음(ㄹ).
+const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
 const REWARDS = ["star", "tree", "drawing"] as const;
 
 const TITLE_BY_LEVEL: Record<number, string> = {
