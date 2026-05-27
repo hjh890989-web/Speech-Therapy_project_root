@@ -17,11 +17,17 @@ function formatScore(value: number): string {
   return Math.round(value).toString();
 }
 
-/** OfflineEntry kind 라벨 — repo OFFLINE_ENTRY_KINDS 와 정합. */
+/** OfflineEntry kind 라벨 — repo OFFLINE_ENTRY_KINDS 와 정합.
+ *
+ * FR-Q-NEW-F17-UI-C (V07): 부모 본인 직접 입력 kind 2종 라벨 추가.
+ * Server Action `submitParentCareLog` 가 author=subject=본인 RBAC 로 INSERT 한 entry.
+ */
 const OFFLINE_KIND_LABEL: Record<string, string> = {
   practice: "발음 연습",
   observation: "관찰",
   note: "메모",
+  parent_play: "가정 놀이",
+  parent_external_session: "외부 센터 세션",
 };
 
 export function TimelineEntryCard({ entry, now }: TimelineEntryProps) {

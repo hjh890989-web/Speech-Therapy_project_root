@@ -27,6 +27,9 @@ import { WeeklyReportChart } from "./WeeklyReportChart";
 import { PrintButton } from "./PrintButton";
 import { PredictionCard } from "./PredictionCard";
 import { ReportEmptyState } from "./ReportEmptyState";
+// F17-UI (V07) — 부모 본인 케어로그 입력 + 주간 요약.
+import { ParentCareLogForm } from "@/components/parent-care-log/ParentCareLogForm";
+import { loadParentCareLogWeeklySummary } from "@/lib/parent-care-log/weekly-summary";
 
 export const metadata = {
   title: "주간 발달 리포트 — Speech-Therapy",
@@ -46,6 +49,20 @@ async function resolveUserId(): Promise<string | undefined> {
   }
   const cookieStore = await cookies();
   return cookieStore.get(ANONYMOUS_USER_COOKIE)?.value;
+}
+
+/**
+ * F17-UI-B: 부모 케어로그 섹션은 인증 user 만 표시.
+ * 익명 user (Server Action 이 401 반환) 에게는 폼 노출 안 함.
+ */
+async function isAuthenticated(): Promise<boolean> {
+  try {
+    const supabase = await getSupabaseServerClient();
+    const { data } = await supabase.auth.getUser();
+    return Boolean(data.user?.id);
+  } catch {
+    return false;
+  }
 }
 
 interface LifetimeStats {
@@ -168,7 +185,67 @@ export default async function ReportsPage() {
         <Card label="언어 평균" value={Math.round(weekAgg.linguisticAvg)} />
         <Card label="음향 평균" value={Math.round(weekAgg.acousticAvg)} />
       </section>
+
+      {/* FR-Q-NEW-F17-UI (V07) — 부모 본인 케어로그 (인증 user 만 노출) */}
+      <ParentCareLogSection userId={userId} />
     </PageShell>
+  );
+}
+
+/**
+ * F17-UI-A + B: 부모 본인 케어로그 섹션 — 주간 요약 + 입력 폼.
+ *
+ * - 인증 user 만 표시 (Server Action 이 익명 시 401 반환 — 폼 노출 의미 없음).
+ * - 주간 요약: 직전 7일 합계 + kind 별 카운트 + 마지막 입력.
+ * - 입력 폼: ParentCareLogForm (Client Component).
+ *
+ * R4: 자녀 식별 정보 미노출 — 메트릭 + label 만.
+ */
+async function ParentCareLogSection({ userId }: { userId: string }) {
+  if (!(await isAuthenticated())) return null;
+
+  const summary = await loadParentCareLogWeeklySummary(userId);
+  return (
+    <>
+      <section
+        className="mb-6 rounded-lg border border-gray-200 p-4 dark:border-gray-700"
+        aria-label="부모 직접 기록"
+        data-testid="parent-care-log-summary"
+      >
+        <h2 className="mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
+          부모 직접 기록 — 직전 7일
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Card
+            label="가정 놀이"
+            value={summary.byKind.parent_play ?? 0}
+            data-testid="parent-care-log-count-play"
+          />
+          <Card
+            label="외부 센터 세션"
+            value={summary.byKind.parent_external_session ?? 0}
+            data-testid="parent-care-log-count-external"
+          />
+          <Card
+            label="총 기록"
+            value={summary.totalCount}
+            data-testid="parent-care-log-count-total"
+          />
+        </div>
+        {summary.lastObservedAt && (
+          <p className="mt-3 text-xs text-gray-600 dark:text-gray-400">
+            마지막 입력:{" "}
+            <time dateTime={summary.lastObservedAt.toISOString()}>
+              {summary.lastObservedAt.toLocaleString("ko-KR")}
+            </time>
+          </p>
+        )}
+      </section>
+
+      <section className="mb-6" aria-label="부모 기록 입력">
+        <ParentCareLogForm />
+      </section>
+    </>
   );
 }
 
@@ -233,9 +310,20 @@ function PageShell({
   );
 }
 
-function Card({ label, value }: { label: string; value: number }) {
+function Card({
+  label,
+  value,
+  "data-testid": dataTestId,
+}: {
+  label: string;
+  value: number;
+  "data-testid"?: string;
+}) {
   return (
-    <article className="rounded-lg border border-gray-200 p-3 text-center dark:border-gray-700">
+    <article
+      className="rounded-lg border border-gray-200 p-3 text-center dark:border-gray-700"
+      data-testid={dataTestId}
+    >
       <p className="text-xs text-gray-600 dark:text-gray-400">{label}</p>
       <p className="text-2xl font-bold tabular-nums">{value}</p>
     </article>
