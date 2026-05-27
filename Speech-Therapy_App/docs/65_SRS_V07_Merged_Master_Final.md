@@ -37,24 +37,33 @@ V07 은 V06 base 위에 다음을 통합:
 | Glossary | §1.3 (간략) | **§9** (Wiki glossary 통합) | 12 카테고리 + 3 온보딩 순서 |
 | F15 임상 자문 | 미포함 | **§10** (Wiki F15-clinical-consultation-checklist 통합) | KOPLAC 13 항목 + 자문 4주 + 82만 |
 
-## 0.3 V07 작성 진행 상태 (본 sub-session 1차 draft)
+## 0.3 V07 작성 진행 상태 (단일 sub-session 의 전체 완성)
 
 | § | 상태 | 비고 |
 |---|---|---|
-| **§0** | ✅ 본 sub-session | 본 섹션 |
-| §1-3 | 🟡 **V06 재사용 + ADR 서론 갱신** | 다음 sub-session 에서 §3.5 API + §3.6 Sequence 갱신 continue |
-| §4 | ⬜ 다음 sub-session | Phase 1+ 13 신규 task + NF 5 신규 추가 |
-| §5 | ⬜ 다음 sub-session | HITL 완전 재작성 (Wiki 4 페이지 흡수) |
-| **§6.8 ADR** | ✅ 본 sub-session | 4 → 16 갱신 |
-| §6.1 ERD | ⬜ 다음 sub-session | 7 → 14+ Entity |
-| §6.5 Timeline | ⬜ 다음 sub-session | 14 sub-task + 보류 4건 |
-| §6.9~6.11 | ⬜ 다음 sub-session | 임상 자문 + IRB + 임상 reference |
-| §7 운영 | ⬜ 다음 sub-session | Phase 별 expert 풀 + 운영비 |
-| §8 변경 관리 | ⬜ 다음 sub-session | Wiki change-management 통합 |
-| §9 Glossary | ⬜ 다음 sub-session | Wiki glossary 통합 |
-| §10 F15 KOPLAC | ⬜ 다음 sub-session | Wiki F15 통합 |
-| §11 R6 Plan B | ⬜ 다음 sub-session | Wiki R6 통합 |
-| **§12 컴플라이언스** | ✅ 본 sub-session | 본 sub-session 결과 통합 |
+| **§0** | ✅ 완성 | 본 섹션 |
+| **§1** | ✅ 완성 (V06 base + 1.4 References 신규) | §1.1~§1.3 V06 그대로 + §1.4 V07 신규 link + §1.5.1 ADR 16 link |
+| §2 | 🟡 V06 재사용 | Stakeholder DMU 그대로 |
+| §3 | 🟡 V06 base + §3.5 / §3.6 갱신 placeholder | 차기 작업 시 §3.5 API list 갱신 / §3.6.4-5 시퀀스 추가 |
+| **§4** | ✅ 완성 | Phase 0 (V06) + Phase 1+ 13 신규 + Cross-cutting +3 + Phase 2 (V06) + NF 35 (V06 30 + 5 신규) |
+| **§5** | ✅ 완성 | 4 원칙 + 9 단계 흐름 + 재학습 파이프라인 + Phase 풀 + 다양성 모니터링 + 임상 안전망 |
+| §6.1 | ✅ 완성 | ERD 7 → 14 Entity |
+| §6.2-6.3 | 🟡 V06 base + 신규 Entity 추가 (V07 §6.1 참조) | |
+| §6.4 | 🟡 V06 5 시퀀스 + §6.4.4-5 신규 placeholder | 차기 작업 |
+| **§6.5** | ✅ 완성 | Sprint sub-task 14 + 보류 4건 + Project #8 정합성 |
+| §6.6-6.7 | 🟡 V06 재사용 | EXP + Contingency |
+| **§6.8** | ✅ 완성 | ADR 4 → 16 |
+| **§6.9** | ✅ 완성 | F15 KOPLAC 요약 (본문은 §10) |
+| **§6.10** | ✅ 완성 | IRB 5단계 + 사전 확보 4 카테고리 |
+| **§6.11** | ✅ 완성 | 임상 reference 30+ wiki 페이지 link |
+| **§7** | ✅ 완성 | 운영 정책 + 비 + 모니터링 + cron 분리 |
+| **§8** | ✅ 완성 | 변경 관리 3-Tier + CR 워크플로 + 본 sub-session 5 사례 |
+| **§9** | ✅ 완성 | Glossary 12 카테고리 + 3 온보딩 순서 |
+| **§10** | ✅ 완성 | F15 KOPLAC 13 항목 + 자문 풀 7 그룹 |
+| **§11** | ✅ 완성 | R6 Seg B Plan B + F4-Plus + Plan C |
+| **§12** | ✅ 완성 | PIPA + 의료기기법 + 5중 가드 + 출시 체크리스트 |
+
+**완성도**: 13 § 중 **11 § 본문 완성** + 2 § (V06 base 유지 + 차기 보강 placeholder).
 
 ---
 
@@ -75,7 +84,50 @@ V06 의 §1.5.1 의 ADR-01~04 표는 V07 의 **§6.8 ADR Reference (16 ADR 완�
 | ADR-05~15 | **신규 (V05 + Wiki 합성)** | §6.8 ADR-05~15 |
 | ADR-16 | **PIPA 5중 가드 (본 sub-session 신규)** | §6.8 ADR-16 + §12.4 |
 
-> 나머지 §1.1~§1.5 본문 (Purpose / Scope / Definitions / References) 은 V06 그대로. **다음 sub-session 에서 §1.4 References 에 wiki clinical 30 페이지 link 추가 예정.**
+> §1.1~§1.3 본문 (Purpose / Scope / Definitions) 은 V06 그대로 유지. §9 Glossary 의 12 카테고리 가 본 §1.3 의 Definitions 보강.
+
+## 1.4 References (V07 신규 link)
+
+V06 §1.4 base + V07 신규:
+
+### 1.4.1 본 프로젝트 자체 reference
+
+- [`docs/54_PRD_V10_Final.md`](54_PRD_V10_Final.md) — 제품 요구사항 V10
+- [`docs/64_SRS_V05_Merged_Master_Final.md`](64_SRS_V05_Merged_Master_Final.md) — SRS V06 (본 V07 의 base)
+- [`docs/compliance-lawyer-consultation-brief.md`](compliance-lawyer-consultation-brief.md) — 변호사 자문 의뢰 자료 (275 lines)
+- [`docs/security-policy.md`](security-policy.md) + [`docs/ops-runbook.md`](ops-runbook.md) + [`docs/cs-templates.md`](cs-templates.md) + [`docs/postmortem-template.md`](postmortem-template.md)
+- [`tasks/09_SRS_V06_vs_Wiki_Gap_Analysis.md`](../tasks/09_SRS_V06_vs_Wiki_Gap_Analysis.md) — 본 V07 Gap 분석
+- [`tasks/03_Tasks_Breakdown_SRS_reinforce.md`](../tasks/03_Tasks_Breakdown_SRS_reinforce.md) — Sprint sub-task 14
+- [`tasks/08_Project_Gantt_Chart_병렬_트랙.md`](../tasks/08_Project_Gantt_Chart_병렬_트랙.md) — Gantt
+
+### 1.4.2 Wiki product/concepts (28 페이지, 본 V07 흡수 출처)
+
+`Speech-Therapy_Workbase/wiki/product/concepts/` 의 다음 28 페이지가 V07 의 직접 출처:
+
+| 페이지 | V07 § 흡수 |
+|---|---|
+| `architecture-decisions` | §6.8 (16 ADR) |
+| `requirements-traceability-matrix` | §5 + Wiki RTM |
+| `MVP-feature-spec` | §4.1 Phase 0/1/2 |
+| `Phase-1-future-tasks-decomposition` | §4.1 Phase 1+ 13 신규 task |
+| `HITL-system-flow` + `HITL-retraining-pipeline` + `HITL-operations-policy` + `expert-diversity-monitoring` | §5 + §7 |
+| `F9.4-ROI-simulator` + `F10-research-consent` + `F15-clinical-consultation-checklist` + `R6-Seg-B-Plan-B` | §10 + §11 + §4.1 |
+| `change-management-process` + `glossary` | §8 + §9 |
+| `SRS-evolution` + `PRD-evolution` + `VPS-evolution` | §0 Revision History |
+| `tech-architecture` | §3 + ADR-05~07 |
+| `competitive-landscape` + `customer-segmentation` + `customer-journey` + `jtbd-insights` + `opportunity-quadrants` + `Key-Success-Factors` + `problem-definition` + `multi-llm-workflow` + `Porter-5-Forces-Analysis` + `Value-Chain-Analysis` | §1.1 Business Context + §2 Stakeholders (V06 base + cross-link) |
+
+### 1.4.3 Wiki clinical (60+ 페이지)
+
+`Speech-Therapy_Workbase/wiki/clinical/` — 본 V07 §6.11 의 임상 reference 매트릭스 참조.
+
+### 1.4.4 외부 reference (V06 그대로)
+
+- KCDC 영유아 발달 표준 (REQ-FUNC-002 또래 비교 출처)
+- AGENTS.md §2.1 CON-04 의료 금칙어 정책
+- PIPA / 의료기기법 / 약관규제법 / 정보통신망법 (§12 참조)
+- ElevenLabs TTS Free Tier 정책 (REQ-FUNC-036 출처)
+- Vercel Hobby plan cron 한도 (§7.3 + 본 sub-session 학습)
 
 ---
 
@@ -123,111 +175,445 @@ V06 base + **§3.6.3 PIPA 동의 흐름** 신규 (다음 sub-session).
 
 ---
 
-# §4. Specific Requirements (V06 base + 다음 sub-session 보강)
-
-> **본 § 는 다음 sub-session 에서 V07 의 가장 큰 추가 작업**. V06 의 99 REQ → V07 의 ~120 REQ.
+# §4. Specific Requirements
 
 ## 4.1 Functional Requirements
 
-### Phase 0 — MVP 코어 (V06 그대로, 26 REQ)
-### Phase 1 — 리텐션/바이럴 (V06 23 REQ + **신규 13** = 36 REQ)
+### Phase 0 — MVP 코어 (V06 그대로, 26 REQ-FUNC)
 
-**다음 sub-session 에서 추가 (Wiki Phase-1-future-tasks-decomposition 흡수)**:
+> V06 §4.1 Phase 0 의 26 REQ (REQ-FUNC-001 ~ REQ-FUNC-026, 6 Epics: F1-a / F1-b / F2 / F3 / F8 / F12) 그대로 유지. V06 본문 참조.
 
-| Epic | 신규 task 수 | 출처 |
-|---|---|---|
-| F11 부모 음성 클로닝 동화 | 5 | wiki Phase-1-future §F11 |
-| F15 LLM 대화형 발화 유도 챗봇 | 4 | wiki Phase-1-future §F15 |
-| F16 오프라인 일반화 푸시 알림 | 3 | wiki Phase-1-future §F16 |
-| F17 통합 케어로그 (보강) | 2 | wiki Phase-1-future §F17 |
-| F18 발달 예측 시뮬레이션 (보강) | 1 | wiki Phase-1-future §F18 |
-| **합계** | **15 task** (REQ 매핑은 task 1 → REQ 1 가정 시 +15, 실제로는 +13 추정) | |
+### Phase 1 — 리텐션/바이럴 (V06 23 + **신규 13** = 36 REQ-FUNC)
+
+V06 의 23 REQ (REQ-FUNC-027 ~ REQ-FUNC-049, 10 Epics) 유지 + Wiki `Phase-1-future-tasks-decomposition` 흡수 13 신규:
+
+#### Epic F11 — 부모 음성 클로닝 동화 (5 신규 task)
+
+| REQ ID | 요구사항 | Source | AC |
+|---|---|---|---|
+| **REQ-FUNC-036** | 부모 음성 녹음 → ElevenLabs TTS 클로닝 모델 생성 / 동화 콘텐츠에서 부모 목소리 재생 | F11, wiki Phase-1-future §F11 | 권한 동의 후 30초~5분 녹음 → modelHash 발급 |
+| **REQ-FUNC-037** ⚠️ | **교정 훈련에는 부모 음성 클로닝 적용 금지** (UX 원칙 — 치료자 ≠ 가족 역할 분리) | wiki clinical/실어증 § MIT 임상 원리, **ADR-09** | `applyParentVoice(contentType)` 화이트리스트 (storybook / lullaby) — 교정 페이지 audio 적용 0건 자동 검증 |
+
+**신규 task 분해 (5종 / 7.5 SP)**:
+
+| 신규 ID 후보 | 종류 | 명세 | SP |
+|---|---|---|---|
+| FR-Q-NEW-F11-1 `voice_recording_page` | Read | 부모 음성 녹음 페이지 (`/voice-recording`) — 권한 안내 + Disclaimer + 5분 30초 녹음 가이드 | 2 |
+| FR-C-NEW-F11-1 `submit_voice_clone` | Write | Server Action — 음성 업로드 + ElevenLabs API 호출 + voice_models DB INSERT + **7일 폐기 Cron** (ADR-03 정합) | 2 |
+| API-NEW-F11-1 `/api/voice-clone/render` | API | TTS 렌더링 외부 API → Vercel Edge Cache → 동화 페이지 사용 | 1.5 |
+| DB-NEW-F11-1 `voice_models` 테이블 | DB | userId + modelHash + createdAt + expiresAt (7일) + appliedContentTypes (배열, 동화만 허용) | 0.5 |
+| TEST-NEW-F11-1 윤리 차단 자동 검증 | TEST | 동화 페이지 음성 = OK / **교정 페이지 음성 = 0건 자동** + 7일 만료 검증 | 1.5 |
+
+**리스크**:
+- ElevenLabs Free 10K characters/月 (≈ 동화 5권/月) — Phase 1 검증용 충분 / 유료 $5/月 30K (Premium 구독 시 활성)
+- ⚠️ 윤리 — 부모 음성 ≤ 7일 폐기 (ADR-03) + 교정 차단 (REQ-FUNC-037) — 둘 다 시스템 강제
+
+#### Epic F15 — LLM 대화형 발화 유도 챗봇 (4 신규 task)
+
+| REQ ID | 요구사항 | Source | AC |
+|---|---|---|---|
+| **REQ-FUNC-038** | Vercel AI SDK `useChat()` 스트리밍 + Gemini 호출 | F15, **ADR-07** | UI 응답 시간 p95 ≤ 2s |
+| **REQ-FUNC-039** | 자연 발화 데이터 무자각 수집 + 7일 폐기 + 의료 용어 배제 | F15, **ADR-03 + ADR-04** | 발화 INSERT → 7일 후 자동 삭제 / 금칙어 0건 |
+
+**신규 task 분해 (4종 / 6.5 SP)**:
+
+| 신규 ID 후보 | 종류 | 명세 | SP |
+|---|---|---|---|
+| FR-Q-NEW-F15-1 `chat_page` | Read | useChat 스트리밍 UI + ADR-04 금칙어 자동 검열 (Middleware) | 2 |
+| FR-C-NEW-F15-1 `submit_chat_utterance` | Write | 발화 → STT (Web Speech API D1) → 메시지 INSERT + 7일 폐기 Cron 등록 | 1.5 |
+| API-NEW-F15-1 `/api/chat/stream` | API | Vercel AI SDK Edge → Gemini Pro 1.5 (D6 pgvector 미사용 = 단일턴 컨텍스트) | 1.5 |
+| TEST-NEW-F15-1 화용 + ADR-04 + 7일 폐기 | TEST | 의도 ↔ 발화 매핑 검증 + 의료 용어 0건 자동 + 7일 후 자동 삭제 | 1.5 |
+
+**KOPLAC 영감** (wiki/clinical/entities/KOPLAC § 화용 영역):
+- 의사소통 의도 (요청/거절/공유) 시나리오 자동 유도
+- 담화 관리 (차례 지키기) 챗봇 구현
+- 상황 맥락 (이미지 + 텍스트 멀티모달)
+- 단 ASD 진단 회피 (wiki/clinical/concepts/자폐-화용중재 정합 — ADR-04)
+
+**임상 안전 게이트** (**ADR-14**): F15 활성 전 §6.9 KOPLAC 13 항목 + 자문 4주 + 82만 통과 필수.
+
+#### Epic F16 — 오프라인 일반화 푸시 알림 (3 신규 task)
+
+| REQ ID | 요구사항 | Source | AC |
+|---|---|---|---|
+| **REQ-FUNC-040** | Web Push API → 일상 발화 유도 시점 알림 ("저녁 먹을 때 '맛있어요' 한번 말해보세요") | F16, **ADR-10** | 일 1회 18:00 발송 / 옵트인 user 만 |
+
+**신규 task 분해 (3종 / 3.5 SP)**:
+
+| 신규 ID 후보 | 종류 | 명세 | SP |
+|---|---|---|---|
+| FR-C-NEW-F16-1 `subscribe_push` | Write | Service Worker push subscription 등록 (**PWA 의존, D5 Descope 부활 트리거**) | 1.5 |
+| API-NEW-F16-1 `/api/push/dispatch` | API | Vercel Cron (일 1회 18:00 — 본 sub-session GitHub Actions 이관 후 cron-job.org / 별도 외부) → 활성 구독 조회 → Web Push 발송 | 1.5 |
+| DB-NEW-F16-1 `push_subscriptions` 테이블 | DB | userId + endpoint + p256dh + auth + lastSentAt + dismissCount | 0.5 |
+
+**D5 PWA 부활 의존성** (ADR-10):
+- D5 부활 조건: 농촌 사용자 비율 N%+ + iOS Safari + EXP-2 통과
+- F16 부활 조건: D5 + 일 활성 사용자 1,000명+ (Vercel 무료 한도 검증)
+
+#### Epic F17 — 통합 케어로그 (2 신규 task / 2 SP)
+
+V06 의 REQ-FUNC-042 (FR-Q-013 / DB-004) 기반 보강:
+
+| 신규 ID 후보 | 종류 | 명세 | SP |
+|---|---|---|---|
+| FR-C-NEW-F17-1 `submit_care_log` | Write | 부모 직접 입력 (자유놀이 시간·외부 센터 세션 메모) — DB-004 INSERT | 1 |
+| TEST-NEW-F17-1 F4 통합 검증 | TEST | F4 주간 리포트에서 외부 케어로그 + 앱 미션 데이터 통합 시각화 | 1 |
+
+#### Epic F18 — 발달 예측 시뮬레이션 (1 신규 task / 1.5 SP)
+
+V06 의 REQ-FUNC-044/045 (FR-Q-012 / FR-C-011 / API-011 / DB-007) 기반 EXP-2 검증 task:
+
+| 신규 ID 후보 | 종류 | 명세 | SP |
+|---|---|---|---|
+| TEST-NEW-F18-1 EXP-2 검증 | TEST | Amplitude 코호트 분석 자동화 — 시뮬레이션 클릭 vs 비클릭 익월 결제 유지율 차이 ≥ 20%p | 1.5 |
+
+#### Phase 1+ 신규 task 합계
+
+| Epic | task 수 | SP 합 | 누적 SP |
+|---|---|---|---|
+| F11 | 5 | 7.5 | 7.5 |
+| F15 | 4 | 6.5 | 14.0 |
+| F16 | 3 | 3.5 | 17.5 |
+| F17 | 2 | 2.0 | 19.5 |
+| F18 | 1 | 1.5 | **21.0 SP** (= +13 REQ-FUNC + 신규 6 DB/API/TEST task) |
 
 ### Cross-cutting — HITL 안전 프로토콜 (V06 4 → V07 7 REQ)
 
-**다음 sub-session 에서 추가 (Wiki HITL-retraining-pipeline 흡수)**:
-- REQ-FUNC-HITL-005: 재학습 데이터 자동 INSERT 트리거 (model_retraining_data 스키마)
-- REQ-FUNC-HITL-006: 재학습 게이트 0.5% / 500건 / 0.3%
-- REQ-FUNC-HITL-007: expertId 다양성 모니터링 (HHI + Gini)
+V06 REQ-FUNC-HITL-001~004 (4 원칙: 인적 검토 의무 / 비동기 / 분산 / 추적성) 유지 + Wiki HITL-retraining-pipeline 흡수 3 신규:
 
-### Phase 2 — B2B 스케일업 (V06 그대로, 16 REQ)
-
-## 4.2 Non-Functional Requirements (V06 30 → V07 35 REQ)
-
-**다음 sub-session 에서 추가 (본 sub-session 결과 통합)**:
-
-| REQ ID | 항목 | 기준 | 출처 |
+| REQ ID | 요구사항 | Source | AC |
 |---|---|---|---|
-| **REQ-NF-025** | PIPA §22-6 만 14세 미만 부모 대리 동의 | 인증 user: onboarding Step2 + /settings/privacy-consent / 익명 user: /diagnose inline 체크박스 + localStorage marker / DB 영속 (`pipaUnderageConsentAt`) | 본 sub-session A1 |
-| **REQ-NF-026** | PIPA §17 국외 이전 동의 | STT (Google Cloud Speech US) + Gemini (US/global) 통합 동의 / DB 영속 (`overseasTransferConsentAt`) | 본 sub-session A2 |
-| **REQ-NF-027** | Gemini transcript PII 마스킹 | `lib/ai/pii-mask.ts` — 한국 PIPA 7 패턴 (주민등록번호 / 신용카드 / 이메일 / 전화번호 / URL / IPv4 / 한국식 상세 주소) | 본 sub-session A3 |
-| **REQ-NF-028** | 의료기기법 disclaimer 전역 footer | `MedicalDisclaimerFooter` (모든 페이지) + /privacy + /terms 링크 | 본 sub-session A5 |
-| **REQ-NF-029** | PIPA 5중 가드 | UI (ConsentRedirectGate) + Server Action × 4 (analyzeDiagnosis / updateChildProfile / generateCushion + 익명 가드) | 본 sub-session A4 |
+| **REQ-FUNC-HITL-005** | 재학습 데이터 자동 INSERT 트리거 — `model_retraining_data` 스키마 + `sync_retraining_data` PostgreSQL TRIGGER | wiki HITL-retraining-pipeline, **ADR-11** | expert 보정 점수 INSERT 시 자동 `model_retraining_data` 적재 (R4 sanitize 후) |
+| **REQ-FUNC-HITL-006** | 재학습 게이트 — **0.5% / 500건 / 0.3%** 통과 시만 재학습 트리거 | wiki HITL-retraining-pipeline, **ADR-11** | (1) AI ↔ expert 점수 차이 ≥ 0.5% / (2) 누적 500건 / (3) expert 다양성 HHI ≤ 0.3 — 3 게이트 통과 시만 |
+| **REQ-FUNC-HITL-007** | expertId 다양성 모니터링 — Phase 1 단순 Threshold + Phase 2 HHI + Gini | wiki expert-diversity-monitoring | Phase 1: Top-3 expert 누적 ≤ 60% / Phase 2: HHI ≤ 0.3 + Gini ≤ 0.4 + Vercel Cron 자동화 |
 
-→ V06 §4.2 보안 (4 REQ) + 위 5 신규 = **9 REQ NF 보안 영역**.
+§5 HITL 안전 프로토콜 정책 본문 참조.
+
+### Phase 2 — B2B 스케일업 (V06 그대로, 16 REQ-FUNC)
+
+V06 §4.1 Phase 2 의 16 REQ (REQ-FUNC-050 ~ REQ-FUNC-065, 5 Epics) 유지.
+
+## 4.2 Non-Functional Requirements (V06 30 + 신규 5 = 35 REQ-NF)
+
+### 성능 (V06 REQ-NF-001~005)
+
+V06 §4.2 성능 그대로 유지.
+
+### 가용성/SLA (V06 REQ-NF-006~009)
+
+V06 §4.2 가용성 그대로 유지.
+
+### 신뢰성 (V06 REQ-NF-010~015)
+
+V06 §4.2 신뢰성 그대로 유지.
+
+### 보안 (V06 4 + 신규 5 = 9 REQ-NF) ⭐
+
+V06 REQ-NF-016~019 유지 + 본 sub-session 결과 5 신규:
+
+| REQ ID | 항목 | 기준 | Source |
+|:---|:---|:---|:---|
+| **REQ-NF-016** | 영유아 음성 원본 보관 | ≤ 7일 후 즉시 폐기 (V06 — ADR-03) | V06 |
+| **REQ-NF-017** | 민감 데이터 암호화 | 저장: AES-256 / 전송: TLS 1.2+ | V06 |
+| **REQ-NF-018** | AI API 호출 비용 통제 | 유저당 월 ≤ ₩5,250 (구독료 15%) | V06 |
+| **REQ-NF-019** | RBAC 접근 제어 | 원장/교사/재활사/관리자 역할 분리 + 감사 로그 1년+ 보관 (DB-011 + audit_log_triggers) | V06 |
+| **REQ-NF-025** ⭐ | PIPA §22-6 만 14세 미만 부모 대리 동의 | 인증 user: onboarding Step2 + `/settings/privacy-consent` / 익명 user: `/diagnose` inline 체크박스 + localStorage marker / DB 영속 (`User.pipaUnderageConsentAt`) | 본 sub-session A1, §12.3 |
+| **REQ-NF-026** ⭐ | PIPA §17 국외 이전 동의 | STT (Google Cloud Speech US) + Gemini (US/global) 통합 동의 / DB 영속 (`User.overseasTransferConsentAt`) | 본 sub-session A2, §12.2 |
+| **REQ-NF-027** ⭐ | Gemini transcript PII 마스킹 | `lib/ai/pii-mask.ts` — 한국 PIPA 7 패턴 (주민등록번호 / 신용카드 / 이메일 / 전화번호 / URL / IPv4 / 한국식 상세 주소) | 본 sub-session A3 |
+| **REQ-NF-028** ⭐ | 의료기기법 disclaimer 전역 footer | `MedicalDisclaimerFooter` (모든 페이지) + `/privacy` + `/terms` 링크 | 본 sub-session A5 |
+| **REQ-NF-029** ⭐ | PIPA 5중 가드 | UI (`ConsentRedirectGate`) + Server Action × 4 (`analyzeDiagnosis` / `updateChildProfile` / `generateCushion` + 익명 boolean 가드) | 본 sub-session A4, §12.4, **ADR-16** |
+
+### 모니터링 (V06 REQ-NF-020~024)
+
+V06 §4.2 모니터링 그대로 유지.
+
+### Business KPI (V06 REQ-NF-025~030 → V07 재번호 REQ-NF-030~035)
+
+V06 의 6 Business KPI REQ 는 V07 에서 REQ-NF-030~035 로 재번호 (보안 영역 5 신규로 인한 ID 충돌 회피).
 
 ---
 
-# §5. HITL 안전 프로토콜 (V07 신규 — 다음 sub-session 완전 작성)
+# §5. HITL 안전 프로토콜 (V06 §3.6.2 + §4.1 Cross-cutting 통합 + Wiki HITL 4 페이지 흡수)
 
-> **다음 sub-session 의 핵심 작업** — V06 의 §3.6.2 시퀀스 + §4.1 Cross-cutting (4 원칙) 를 통합 + Wiki 4 페이지 (2034 lines) 흡수.
+V06 의 HITL 4 원칙 (§4.1 Cross-cutting) + 시퀀스 (§3.6.2) 를 본 § 로 통합 + Wiki `HITL-system-flow` (290 lines) + `HITL-retraining-pipeline` (404 lines) + `HITL-operations-policy` (792 lines) + `expert-diversity-monitoring` (548 lines) 흡수.
 
-## 5.1 9 단계 흐름 (Wiki HITL-system-flow)
+## 5.1 4 원칙 (V06 §4.1 Cross-cutting 그대로)
 
-1. AI 1차 분석 → Confidence 산출
-2. Confidence < 70 → API-005 큐 자동 등록
-3. expert (1급/2급 분산) 배정
-4. API-006 Studio 또는 PostgreSQL TRIGGER 자동 capture
-5. 24h 무응답 → 1차 알림 (Resend)
-6. 48h SLA 초과 → 2차 알림 + admin 에스컬레이션
-7. expert 보정 점수 + 코멘트
-8. 어뷰징 방어 (expertId 다양성 모니터링 — Phase 2 HHI + Gini)
-9. 루프백 (재학습 게이트 0.5%/500건/0.3% 통과 시 model_retraining_data INSERT)
+1. **인적 검토 의무**: AI Confidence < 70 시 100% 사람 검토 (자동 진행 차단)
+2. **비동기 큐**: 실시간 즉시 응답 vs 24~48h 비동기 검토 (UX vs 안전 균형)
+3. **분산 책임**: 1 expert 폭주 방지 — 자동 분산 배정 + 누적 비율 모니터링
+4. **추적성**: AI 결과 → expert 보정 → 재학습 데이터 의 전 chain 추적 (DB-011 audit_log)
 
-## 5.2 재학습 파이프라인 (Wiki HITL-retraining-pipeline)
+## 5.2 9 단계 흐름 (Wiki HITL-system-flow §시스템 흐름 다이어그램 흡수)
 
-다음 sub-session 작성.
+```
+[Step 1] AI 1차 분석 (analyzeDiagnosis) → Confidence 산출 (0~100)
+   ↓
+[Step 2] Confidence < 70 (REQ-FUNC-003) → API-005 /api/hitl/queue 자동 INSERT
+   ↓
+[Step 3] expert 배정 — 1급/2급 분산 (assignedExpertId field)
+   ├─ Phase 0: Supabase Studio 수동 배정 (D4 단순화)
+   └─ Phase 1+: 자동 배정 + 다양성 모니터링 (HHI ≤ 0.3)
+   ↓
+[Step 4] expert 검토 — API-006 PATCH /api/hitl/comment + groundTruthScore JSON
+   ├─ Application-level: lib/audit.ts 명시 INSERT
+   └─ DB-level: audit_log_triggers 자동 capture (TRIGGER × 3 — User/HITLQueue/RewardLog)
+   ↓
+[Step 5] 24h 무응답 → 1차 알림 (Resend 또는 Slack webhook)
+   ├─ Cron: hitl-escalation (GitHub Actions, 2h 간격)
+   └─ REQ-NF-023 모니터링: 24h 초과 ≥ 3건 시 admin Alert + 자동 재배정
+   ↓
+[Step 6] 48h SLA 초과 → escalatedAt 자동 마킹 + 2차 알림 + admin 에스컬레이션
+   ↓
+[Step 7] expert 보정 점수 + 코멘트 INSERT (HITLQueue.groundTruthScore + expertComment)
+   ↓
+[Step 8] 어뷰징 방어 — expertId 다양성 모니터링 (§5.5)
+   ├─ Phase 1: Top-3 expert 누적 ≤ 60%
+   └─ Phase 2: HHI ≤ 0.3 + Gini ≤ 0.4 (Vercel Cron 자동화)
+   ↓
+[Step 9] 루프백 — 재학습 게이트 (§5.3) 3 조건 통과 시 model_retraining_data INSERT
+```
 
-## 5.3 Phase 별 expert 풀 운영 (Wiki HITL-operations-policy)
+## 5.3 재학습 파이프라인 (Wiki HITL-retraining-pipeline 흡수, ADR-11)
 
-다음 sub-session 작성.
+### 5.3.1 model_retraining_data 스키마
 
-## 5.4 다양성 모니터링 (Wiki expert-diversity-monitoring)
+```sql
+CREATE TABLE model_retraining_data (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sessionId uuid NOT NULL,        -- EvaluationResult.sessionId 1:1
+  aiScore jsonb NOT NULL,         -- AI 1차 3축 + confidence
+  groundTruthScore jsonb NOT NULL,-- expert 보정 3축
+  expertId uuid NOT NULL,         -- User.id (다양성 모니터링용)
+  diffPct float NOT NULL,         -- abs(ai - groundTruth) / 100
+  consentTier text NOT NULL,      -- F10 T1~T4 (ADR-15 IRB)
+  sanitized boolean DEFAULT false,-- R4 sanitize 완료 여부
+  createdAt timestamp DEFAULT now()
+);
+```
 
-다음 sub-session 작성.
+### 5.3.2 sync_retraining_data PostgreSQL TRIGGER
+
+`HITLQueue.groundTruthScore` UPDATE 시 자동 INSERT:
+- R4 sanitize 강제 (자녀 식별 정보 0건 — to_jsonb 의 의심 키 `[REDACTED]` 치환)
+- F10 동의 Tier 확인 (T4-a/b/c 미동의 시 INSERT skip)
+
+### 5.3.3 재학습 3 게이트 (REQ-FUNC-HITL-006)
+
+| 게이트 | 조건 | 의미 |
+|---|---|---|
+| 1 | `diffPct ≥ 0.5%` | AI ↔ expert 점수 차이 유의 |
+| 2 | 누적 ≥ 500건 | 통계적 의미 충분 |
+| 3 | expert 다양성 `HHI ≤ 0.3` | 편향 방어 |
+
+**3 게이트 모두 통과 시만 재학습 트리거** — 약 분기 1~2회 예상.
+
+### 5.3.4 RACI 책임 분리 (ADR-11)
+
+| 단계 | R (책임) | A (승인) | C (자문) | I (통보) |
+|---|---|---|---|---|
+| 1 데이터 수집 | system (TRIGGER) | - | - | admin |
+| 2 게이트 검증 | system (Cron) | admin | expert | - |
+| 3 재학습 실행 | 외부 ML 엔지니어 (위탁) | admin | expert | 전체 expert |
+| 4 모델 배포 | admin | admin (F15 안전 게이트 — ADR-14) | IRB (ADR-15 T4-c) | 전체 expert + 사용자 |
+
+## 5.4 Phase 별 expert 풀 운영 (Wiki HITL-operations-policy 흡수)
+
+### 5.4.1 Phase 별 정량화
+
+| Phase | 기간 | expert 수 | 1급/2급 비율 | 운영비 (월) |
+|---|---|---|---|---|
+| **Phase 0 (MVP)** | ~3개월 | 3-5 (와이프 1명 + 친지 / 학회 자원봉사 2-4) | 1급 1 / 2급 2-4 | ₩0 (자원봉사 + 가족) |
+| **Phase 1 (리텐션)** | ~6개월 | 5-10 (1급 정규 1 + 2급 프리랜서 4-9) | 1급 1-2 / 2급 4-8 | ₩200-500만 (HITL 큐 200건/월) |
+| **Phase 2 (B2B 스케일업)** | ~6개월+ | 15-25 (1급 정규 2-3 + 2급 프리랜서 + B2B 어드민) | 1급 2-3 / 2급 12-22 | ₩600만-1,200만 (HITL 큐 1,000건/월) |
+
+### 5.4.2 풀 확대 트리거 (Phase 변경 권한 — ADR-13 system_config)
+
+- HITL 큐 24h+ 대기 ≥ 5건 / 1주 평균
+- expert 1급 누적 점유 ≥ 50% (Top-1 expert 의 검토 비율)
+- 일 활성 사용자 (DAU) ≥ Phase 임계값 (Phase 0→1: 200 DAU / Phase 1→2: 1,000 DAU)
+
+### 5.4.3 getCurrentPhase() 메커니즘 (ADR-13)
+
+env (`NEXT_PUBLIC_CURRENT_PHASE=phase_1`) + DB `system_config` 테이블 하이브리드:
+- env: 빠른 부팅 분기 (정적 import)
+- DB: runtime 변경 (admin 권한, 감사 로그 자동 캡처)
+
+```sql
+CREATE TABLE system_config (
+  key text PRIMARY KEY,
+  value jsonb NOT NULL,
+  updatedBy uuid NOT NULL,  -- audit_user_changes TRIGGER 캡처
+  updatedAt timestamp DEFAULT now()
+);
+-- 예: key='currentPhase', value='{"phase": "phase_1", "since": "2026-Q3"}'
+```
+
+## 5.5 expert 다양성 모니터링 (Wiki expert-diversity-monitoring 흡수)
+
+### 5.5.1 Phase 1 — 단순 Threshold + Top-3
+
+```sql
+-- Top-3 expert 누적 점유 ≤ 60% 검증 (Cron daily)
+WITH expert_counts AS (
+  SELECT expertId, COUNT(*) AS reviews
+  FROM model_retraining_data
+  WHERE createdAt > NOW() - INTERVAL '30 days'
+  GROUP BY expertId
+  ORDER BY reviews DESC
+  LIMIT 3
+)
+SELECT SUM(reviews)::float / (SELECT COUNT(*) FROM model_retraining_data
+                              WHERE createdAt > NOW() - INTERVAL '30 days') AS top3_ratio
+FROM expert_counts;
+-- top3_ratio > 0.60 시 admin Alert
+```
+
+### 5.5.2 Phase 2 — HHI + Gini 이중
+
+**HHI (Herfindahl-Hirschman Index)** = Σ (expert_i / total)² × 10000
+
+| HHI 값 | 의미 | 조치 |
+|---|---|---|
+| < 1500 | 분산 양호 | — |
+| 1500-2500 | 집중 우려 | Top-3 expert 부하 분산 |
+| ≥ 2500 | 심각 집중 | Phase 풀 확대 |
+
+**Gini Coefficient** — expert review 횟수의 불평등 측정 (0 = 완전 평등 / 1 = 완전 불평등):
+- Gini ≤ 0.4 = 양호
+- Gini > 0.4 = 일부 expert 폭주 → 자동 분산 알고리즘 가중치 조정
+
+### 5.5.3 위반 대응 시나리오 (3종)
+
+1. **HHI 1500-2500 (집중 우려)**: Phase 풀 확대 권고 (system_config UPDATE 트리거) + admin 통보
+2. **HHI ≥ 2500 (심각 집중)**: 자동 차단 — Top-3 expert 신규 배정 24h 일시 정지 + admin 긴급 알림
+3. **Gini > 0.4**: 분산 알고리즘 가중치 조정 (소수 expert 우선 배정 알고리즘 부스트)
+
+## 5.6 D4 Descope (Realtime → Slack + Studio, ADR-05 결합)
+
+V06 의 D4 단순화 정책 유지: Supabase Realtime 미사용. Slack 웹훅 (Phase 0) → Resend (Phase 1+) 알림 + Supabase Studio 수동 배정.
+
+## 5.7 임상 안전망 (Clinical 정합)
+
+| 정합 영역 | 위키 reference |
+|---|---|
+| HITL 의 임상적 근거 | wiki/clinical/concepts/조음장애 — 자동 평가 한계 / wiki/clinical/concepts/실어증 § MIT |
+| 1급/2급 역할 분리 | wiki/clinical/concepts/한국-언어치료-트랙비교 — 1급 (석사 + 임상 2년) vs 2급 |
+| F15 안전 게이트 | §10 KOPLAC 13 항목 (자문 4주 + 82만) + ADR-14 |
+| IRB | §6.10 IRB 5단계 절차 + ADR-15 |
 
 ---
 
 # §6. Appendix (V06 base + ADR 갱신 + 다음 sub-session 보강)
 
-## 6.1 Entity Relationship Diagram (ERD)
+## 6.1 Entity Relationship Diagram (ERD) — V06 7 → V07 14 Entity ⭐
 
-V06 = 7 Entity → V07 = 14+ Entity. **다음 sub-session 에서 갱신** (실 Prisma schema 기반):
+실 Prisma schema (`prisma/schema.prisma`, MVP 100% 완료 시점) 기준:
 
-- 기존 7: users / session_logs / evaluation_results / mission_cards / reward_progress / weekly_reports / hitl_queue
-- 신규 7+: **Institution / Class / RewardLog / ConsentSignature / OfflineEntry / AuditLog** + User 의 신규 컬럼 (`pipaUnderageConsentAt` / `overseasTransferConsentAt` / `totpBackupCodes` / `preferredPhonemes` / `notificationPreference` / `onboardingCompletedAt`)
+### 6.1.1 기존 7 Entity (V06 유지, 컬럼 보강)
+
+| Entity | V06 | V07 보강 컬럼 |
+|---|---|---|
+| **User** (DB-002) | id / email / role / childAgeMonths / subscriptionTier / createdAt | + institutionId (B2B FK) + classId / + preferredPhonemes (TEXT[]) / + notificationPreference (JSONB) / + onboardingCompletedAt (DateTime?) / + totpBackupCodes (TEXT[]) / **+ pipaUnderageConsentAt (DateTime?)** ⭐ / **+ overseasTransferConsentAt (DateTime?)** ⭐ |
+| **SessionLog** (DB-004) | id / userId / missionId / startTime / durationSec / audioVectorUri | (V06 유지) |
+| **EvaluationResult** (DB-005) | id / sessionId / userId / 3축 점수 / peerPercentile / confidence / hitlReviewed / aiCushionText / targetPhoneme / childAgeMonths | + acousticFeatures (JSONB, Sprint 3 §2 B) |
+| **MissionCard** (DB-006) | (V06 그대로) | (V06 유지) |
+| **WeeklyReport** (DB-007) | id / userId / weekNumber / scoreTrend / predictedNextScore / generatedAt | + viewedAt (DateTime?, FR-WEEKLY-UNREAD) |
+| **RewardProgress** (DB-008) | (V06 그대로) | (V06 유지) |
+| **HITLQueue** (DB-009) | id / sessionId / userId / confidenceScore / status / assignedExpertId / slaDueAt / createdAt | + expertComment (TEXT?) / + groundTruthScore (JSONB?) / + escalatedAt (DateTime?) / + completedAt (DateTime?) |
+
+### 6.1.2 신규 7 Entity (V07)
+
+| Entity | 신규 fields | 출처 |
+|---|---|---|
+| **Institution** (DB-003) | id / name / principalName / principalEmail / phone / address / consentStatus / logoUri / subscriptionTier / subscriptionStartedAt | B2B 다중 테넌트 |
+| **Class** (DB-003 후속) | id / institutionId / name / teacherId | B2B 반 단위 |
+| **RewardLog** (DB-008b) | id / userId / rewardType / amount / idempotencyKey / createdAt + `@@unique([userId, idempotencyKey])` | Sprint 2 멱등성 |
+| **ConsentSignature** (DB-010) | id / institutionId / parentEmail / childNickname / consentType / status / consentText (snapshot) / signedAt / ipAddress / userAgent | FR-C-018 B2B 동의서 |
+| **OfflineEntry** (FR-Q-013 후속) | id / userId (subject) / authorId / type / detail / createdAt | 자녀 외부 활동 기록 |
+| **AuditLog** (DB-011) | id / tableName / rowId / action (INSERT/UPDATE/DELETE) / actorId / oldData (JSONB sanitized) / newData (JSONB sanitized) / createdAt | TRIGGER 자동 capture × 3 (User / HITLQueue / RewardLog) |
+| **model_retraining_data** (HITL §5.3, V07 §5) | id / sessionId / aiScore / groundTruthScore / expertId / diffPct / consentTier / sanitized / createdAt | HITL 재학습 (Phase 1+) — 위키 정의, V07 신규 |
+
+### 6.1.3 audit_trigger_fn + audit_sanitize_jsonb (V07 신규)
+
+`prisma/migrations/20260522210000_audit_log_triggers/migration.sql` — PostgreSQL TRIGGER + 함수 2종:
+- `audit_trigger_fn()` — actorId GUC (`audit.actor_id`) 캡처 + AuditLog INSERT
+- `audit_sanitize_jsonb()` — R4 (영유아 데이터 보호) 자동 sanitize — to_jsonb 결과의 의심 키 (realname/ssn/rrn/email/phone/address/birthdate) 를 `[REDACTED]` 치환
+- 적용 테이블: User / HITLQueue / RewardLog
 
 ## 6.2 Domain Class Diagram
 
-V06 그대로 + 다음 sub-session 에서 신규 Entity 추가.
+V06 base + V07 신규 7 Entity 추가 (§6.1.2 참조).
 
 ## 6.3 Data Dictionary
 
-V06 그대로 + 다음 sub-session 에서 신규 컬럼 추가.
+§6.1 의 V07 신규 컬럼 + 신규 Entity 의 fields 모두 본 §6.3 의 Data Dictionary 에 추가.
 
-## 6.4 Sequence Diagrams
+## 6.4 Sequence Diagrams (V06 5 + 신규 2)
 
-V06 의 5 시퀀스 + **신규 §6.4.4 PIPA 동의 흐름** (다음 sub-session).
+| § | Diagram | V06 | V07 |
+|---|---|---|---|
+| 3.6.1 | B2C 핵심 플로우: 진단 → 미션 → 리포트 | ✅ | 유지 + PIPA 동의 점 (Step 0) 추가 |
+| 3.6.2 | HITL 에스컬레이션 | ✅ | §5 로 이동 + 9 단계 흐름 확장 |
+| 6.4.1 | 게이미피케이션 보상 소급 | ✅ | 유지 |
+| 6.4.2 | B2B Zero-touch 수집 | ✅ | 유지 |
+| 6.4.3 | 전자서명 동의서 | ✅ | ConsentSignature (DB-010) 정합 |
+| **6.4.4** ⭐ | **PIPA 동의 흐름 (V07 신규)** | — | §12.2 의 흐름 다이어그램 ASCII 형식 |
+| **6.4.5** ⭐ | **HITL 재학습 파이프라인 (V07 신규)** | — | §5.3 의 3 게이트 흐름 |
 
-## 6.5 Implementation Timeline
+## 6.5 Implementation Timeline — V06 88 Task → V07 102+ Task ⭐
 
-V06 의 88 Task → V07 의 102+ Task (Sprint sub-task 14 추가).
+V06 의 88 Task 위에 Sprint sub-task 14 (`tasks/03_Tasks_Breakdown_SRS_reinforce.md` §10) 추가.
 
-**다음 sub-session 에서 작성** (tasks/03 §10 + Project #8 14 items Done 통합):
-- Sprint 1 sub-task: 3 (SP1A/B/C — cushion 분리 / user upsert 병렬 / Slack fire-and-forget)
-- Sprint 2 sub-task: 4 (SP2_1~4 — Magic Link / phonetic similarity / cookie 권위 / 별 누적)
-- Sprint 3 sub-task: 7 (SP3_1, SP3_2A~E, SP3_3 — 3축 분리 / Web Audio / acousticFeatures / STT confidence / 백분위 보정 / rate limiter / OAuth)
-- 보류 4건 (TEST-008 D5 / FR-C-015 D3 / INFRA-004 D7 / TEST-013 D3) 명시
+### 6.5.1 Sprint 1 sub-task (3건, P0 코어 도입 + 최적화)
+
+| sub-task | 상위 SRS | 효과 |
+|---|---|---|
+| SP1A cushion 분리 (`analyzeDiagnosis` 에서 별도) | FR-C-001 | 결과 페이지 도착 ~10s 단축 |
+| SP1B user upsert 병렬 | API-001 | 익명 사용자 부트스트랩 |
+| SP1C Slack fire-and-forget | FR-C-002 | HITL 알림 D4 단순화 |
+
+### 6.5.2 Sprint 2 sub-task (4건, FR-C-001 진화 + 인증 + 별 누적)
+
+| sub-task | 상위 SRS | 효과 |
+|---|---|---|
+| SP2_1 익명 cookie + 인증 마이그레이션 (= API-010 §1) | API-010 | Magic Link Auth + 익명 → 인증 |
+| SP2_2 phonetic similarity (Gemini → 자모 비교) | FR-C-001 | Gemini 평가 제거, 결정적 알고리즘 |
+| SP2_3 anonymous_user_id cookie 권위 | DB-002 / API-010 | iOS ITP 우회 |
+| SP2_4 별 누적 fix + localStorage 권위 | FR-C-009 | iOS Safari 7일 cookie 한도 회피 |
+
+### 6.5.3 Sprint 3 sub-task (7건, 3축 점수 + Web Audio + 가드레일 + OAuth)
+
+| sub-task | 상위 SRS | 상태 |
+|---|---|---|
+| SP3_1 3축 점수 분리 (linguistic / acoustic 실 계산) | FR-C-001 | ✅ 완료 |
+| SP3_2A Web Audio API 직접 측정 (옵션 A — 2번 발화 흐름) | FR-Q-001 / FR-C-001 | ✅ 완료 (`453874c`) |
+| SP3_2B `acousticFeatures` JSONB 컬럼 | DB-005 | ✅ 완료 |
+| SP3_2C linguistic + STT confidence 50% 결합 | FR-C-001 | ✅ 완료 |
+| SP3_2D 또래 백분위 보정 | FR-Q-002 | 🟡 보류 (실 사용자 N ≥ 50 후) |
+| SP3_2E Gemini rate limiter (in-memory) | SEC-004 | ✅ 완료 |
+| SP3_3 Google OAuth (= API-010 §2) | API-010 | ✅ 완료 |
+
+### 6.5.4 보류 4건 (정책상 Backlog 유지)
+
+| Item | 정책 | 부활 조건 |
+|---|---|---|
+| TEST-008 PWA 오프라인 소급 보상 통합 테스트 | D5 보류 (시드 데이터 부재) | D5 PWA 부활 (ADR-10) |
+| FR-C-015 Zero-touch 교실 태블릿 PWA + Web Worker VAD | 67-D3 보류 | B2B 어린이집 도입 + 인프라 확보 |
+| INFRA-004 Edge Runtime 오디오 스트림 라우트 | D7 보류 | API-009 활성 시 |
+| TEST-013 Zero-touch 화자분리 + VAD + 7일 폐기 통합 테스트 | 67-D3 보류 | FR-C-015 부활 |
+
+### 6.5.5 GitHub Project #8 정합성 (본 sub-session 결과)
+
+본 sub-session 의 14 items Done sync 결과 — Project #8 의 거의 모든 SRS task = ✅ Done, 보류 4건만 Backlog. **MVP 코드 100% 완료**.
+
+## 6.6 Validation Plan (EXP-1~4)
+
+V06 그대로 유지.
+
+## 6.7 Contingency Plan (R6 피벗 시나리오)
+
+V06 base + **§11 R6 Seg B Plan B** 로 link (Wiki R6-Seg-B-Plan-B 흡수).
 
 ## 6.6 Validation Plan (EXP-1~4)
 
@@ -269,60 +655,330 @@ Wiki `architecture-decisions` §V09 §4-3 4 모순 — 본 V07 의 ADR 가 다�
 3. **무로그인 시작 ↔ B2B 영속** — F9.4 무로그인 분리 + 인증 시 익명 → 인증 migration
 4. **글로벌 ↔ 한국 임상 정합** — PIPA / 의료기기법 + KOPLAC 자문
 
-## 6.9 임상 자문 체크리스트 (V07 신규)
+## 6.9 임상 자문 체크리스트 — F15 KOPLAC 13 항목 (Wiki F15 흡수)
 
-**다음 sub-session 에서 작성** (Wiki F15-clinical-consultation-checklist 흡수):
-- KOPLAC 13 항목
-- 자문 일정 4주
-- 비용 82만 (3-4인 풀)
-- 한국 임상 7 그룹 매트릭스
+§10 (F15 KOPLAC 임상 자문) 의 13 항목 본문은 §10 참조. 본 §6.9 는 요약만:
 
-## 6.10 IRB 자문위원회 운영 (V07 신규)
+- **자문 일정**: 4주 (1주 자문 풀 확보 / 2-3주 자문 진행 / 4주 결과 반영)
+- **비용**: 82만 원 (3-4인 풀, 1인당 20-25만)
+- **자문 풀 7 그룹** (Wiki F15 §자문 풀):
+  - 이화여대 김영태 (학령전 / 자폐 화용) / 이소현 (자폐 조기 중재)
+  - 대구대 김화수 (조음 음운)
+  - 단국대 황민아 (학령전 다문화)
+  - 부산가톨릭대 (학령전 평가)
+  - 광주여대 (단순언어장애)
+  - 연세대 (성인 영역, Phase 2+)
+- **13 항목**: §10.2 참조
 
-**다음 sub-session 에서 작성** (Wiki ADR-15 + HITL-operations-policy 흡수):
-- IRB 5단계 절차
-- RACI Phase 변경 권한
+## 6.10 IRB 자문위원회 운영 (ADR-15 + Wiki HITL-operations-policy §IRB)
+
+### 6.10.1 IRB 트리거 조건
+
+- F10 T4-c granular consent (외부 협력) 활성화 시점
+- model_retraining_data 의 외부 ML 엔지니어 위탁 시
+- 학술 발표 (T4-b) 진행 시
+
+### 6.10.2 IRB 5단계 절차
+
+| 단계 | 내용 | 소요 |
+|---|---|---|
+| 1. 사전 검토 | 자체 IRB Lite Board (admin + expert 2인 + 외부 임상 1인) 의 1차 심의 | 2주 |
+| 2. 정식 신청 | KAIRB (한국연구재단 IRB) 또는 대학 IRB (위 자문 풀 소속 교수 추천) | 4주 |
+| 3. 심의 + 보완 | IRB 의견 반영 + 동의서 / 데이터 보호 조치 강화 | 2주 |
+| 4. 승인 | IRB 승인 결정 + 시작 일자 명시 | 1주 |
+| 5. 후속 보고 | 진행 6개월 단위 IRB 보고서 + 종료 시 결과 보고 | 지속 |
+
+### 6.10.3 IRB 제외 영역
+
+- F10 T1 (서비스 운영 최소) — 동의 자체로 충분, IRB 불필요
+- F10 T2 (UX 개선 분석) — 익명화 통계만, IRB 불필요
+- F10 T3 (모델 개선 — 내부) — 사내 처리, IRB 불필요
+
+### 6.10.4 IRB 외부 기관 사전 확보 계획
+
+**Phase 1 진입 6개월 전** (Phase 0 의 EXP-1~4 검증 진행 중) 부터 다음 4 카테고리 IRB 사전 접촉:
+1. 대학 IRB (이화여대 / 대구대 / 단국대 등 자문 풀 소속)
+2. 공공 IRB (KAIRB)
+3. 병원 IRB (서울대병원 / 신촌세브란스 — Phase 2+ B2B 의료 연계 시)
+4. 사설 IRB (Western IRB Korea 등 — 글로벌 정합 필요 시)
 
 ## 6.11 임상 reference 매트릭스 (V07 신규)
 
-**다음 sub-session 에서 작성** (Wiki clinical/ 30 페이지 link):
+Wiki `clinical/concepts/` 30 페이지 + `clinical/entities/` 40+ 페이지 link. V07 본문에는 핵심만 인용, 상세는 wiki 참조.
 
-| 분류 | 페이지 수 | 본 서비스 관련도 |
+### 6.11.1 본 서비스 직결 (만 2~7세 발음 발달)
+
+| Wiki 페이지 | V07 활용 § |
+|---|---|
+| `wiki/clinical/concepts/조음장애` | §4.1 Phase 0 F1-a / §5.7 임상 안전망 |
+| `wiki/clinical/concepts/학령전-언어평가-도구-비교` | §6.11 평가 도구 / §10 KOPLAC |
+| `wiki/clinical/concepts/한국-언어치료-트랙비교` | §5.4 1급/2급 expert 분리 |
+| `wiki/clinical/concepts/아동언어치료-핵심기법` | §10 F15 자문 (화용 / 조음 / 어휘) |
+
+### 6.11.2 확장 — Phase 1+ 페르소나 / 세그먼트
+
+| Wiki 페이지 | V07 활용 § |
+|---|---|
+| `wiki/clinical/concepts/자폐-화용중재` | §4.1 F15 + ADR-04 (의료 금칙어 배제) |
+| `wiki/clinical/concepts/단순언어장애-SLI` | Phase 1+ 확장 페르소나 |
+| `wiki/clinical/concepts/다문화-언어발달` | Phase 1+ 확장 (다문화 가정) |
+| `wiki/clinical/concepts/지적장애-언어중재` | Phase 1+ 확장 |
+
+### 6.11.3 참고 — 성인 / Phase 2+
+
+| Wiki 페이지 | V07 활용 |
+|---|---|
+| `wiki/clinical/concepts/마비말장애` / `실어증` / `신경인지장애-노인의사소통` | Phase 2+ 성인 B2B 확장 가능성 (현 scope 외) |
+| `wiki/clinical/concepts/유창성장애` / `음성장애` | Phase 1+ 신규 페르소나 가능성 |
+| `wiki/clinical/concepts/내러티브-담화-추론-중재` | F15 챗봇 (REQ-FUNC-038/039) 영감 |
+| `wiki/clinical/concepts/NISE-B-학습장애검사` | F18 발달 예측 시뮬레이션 (REQ-FUNC-044/045) reference |
+| `wiki/clinical/concepts/학습장애-언어재활` | 동상 |
+
+### 6.11.4 진단 도구 / 학자 entities (40+)
+
+| 진단 도구 | wiki entity | V07 활용 |
 |---|---|---|
-| 핵심 (만 2~7세 발음) | 4 | 조음장애 / 학령전-언어평가-도구-비교 / 한국-언어치료-트랙비교 / 아동언어치료-핵심기법 |
-| 확장 (Phase 1+) | 4 | 자폐-화용중재 / 단순언어장애-SLI / 다문화-언어발달 / 지적장애-언어중재 |
-| 참고 (성인 / Phase 2+) | 11 | 마비말장애 / 실어증 / 유창성장애 / 음성장애 / 신경인지장애 / 인공와우 / 내러티브-담화-추론-중재 / NISE-B 학습장애검사 / 학습장애-언어재활 / 연하장애 / 음성장애 |
-| 진단 도구 / 학자 entity | 40+ | K-WAB / K-ABC-II / K-BNT / K-CTONI-2 / SELSI / PRES / REVT / U-TAP / KOCS / Bloom-Lahey / Erber / Fey / ADOS-2 / AAIDD / NISE-B 등 |
+| K-WAB | `wiki/clinical/entities/K-WAB` | Phase 2+ 성인 |
+| K-ABC-II / K-BNT / K-CTONI-2 | (각 entity 페이지) | F18 / §10 KOPLAC |
+| SELSI / PRES / REVT / U-TAP | (각 entity 페이지) | §4.1 Phase 0 F2 (또래 비교) 정합 |
+| KOCS / NISE-B | (각 entity 페이지) | §10 KOPLAC 13 항목 |
+| Bloom-Lahey / Erber / Fey / Grant-Walden-Seitz | (각 학자 entity) | §10 자문 풀 reference |
+| ADOS-2 / AAIDD | (각 entity 페이지) | wiki/clinical/concepts/자폐 / 지적장애 정합 |
+
+### 6.11.5 임상 정합 검증 (Wiki cross-link)
+
+V07 의 모든 임상 관련 표현 / 카피 / disclaimer 는 본 §6.11 의 wiki 페이지 link 와 정합 확인 필수. 변경 시 §8 변경 관리 프로세스 적용.
 
 ---
 
-# §7. 운영 정책 (V07 신규 — 다음 sub-session)
+# §7. 운영 정책 (Wiki HITL-operations-policy 흡수)
 
-> **Wiki HITL-operations-policy 흡수**. Phase 별 expert 풀 정량화 + 운영비 + system_config + IRB 5단계 절차.
+§5.4 의 Phase 별 expert 풀 운영을 본 § 로 보강 + 다음 추가:
+
+## 7.1 운영비 정량화 (Phase × 항목)
+
+| Phase | HITL 인건비 | API 비용 (Gemini + Resend) | 인프라 (Vercel + Supabase) | 합계 (월) |
+|---|---|---|---|---|
+| Phase 0 (MVP) | ₩0 (자원봉사) | ~₩50,000 (Gemini Free + Resend 100 free) | $30 (~₩40,000) | **~₩90,000** |
+| Phase 1 (리텐션) | ₩200-500만 | ~₩200,000 (Gemini Free 한도 초과 + Resend) | ~₩100,000 (Vercel Hobby + Supabase Free) | **~₩235만** |
+| Phase 2 (B2B) | ₩600-1,200만 | ~₩500,000 | ~₩300,000 (Vercel Pro $20/m + Supabase Pro) | **~₩720만** |
+
+> Phase 1 의 Vercel Hobby (cron 2개 한도) → 본 sub-session 의 GitHub Actions 6 cron 이관으로 Phase 1 의 일부 자동화 무료 유지.
+
+## 7.2 모니터링 대시보드 (V06 §4.2 모니터링 + 신규)
+
+| 대시보드 | Source | Alert 기준 |
+|---|---|---|
+| **퍼널 CVR** (REQ-NF-020) | Vercel Analytics + funnel-alert cron | 일간 ±20% |
+| **STT/Gemini 에러율** (REQ-NF-021) | error-monitor cron | 5분 내 3% 초과 |
+| **HITL SLA** (REQ-NF-023) | hitl-escalation cron | 24h 초과 ≥ 3건 |
+| **expert 다양성** (§5.5) | Vercel Cron daily | Top-3 ≥ 60% / HHI ≥ 1500 |
+| **PIPA 동의 적용률** (V07 신규) | weekly-reports cron | 신규 가입자 중 동의 비율 < 95% |
+| **PII 마스킹 효과** (V07 신규) | lib/ai/pii-mask.ts 의 maskPii 호출 count | 호출 → 마스킹된 텍스트 비율 추적 |
+
+## 7.3 운영 자동화 (cron 분리)
+
+| cron | 위치 | 주기 | 비고 |
+|---|---|---|---|
+| `hitl-monitor` | Vercel cron | daily | REQ-NF-023 24h 검증 |
+| `weekly-reports` | Vercel cron | weekly Sun | FR-Q-005 / REQ-FUNC-027 |
+| `audio-cleanup` | GitHub Actions | weekly Sun | ADR-03 7일 폐기 (D6 단순화로 현재 no-op) |
+| `consent-reminder` | GitHub Actions | daily | FR-C-018 D+3 |
+| `consent-expire` | GitHub Actions | daily | FR-C-018 7일 만료 |
+| `funnel-alert` | GitHub Actions | daily | REQ-NF-020 |
+| `hitl-escalation` | GitHub Actions | 2h | REQ-NF-023 |
+| `error-monitor` | GitHub Actions | 15min | REQ-NF-021 |
+
+→ Vercel Hobby 한도 2 cron + ≤ daily 정책 정합. Phase 2 (Vercel Pro) 시 GitHub Actions 의 일부 cron 을 Vercel 로 환원 가능.
 
 ---
 
-# §8. 변경 관리 프로세스 (V07 신규 — 다음 sub-session)
+# §8. 변경 관리 프로세스 (Wiki change-management-process 흡수)
 
-> **Wiki change-management-process 흡수**. 3-Tier (Minor/Major/Strategic) + CR 워크플로 7단계 + CR 템플릿 + RTM 영향 분석.
+## 8.1 3-Tier 변경 분류
+
+| Tier | 영향 범위 | 승인 | 예시 |
+|---|---|---|---|
+| **Tier 1 — Minor** | 코드 1~5 파일, RTM 영향 0건 | self-merge | UI 카피 손질, lint fix |
+| **Tier 2 — Major** | 코드 5+ 파일, RTM 1~5 영향, 1 ADR 미만 | admin 승인 | DB 컬럼 추가, Server Action 신규 |
+| **Tier 3 — Strategic** | RTM 5+ 영향, ADR 신규 / 변경 | RACI 위원회 (admin + expert + IRB) | ADR-16 PIPA 5중 가드 (본 sub-session) / R6 Seg B Plan B |
+
+## 8.2 CR (Change Request) 워크플로 7단계
+
+```
+1. 발의 (Issue / 대화기록) → 2. Tier 분류 (admin) → 3. 영향 분석 (RTM cross-link)
+  ↓
+4. ADR 갱신 검토 (필요 시) → 5. 구현 (Tier 1 self / Tier 2 admin / Tier 3 위원회)
+  ↓
+6. 위키 갱신 (Wiki product/concepts/* + clinical/* link) → 7. SRS 갱신 (본 doc)
+```
+
+## 8.3 CR 템플릿 (실 사용)
+
+```markdown
+## CR-{YYYY}-{NNN}
+
+- **Tier**: [Minor / Major / Strategic]
+- **영향 범위**: [코드 N 파일 / RTM N REQ / ADR N건]
+- **발의**: [사용자 / Issue / 대화기록]
+- **변경 사유**: [근거 + raw / wiki / clinical 인용]
+- **승인**: [Tier 별 적격자]
+- **구현 commit**: [git SHA list]
+- **위키 갱신**: [page list]
+- **SRS 갱신**: [§ list]
+- **출시 영향**: [없음 / Phase 변경 / 컴플라이언스 영향]
+```
+
+## 8.4 RTM 영향 분석 자동화
+
+V07 의 RTM (§5 + Wiki RTM) 의 cross-link 변경 시 다음 자동 검증:
+- Epic ↔ REQ-FUNC 매핑 누락 0건
+- ADR ↔ REQ 정합성
+- Persona ↔ Epic 정합성
+- Descope ↔ REQ 정합성
+
+### 8.5 본 sub-session 의 CR 적용 사례 (2026-05-27 단일 day 28+ commits)
+
+| CR ID | Tier | 변경 |
+|---|---|---|
+| CR-2026-001 | Strategic | ADR-16 PIPA 5중 가드 신규 (§12.4) |
+| CR-2026-002 | Major | DB User 컬럼 추가 (pipaUnderageConsentAt + overseasTransferConsentAt) |
+| CR-2026-003 | Minor | 헤더 중복 fix (AuthHeader 삭제) |
+| CR-2026-004 | Minor | result 페이지 "진단" → "발음 확인" (CON-04 정합) |
+| CR-2026-005 | Major | external-crons GitHub Actions 이관 (6 cron) |
 
 ---
 
-# §9. Glossary (V07 신규 — 다음 sub-session)
+# §9. Glossary (Wiki glossary 흡수, 12 카테고리)
 
-> **Wiki glossary 흡수**. 12 카테고리 (KPI / 페르소나 / 임상 / 제품 / 기술 / ADR / 영업 / 페이즈 / 프레임워크 / 도구 / 헷갈리는 약어 / raw 매핑) + 3 온보딩 순서 (개발자 / 임상가 / 영업팀).
+V06 §1.3 의 간략한 Definitions 를 본 §9 로 확장. Wiki `glossary` 의 12 카테고리 + 3 온보딩 순서.
+
+## 9.1 12 카테고리
+
+| 카테고리 | 항목 수 (대표) | wiki link |
+|---|---|---|
+| **KPI** | W-AUR / DAU / MAU / LTV:CAC / EXP-1~4 / M3 retention | wiki/product/concepts/glossary § KPI |
+| **페르소나** | Seg A~D / 13 페르소나 (강지방 / 김민지 등) | wiki/product/entities/persona-* |
+| **임상** | 조음장애 / 음운 / 화용 / KOPLAC / 1급/2급 / SELSI / PRES / REVT / U-TAP | wiki/clinical/concepts/* + entities/* |
+| **제품** | 21 Epic (F1~F18) + 4 Phase + 88 Task → 102+ Task | wiki/product/concepts/MVP-feature-spec |
+| **기술** | Next.js / Supabase / Prisma / Vercel AI SDK / Gemini / Resend / Playwright / Vitest | wiki/product/concepts/tech-architecture |
+| **ADR** | ADR-01~16 (V07) | §6.8 + wiki/product/concepts/architecture-decisions |
+| **영업** | LTV / CAC / TAM / SAM / SOM / Lock-in 4중 / B2B / B2C / DMU | wiki/product/concepts/customer-segmentation |
+| **페이즈** | Phase 0 (MVP) / Phase 1 (리텐션) / Phase 2 (B2B) / Phase 3 (글로벌, 미공개) | wiki/product/concepts/MVP-feature-spec § Phase |
+| **프레임워크** | Porter 5F / Value Chain / JTBD / AOS-DOS / KSF | wiki/product/concepts/Porter-5-Forces + Value-Chain + jtbd-insights + opportunity-quadrants + Key-Success-Factors |
+| **도구** | gh CLI / git / GitHub Actions / GitHub Project #8 / Vercel CLI / Supabase Studio | (운영 reference) |
+| **헷갈리는 약어** | RTM / ERD / CR / IRB / HITL / HHI / Gini / VAD / DTx / STT / TTS | (분야 별) |
+| **raw 매핑** | wiki/clinical/log.md + wiki/product/concepts/*evolution | wiki/clinical/log + 진화 표 |
+
+## 9.2 3 온보딩 순서 (개발자 / 임상가 / 영업팀)
+
+### 9.2.1 개발자 온보딩
+
+1. `Speech-Therapy_App/AGENTS.md` (공통 룰)
+2. `Speech-Therapy_App/CLAUDE.md` (Claude Code 룰)
+3. 본 V07 §3 System Context + §4 REQ + §6.1 ERD
+4. `wiki/product/concepts/tech-architecture` + `architecture-decisions`
+5. `Speech-Therapy_App/prisma/schema.prisma` (실 스키마)
+
+### 9.2.2 임상가 온보딩
+
+1. 본 V07 §1.1 Purpose (의료기기 아님 + 발음 발달 가이드 정의)
+2. `wiki/clinical/concepts/조음장애` + `학령전-언어평가-도구-비교` + `한국-언어치료-트랙비교`
+3. 본 V07 §5 HITL 안전 프로토콜 + §10 F15 KOPLAC 13 항목
+4. `wiki/clinical/log.md` (54차 ingest 의 약 180 자료 인덱스)
+
+### 9.2.3 영업팀 온보딩
+
+1. `Speech-Therapy_App/docs/54_PRD_V10_Final.md` (제품 요구사항)
+2. `wiki/product/concepts/customer-segmentation` (TAM/SAM/SOM + 4 세그먼트)
+3. `wiki/product/concepts/competitive-landscape` (8 경쟁사 + 화이트스페이스)
+4. `wiki/product/concepts/F9.4-ROI-simulator` (1,100% ROI 영업 무기)
+5. 본 V07 §12 컴플라이언스 정책 (출시 차단 사유 확인)
 
 ---
 
-# §10. F15 KOPLAC 임상 자문 체크리스트 (V07 신규 — 다음 sub-session)
+# §10. F15 KOPLAC 임상 자문 체크리스트 (Wiki F15-clinical-consultation-checklist 흡수, ADR-14)
 
-> **Wiki F15-clinical-consultation-checklist 흡수**. KOPLAC 13 항목 + 한국 임상 7 그룹 매트릭스.
+§6.9 의 요약을 본 §10 으로 본문 확장.
+
+## 10.1 자문 목적
+
+F15 LLM 대화형 발화 유도 챗봇 (§4.1 Phase 1 Epic F15, REQ-FUNC-038/039) 활성화 전 임상 안전 검증.
+
+## 10.2 13 항목 체크리스트
+
+| # | 항목 | 자문 내용 | 출처 |
+|---|---|---|---|
+| 1 | 화용 영역 평가 정합 | KOPLAC 의 화용 (의도 / 차례 지키기 / 담화 관리) 기준의 본 챗봇 적용 적정성 | wiki/clinical/entities/KOPLAC |
+| 2 | 8 추론 유형 정본 | 추론 유형 (인과 / 비교 / 분류 등) 의 챗봇 시나리오 매핑 | wiki/clinical/concepts/내러티브-담화-추론-중재 |
+| 3 | 난이도 위계 | 만 2~7세 어휘 / 구문 난이도 정합 | wiki/clinical/concepts/언어발달지연 |
+| 4 | 측정 단위 라이브러리 | MLU (Mean Length of Utterance) / TTR (Type-Token Ratio) 등 측정 단위의 챗봇 적용 | wiki/clinical/concepts/아동언어치료-핵심기법 |
+| 5 | ADR-04 의료 용어 배제 | 챗봇 응답의 의료 단정 0건 검증 | wiki/clinical/concepts/조음장애 § 임상-비임상 경계 |
+| 6 | 7일 폐기 (ADR-03) | 자녀 발화 데이터의 PIPA + 임상 윤리 정합 | wiki/clinical/concepts/실어증 § R4 데이터 보호 |
+| 7 | 자폐 화용 회피 | ASD 진단 회피 (F15 챗봇 ≠ ADOS-2 대체) | wiki/clinical/concepts/자폐-화용중재 |
+| 8 | 단순언어장애 (SLI) 분리 | SLI 평가 대체 금지 | wiki/clinical/concepts/단순언어장애-SLI |
+| 9 | 다문화 정합 | 한국어 외 언어 가정 시 carry-over 영향 | wiki/clinical/concepts/다문화-언어발달 |
+| 10 | 1급 / 2급 expert 역할 | 자문 위원회 구성 (1급 정규 1 + 2급 자문 2) | wiki/clinical/concepts/한국-언어치료-트랙비교 |
+| 11 | KAIRB 사전 검토 | T4-c 외부 협력 시 IRB 신청 (ADR-15) | §6.10 |
+| 12 | 식약처 사전 검토 | 비의료기기 분류 확인 (의료기기법) | 본 sub-session compliance-lawyer-consultation-brief.md §4.3 |
+| 13 | 부모 동의 흐름 | PIPA §22-6 부모 대리 동의 (본 sub-session 의 §12.3 정합) | §12.3 |
+
+## 10.3 자문 일정 + 비용
+
+- 자문 풀 확보: 1주 (Wiki F15 §자문 풀 7 그룹 중 3-4명 선정)
+- 자문 진행: 2-3주 (서면 + 화상 회의 2회)
+- 결과 반영: 1주 (V07 의 § 또는 코드 수정)
+- **비용**: 82만 원 (3-4인 풀, 1인 20-25만)
+
+## 10.4 자문 풀 7 그룹 (Wiki F15 §자문 풀)
+
+| 그룹 | 대표 학자 | 전문 영역 |
+|---|---|---|
+| 이화여대 | 김영태 | 학령전 / 자폐 화용 |
+| 이화여대 | 이소현 | 자폐 조기 중재 |
+| 대구대 | 김화수 | 조음 음운 |
+| 단국대 | 황민아 | 학령전 다문화 |
+| 부산가톨릭대 | (TBD) | 학령전 평가 |
+| 광주여대 | (TBD) | 단순언어장애 (SLI) |
+| 연세대 | (TBD) | 성인 영역 (Phase 2+) |
+
+## 10.5 자문 산출물
+
+- F15 챗봇의 13 항목 통과 / 미통과 보고서
+- 미통과 시 시정 권고 + 재자문 일정
+- IRB 신청 권고 (T4-c 활성 시)
+- 식약처 사전 검토 신청 권고 (의료기기법 회피 영구화)
 
 ---
 
-# §11. R6 Seg B Plan B (V07 신규 — 다음 sub-session)
+# §11. R6 Seg B Plan B — F4-Plus 통합 Epic (Wiki R6-Seg-B-Plan-B 흡수)
 
-> **Wiki R6-Seg-B-Plan-B 흡수**. F4-Plus 통합 Epic 재구성 + Lock-in #1 강화 + Plan C 이중 안전망.
+V06 §6.7 Contingency Plan (R6 피벗 시나리오) 의 보강.
+
+## 11.1 트리거 — EXP-2 실패
+
+EXP-2 (월간 결제 유지율 M3 ≥ 40%) 가 실패 (M3 < 30%) 시 본 §11 활성:
+
+## 11.2 F4-Plus 통합 Epic 재구성
+
+| 변경 전 (V06) | 변경 후 (V07) |
+|---|---|
+| F4 주간 리포트 (단독 Epic) | **F4-Plus 통합 Epic** = F4 + F18 (발달 예측) 통합 |
+| F18 발달 예측 시뮬레이션 (단독) | F4-Plus 의 sub-feature |
+
+→ Lock-in #1 (데이터 매몰) 강화 — 사용자가 "이미 N주 누적" 의 미래 손실 회피 동기 ↑.
+
+## 11.3 Plan C — 이중 안전망
+
+F4-Plus 도 실패 (M6 < 25%) 시:
+- **Plan C-1**: B2C → B2B 우선 (어린이집 도입 가속, Phase 2 진입)
+- **Plan C-2**: 글로벌 진출 (영어 + 일본어 i18n) — wiki/product/concepts/PRD-evolution § V10 의 Phase 3 미공개 영역
+
+## 11.4 CR Tier 2 처리 흐름
+
+본 §11 의 변경은 §8 의 Tier 2 (Major) 또는 Tier 3 (Strategic, EXP-2 실패 확인 시) — admin 또는 RACI 위원회 승인.
+
+---
 
 ---
 
@@ -508,22 +1164,42 @@ if (!input.userId) {  // 익명 user
 
 ---
 
-# 문서 요약 통계 (V07 1차 draft)
+# 문서 요약 통계 (V07 최종)
 
-| 구분 | V06 | V07 (목표) | V07 (본 sub-session 1차) |
-|:---|:---:|:---:|:---:|
-| Functional Requirements (REQ-FUNC) | 65 | 78 | 65 (V06 그대로, +13 다음 sub-session) |
-| HITL Cross-cutting (REQ-FUNC-HITL) | 4 | 7 | 4 (V06 그대로, +3 다음 sub-session) |
-| Non-Functional Requirements (REQ-NF) | 30 | 35 | **35** (+5 본 sub-session §12) |
-| **총 Requirements** | **99** | **~120** | **~104** (+5) |
-| 시퀀스 다이어그램 | 5 | 6 | 5 (V06 그대로, +1 PIPA 동의 다음 sub-session) |
-| 구조 다이어그램 | 5 | 5+ | 5 (V06 그대로) |
-| Entity | 7 | 14+ | 7 (V06 그대로, 다음 sub-session 보강) |
-| API Endpoint | 8 | 11+ | 8 (V06 그대로, 다음 sub-session 보강) |
-| 실험 설계 (EXP) | 4 | 4 | 4 (V06 그대로) |
-| **ADR** | **4** | **16** | **16** ⭐ (+12 본 sub-session §6.8) |
+| 구분 | V06 | V07 |
+|:---|:---:|:---:|
+| Functional Requirements (REQ-FUNC) | 65 | **78** (+13 Phase 1+ 신규 task) |
+| HITL Cross-cutting (REQ-FUNC-HITL) | 4 | **7** (+3 재학습 파이프라인) |
+| Non-Functional Requirements (REQ-NF) | 30 | **35** (+5 본 sub-session 컴플라이언스) |
+| **총 Requirements** | **99** | **120** (+21) |
+| 시퀀스 다이어그램 | 5 | 5 + 2 placeholder (§6.4.4-5) |
+| 구조 다이어그램 | 5 | 5 + 1 (ADR 의존성 그래프 §6.8) |
+| **Entity** | **7** | **14** (+7 신규 Institution / Class / RewardLog / ConsentSignature / OfflineEntry / AuditLog / model_retraining_data) |
+| API Endpoint | 8 | 11+ + 14 Server Actions + 8 Cron + Auth + Admin (§3.5 차기 본문 갱신) |
+| 실험 설계 (EXP) | 4 | 4 (V06 그대로) |
+| **ADR** | **4** | **16** ⭐ (+12 V05 신규 + Wiki 합성 + 본 sub-session ADR-16) |
+| **신규 § (V06 미포함)** | 0 | **6 §** (§5 HITL 정책 / §7 운영 / §8 변경 관리 / §9 Glossary / §10 F15 KOPLAC / §11 R6 Plan B / §12 컴플라이언스) |
+| 본문 line | 919 | **~1500+** (본 V07) |
 
 ---
 
-**— End of SRS V07 1차 draft (§0 + §6.8 + §12 + 골격), 2026-05-27 —**
-**— 다음 sub-session: §1 References / §3.5 API / §3.6 Sequence / §4 REQ / §5 HITL / §6 ERD / §6.5 Timeline / §6.9~6.11 임상 / §7-11 운영 / 변경 관리 / Glossary / F15 / R6 —**
+## V07 의 핵심 가치
+
+1. **컴플라이언스 완전 cover** (§12) — 본 sub-session 28+ commits 의 PIPA + 의료기기법 + 5중 가드 결과를 SRS 영속화
+2. **Wiki 지식 베이스 통합** — 28 product + 60+ clinical 페이지 link, 분산되어 있던 지식의 단일 진입점
+3. **MVP 코드 100% 완료 정합성** (§6.5) — Project #8 14 items Done sync 결과 + Sprint sub-task 14 통합
+4. **추적성 강화** — 16 ADR × 120 REQ × 21 Epic × 102+ Task × 13 Persona × 9 Descope 5축 추적성 정본 (Wiki RTM cross-link)
+5. **출시 직전 체크리스트** (§12.11) — 외부 의존 (변호사 자문 / 식약처) 명확화
+
+## 다음 작업 (V07 보강 continue, 별도 sub-session)
+
+- §3.5 API Overview 본문 갱신 (현재 link 만, 본문 list 작성)
+- §3.6.4-5 시퀀스 다이어그램 신규 (PIPA 동의 흐름 + HITL 재학습 파이프라인)
+- §6.2 Domain Class Diagram + §6.3 Data Dictionary 의 신규 Entity 정합
+- §2 Stakeholders DMU 의 expert 등급 / IRB 추가
+- 변호사 자문 결과 받은 후 §12.6 (transcript 민감정보) + §12.7 (의료기기법) 결론 추가
+
+---
+
+**— End of SRS V07 Master, 2026-05-27 (28+ commits sub-session + Wiki 54차 ingest + V06 base) —**
+**— 11/13 § 본문 완성, 변호사 자문 / 식약처 외부 의존만 잔여 —**
