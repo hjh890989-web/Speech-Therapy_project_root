@@ -40,6 +40,12 @@ export const DiagnosisInputSchema = z.object({
   /// (Server Action 진입 시 비즈니스 검증).
   userId: z.string().uuid().optional(),
   anonymousUserId: z.string().uuid().optional(),
+  /// SEC-COMP-PIPA (Grill #3A) — 익명 user 의 PIPA §22-6 만 14세 미만 부모 대리 동의 여부.
+  /// 클라이언트가 체크박스에서 받아 true 전송. 인증 user 는 onboarding 에서 이미 동의 받아
+  /// User row 의 pipaUnderageConsentAt 으로 확인하므로 본 필드 무관 (optional).
+  pipaUnderageConsent: z.boolean().optional(),
+  /// SEC-COMP-PIPA — 익명 user 의 PIPA §17 국외 이전 동의 여부 (STT US + Gemini US).
+  overseasTransferConsent: z.boolean().optional(),
 });
 export type DiagnosisInput = z.infer<typeof DiagnosisInputSchema>;
 

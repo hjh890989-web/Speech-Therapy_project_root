@@ -71,11 +71,16 @@ import { analyzeDiagnosis } from "@/app/actions/diagnosis";
 const ORIGINAL_SLACK_URL = process.env.SLACK_WEBHOOK_URL;
 const ORIGINAL_FETCH = globalThis.fetch;
 
+// SEC-COMP-PIPA (Grill #3A) — 익명 user 가드 통과를 위한 두 동의 boolean.
+// 본 통합 테스트는 익명 흐름 (input.userId 없음) — analyzeDiagnosis 의 익명 가드가
+// 두 동의 true 를 요구. fixture 에서 default true 로 설정.
 const VALID_INPUT_HIGH_MATCH = {
   intendedWord: "사과",
   transcript: "사과", // 완전 일치 → articulationScore = 100
   childAgeMonths: 36,
   targetPhoneme: "ㅅ" as const,
+  pipaUnderageConsent: true,
+  overseasTransferConsent: true,
 };
 
 const VALID_INPUT_LOW_MATCH = {
@@ -83,6 +88,8 @@ const VALID_INPUT_LOW_MATCH = {
   transcript: "타파", // 거의 다름 (ㅅ→ㅌ, ㄱ→ㅍ) → articulationScore < 50
   childAgeMonths: 36,
   targetPhoneme: "ㅅ" as const,
+  pipaUnderageConsent: true,
+  overseasTransferConsent: true,
 };
 
 beforeEach(() => {

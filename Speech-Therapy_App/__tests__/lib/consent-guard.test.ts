@@ -110,4 +110,13 @@ describe("ConsentRequiredError", () => {
     expect(err.name).toBe("ConsentRequiredError");
     expect(err).toBeInstanceOf(Error);
   });
+
+  it("throw + catch 시 message 매칭 ('PIPA_CONSENT_REQUIRED' includes)", () => {
+    try {
+      throw new ConsentRequiredError();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      expect(message.includes("PIPA_CONSENT_REQUIRED")).toBe(true);
+    }
+  });
 });

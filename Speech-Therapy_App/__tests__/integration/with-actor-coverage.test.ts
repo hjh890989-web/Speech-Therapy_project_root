@@ -195,6 +195,9 @@ describe("[DB-011 마이그레이션] app/actions/diagnosis.ts analyzeDiagnosis 
       transcript: "사과",
       childAgeMonths: 36,
       targetPhoneme: "ㅅ",
+      // SEC-COMP-PIPA (Grill #3A) — 익명 user 가드 통과.
+      pipaUnderageConsent: true,
+      overseasTransferConsent: true,
     });
 
     // user.upsert 가 withActor 안에서 호출됨 → $transaction 1회 + set_config 1회.

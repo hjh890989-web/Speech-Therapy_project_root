@@ -105,6 +105,43 @@ describe("DiagnosisInputSchema (Sprint 2 §2 — intendedWord 필수)", () => {
       }),
     ).toThrow();
   });
+
+  // SEC-COMP-PIPA (Grill #3A) — 익명 user 의 두 동의 boolean 필드.
+  it("pipaUnderageConsent + overseasTransferConsent boolean 통과", () => {
+    expect(() =>
+      DiagnosisInputSchema.parse({
+        intendedWord: "사과",
+        transcript: "사과",
+        childAgeMonths: 36,
+        targetPhoneme: "ㅅ",
+        pipaUnderageConsent: true,
+        overseasTransferConsent: true,
+      }),
+    ).not.toThrow();
+  });
+
+  it("두 동의 boolean optional — 미지정 시에도 통과 (Server Action 측 가드가 enforce)", () => {
+    expect(() =>
+      DiagnosisInputSchema.parse({
+        intendedWord: "사과",
+        transcript: "사과",
+        childAgeMonths: 36,
+        targetPhoneme: "ㅅ",
+      }),
+    ).not.toThrow();
+  });
+
+  it("두 동의 boolean 외 타입 — 거부", () => {
+    expect(() =>
+      DiagnosisInputSchema.parse({
+        intendedWord: "사과",
+        transcript: "사과",
+        childAgeMonths: 36,
+        targetPhoneme: "ㅅ",
+        pipaUnderageConsent: "yes" as unknown as boolean,
+      }),
+    ).toThrow();
+  });
 });
 
 describe("DiagnosisOutputSchema ↔ MOCK 호환성", () => {

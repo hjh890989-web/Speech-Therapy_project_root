@@ -72,6 +72,11 @@ const ORIGINAL_FETCH = globalThis.fetch;
 const BASE_INPUT = {
   childAgeMonths: 36,
   targetPhoneme: "ㅅ" as const,
+  // SEC-COMP-PIPA (Grill #3A) — 익명 user 가드 통과를 위한 두 동의 boolean.
+  // 본 통합 테스트는 익명 흐름 (input.userId 없음) — analyzeDiagnosis 의 익명 가드가
+  // 두 동의 true 를 요구. fixture 에서 default true 로 설정.
+  pipaUnderageConsent: true,
+  overseasTransferConsent: true,
 };
 
 const FEATURES_GOOD = {

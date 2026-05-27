@@ -7,9 +7,11 @@
 // (내부 식별자 `analyzeDiagnosis`, `app/actions/diagnosis.ts` 등은 미노출이라 예외)
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSpeechRecognition } from "@/lib/hooks/useSpeechRecognition";
 import { useAnonymousUserId } from "@/lib/hooks/useAnonymousUserId";
+import { useAnonymousConsent } from "@/lib/hooks/useAnonymousConsent";
 import { useSilenceDetection } from "@/lib/hooks/useSilenceDetection";
 import { useNetworkAware } from "@/lib/hooks/useNetworkAware";
 import { useAudioAnalyzer } from "@/lib/hooks/useAudioAnalyzer";
@@ -88,6 +90,19 @@ function DiagnosisFormInner({
   /// Sprint 2 §2 — 부모가 발화 전에 선택하는 의도 단어. 미선택 시 발화/제출 차단.
   const [intendedWord, setIntendedWord] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
+  /// SEC-COMP-PIPA (Grill #3A) — 익명 user 의 PIPA 동의 2개.
+  /// useAnonymousConsent 의 localStorage 마커로 mount 후 자동 prefill (재방문 즉시 통과).
+  const anonymousConsent = useAnonymousConsent();
+  const [pipaConsent, setPipaConsent] = useState(false);
+  const [overseasConsent, setOverseasConsent] = useState(false);
+  useEffect(() => {
+    // mount 후 useAnonymousConsent hook 의 마운트 후 sync 결과를 본 form state 로 반영.
+    // 외부 시스템 (localStorage 결과) → React state 의 일회성 동기화 — set-state-in-effect 룰의
+    // 정당한 예외 (OnboardingWizardClient 와 동일 패턴).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPipaConsent(anonymousConsent.pipaConsented);
+    setOverseasConsent(anonymousConsent.overseasConsented);
+  }, [anonymousConsent.pipaConsented, anonymousConsent.overseasConsented]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progressLabel, setProgressLabel] = useState<string>(PROGRESS_STAGES[0].label);
@@ -345,8 +360,14 @@ function DiagnosisFormInner({
           anonymousUserId: anonymousUserId ?? undefined,
           acousticFeatures: acousticFeaturesRef.current ?? undefined,
           sttConfidence: sttConfidence ?? undefined,
+          // SEC-COMP-PIPA (Grill #3A) — 익명 user 의 두 동의 boolean.
+          // 인증 user 는 User row 의 일시로 확인하므로 본 필드 무관.
+          pipaUnderageConsent: pipaConsent,
+          overseasTransferConsent: overseasConsent,
         }),
       );
+      // 성공 시 localStorage 에 두 동의 일시 마커 저장 — 다음 방문 시 자동 prefill.
+      anonymousConsent.markConsented();
       trackEvent("diagnose_completed", {
         articulationScore: Math.round(result.articulationScore),
         linguisticScore: Math.round(result.linguisticScore),
@@ -402,6 +423,60 @@ function DiagnosisFormInner({
           오프라인 상태입니다. 인터넷 연결 후 다시 시도해 주세요.
         </div>
       )}
+
+      {/* SEC-COMP-PIPA (Grill #3A) — 익명 user 의 PIPA 동의 2개 (필수). */}
+      <fieldset
+        data-testid="anonymous-pipa-consents"
+        className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900"
+      >
+        <legend className="px-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+          개인정보 동의 (필수)
+        </legend>
+        <label
+          data-testid="diagnose-pipa-checkbox"
+          className="flex items-start gap-2 text-sm"
+        >
+          <input
+            type="checkbox"
+            checked={pipaConsent}
+            onChange={(e) => setPipaConsent(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+          />
+          <span className="flex-1">
+            <span className="font-medium text-slate-900 dark:text-slate-100">
+              [필수] 만 14세 미만 자녀 정보 처리 동의 (PIPA §22조 6항)
+            </span>
+            <span className="mt-1 block text-xs text-slate-600 dark:text-slate-400">
+              자녀의 발화 텍스트 + 월령 등을 발음 가이드 목적으로 처리하는 데 부모님의
+              동의가 필요해요.
+            </span>
+          </span>
+        </label>
+        <label
+          data-testid="diagnose-overseas-checkbox"
+          className="flex items-start gap-2 text-sm"
+        >
+          <input
+            type="checkbox"
+            checked={overseasConsent}
+            onChange={(e) => setOverseasConsent(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+          />
+          <span className="flex-1">
+            <span className="font-medium text-slate-900 dark:text-slate-100">
+              [필수] 개인정보 국외 이전 동의 (PIPA §17조)
+            </span>
+            <span className="mt-1 block text-xs text-slate-600 dark:text-slate-400">
+              Google Cloud Speech (미국, 음성 → 텍스트) + Google Gemini (미국, 안내 문구)
+              로 이전돼요. 자세한 항목은{" "}
+              <Link href="/privacy" className="underline">
+                개인정보 처리방침
+              </Link>{" "}
+              참고.
+            </span>
+          </span>
+        </label>
+      </fieldset>
 
       {/* 1) 자녀 월령 */}
       <div className="space-y-2">
@@ -642,10 +717,17 @@ function DiagnosisFormInner({
 
       <button
         type="submit"
-        disabled={isSubmitting || !isOnline}
+        disabled={isSubmitting || !isOnline || !pipaConsent || !overseasConsent}
+        data-testid="diagnose-submit-btn"
         className="w-full rounded-md bg-emerald-600 px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
       >
-        {isSubmitting ? "분석 중..." : !isOnline ? "오프라인 — 연결 후 시도" : "결과 확인"}
+        {isSubmitting
+          ? "분석 중..."
+          : !isOnline
+            ? "오프라인 — 연결 후 시도"
+            : !pipaConsent || !overseasConsent
+              ? "개인정보 동의 후 진행"
+              : "결과 확인"}
       </button>
 
       {isSubmitting && (

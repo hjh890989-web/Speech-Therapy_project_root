@@ -33,7 +33,8 @@ import { notifyHITLBySlack } from "@/lib/notifications/slack";
 import { getDiagnosisMock } from "@/lib/mocks/diagnosis";
 import { trackEvent } from "@/lib/analytics";
 // SEC-COMP-PIPA (Grill #3A) — 인증 user 의 PIPA 동의 hard 가드 (UI 가드 보완).
-import { assertConsentedIfAuthenticated } from "@/lib/policy/consent-guard";
+// + 익명 user 가드 — 본 PR 에서 input.pipaUnderageConsent + input.overseasTransferConsent 검증.
+import { assertConsentedIfAuthenticated, ConsentRequiredError } from "@/lib/policy/consent-guard";
 import {
   DiagnosisInputSchema,
   DiagnosisOutputSchema,
@@ -83,9 +84,18 @@ export async function analyzeDiagnosis(
   // 인증 user 의 두 동의 (pipaUnderageConsentAt + overseasTransferConsentAt) 가
   // 모두 not-NULL 인지 server-side 에서 검증. 미동의 시 ConsentRequiredError throw —
   // DiagnosisForm 의 catch 가 "PIPA_CONSENT_REQUIRED" message 를 잡아 /settings/privacy-consent
-  // 로 안내. 익명 user 는 가드 통과 (별도 PR scope).
+  // 로 안내.
   // MOCK 모드 진입 _전_ 에 호출하여 우회 차단 (USE_MOCK_DIAGNOSIS 도 인증 user 가드 적용).
   await assertConsentedIfAuthenticated();
+
+  // 익명 user 가드 — 인증 user 가 아닐 때 (input.userId 미제공)
+  // input.pipaUnderageConsent + input.overseasTransferConsent 둘 다 true 여야 통과.
+  // DiagnosisForm 의 inline 체크박스가 클라이언트 측 가드 → 본 가드는 hard enforcement.
+  if (!input.userId) {
+    if (!input.pipaUnderageConsent || !input.overseasTransferConsent) {
+      throw new ConsentRequiredError();
+    }
+  }
 
   // ── MOCK 모드 fallback (USE_MOCK_DIAGNOSIS=true) ────────────────
   if (options.searchParams) {
@@ -106,14 +116,22 @@ export async function analyzeDiagnosis(
     // withActor(userId, ...) 로 익명 user 본인 id 캡처.
     // 익명 흐름의 userId 는 anonymous_user_id (cookie) 또는 supabase auth.uid —
     // 모두 withActor 의 ACTOR_ID_PATTERN ([a-zA-Z0-9_-]{1,128}) 통과.
+    // SEC-COMP-PIPA (Grill #3A): create + update 양쪽에 동의 일시 기록 — 익명 user 도
+    // 인증 user 와 동일하게 User row 에 보존. 본 시점은 위 가드 통과 이후라 두 boolean true 보장.
+    const consentTimestamp = new Date();
     await withActor(userId, (tx) =>
       tx.user.upsert({
         where: { id: userId },
-        update: {},
+        update: {
+          pipaUnderageConsentAt: consentTimestamp,
+          overseasTransferConsentAt: consentTimestamp,
+        },
         create: {
           id: userId,
           role: "parent",
           childAgeMonths: input.childAgeMonths,
+          pipaUnderageConsentAt: consentTimestamp,
+          overseasTransferConsentAt: consentTimestamp,
         },
       }),
     );
