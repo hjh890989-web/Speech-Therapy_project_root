@@ -30,7 +30,12 @@ export const dynamic = "force-dynamic";
 export default async function MissionPlayPage({ params }: PageProps) {
   const { missionId } = await params;
 
-  const mission = dailyMissionFixtures.find((m) => m.id === missionId);
+  // 한국어 자음이 fixture id 에 포함됨 (예: `mock-ㅅ-2`). URL encoding/decoding 과정에서
+  // unicode normalization (NFC vs NFD) 차이 가능 → 양쪽 NFC normalize 후 비교.
+  const normalizedId = missionId.normalize("NFC");
+  const mission = dailyMissionFixtures.find(
+    (m) => m.id.normalize("NFC") === normalizedId,
+  );
   if (!mission) {
     notFound();
   }
