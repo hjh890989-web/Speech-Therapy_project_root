@@ -127,17 +127,6 @@ export default async function SettingsPrivacyConsentPage() {
       />
 
       <section className="mt-8 space-y-3 text-sm text-slate-500 dark:text-slate-500">
-        <p>
-          자세한 내용은{" "}
-          <Link href="/privacy" className="underline hover:no-underline">
-            개인정보 처리방침
-          </Link>{" "}
-          및{" "}
-          <Link href="/terms" className="underline hover:no-underline">
-            이용약관
-          </Link>{" "}
-          을 참고해 주세요.
-        </p>
         {!bothConsented ? (
           <p
             className="text-slate-600 dark:text-slate-400"
@@ -155,6 +144,17 @@ export default async function SettingsPrivacyConsentPage() {
             </span>
           </p>
         ) : null}
+        <p>
+          자세한 내용은{" "}
+          <Link href="/privacy" className="underline hover:no-underline">
+            개인정보 처리방침
+          </Link>{" "}
+          및{" "}
+          <Link href="/terms" className="underline hover:no-underline">
+            이용약관
+          </Link>{" "}
+          을 참고해 주세요.
+        </p>
         <p>
           <Link
             href="/settings"
