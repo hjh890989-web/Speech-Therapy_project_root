@@ -1,4 +1,11 @@
-// API-010 §1 — 공개 라우트 그룹 layout. AuthHeader 모든 (public) 페이지 상단 표시.
+// 공개 라우트 그룹 layout.
+//
+// 헤더 구조 (drift 정리, 5/27):
+//   - root layout (app/layout.tsx) 의 InstitutionHeader: 브랜드 + 기관 로고
+//   - 본 (public) layout 의 MainNav: 메뉴 + email + 로그아웃
+//   - 이전 AuthHeader (API-010 §1 legacy) 는 MainNav 와 email/로그아웃/브랜드 모두
+//     중복되어 5/27 제거됨. 사용자 보고로 헤더 3중 표시 (브랜드 2번 + email/로그아웃 2번)
+//     drift 발견 → AuthHeader 단일 삭제로 해소.
 //
 // FR-C-PARENT-ONBOARDING (follow-up):
 //   인증된 신규 user (onboardingCompletedAt 미설정) 가 본 layout 하위 페이지에 진입하면
@@ -13,7 +20,6 @@
 
 import { Suspense } from "react";
 
-import { AuthHeader } from "./AuthHeader";
 import { OnboardingRedirectGate } from "@/components/onboarding/OnboardingRedirectGate";
 import { hasCompletedOnboardingServerSide } from "@/lib/onboarding/server-state";
 import { MainNav } from "@/components/nav/MainNav";
@@ -35,9 +41,9 @@ export default function PublicLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <>
-      <AuthHeader />
       {/* FR-NAV — 부모/원장/선생님/expert role 별 메인 navigation. RSC 내부에서 Supabase + Prisma role
-          단건 조회 후 메뉴 항목을 산출. Suspense fallback (null) 으로 wrap 되어 page LCP 차단 0. */}
+          단건 조회 후 메뉴 항목을 산출. Suspense fallback (null) 으로 wrap 되어 page LCP 차단 0.
+          인증/익명 분기는 MainNav 가 단독 담당 (5/27 AuthHeader 제거 후). */}
       <Suspense fallback={null}>
         <MainNav />
       </Suspense>
