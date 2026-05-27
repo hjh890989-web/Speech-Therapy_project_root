@@ -40,6 +40,8 @@ export type UpdateChildProfileResult =
         | "unauthorized"
         | "invalid_age"
         | "invalid_phonemes"
-        | "db_failed";
+        | "db_failed"
+        /// SEC-COMP-PIPA (Grill #3A) — PIPA 두 동의 미완료. UI 에서 /settings/privacy-consent 안내.
+        | "consent_required";
       message: string;
     };

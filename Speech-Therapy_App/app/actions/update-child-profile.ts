@@ -28,6 +28,8 @@
 
 import { withActor } from "@/lib/db/with-actor";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+// SEC-COMP-PIPA (Grill #3A) — 인증 user 의 PIPA 동의 hard 가드.
+import { assertConsentedIfAuthenticated } from "@/lib/policy/consent-guard";
 
 // FR-PERF-3-USE-SERVER-REFACTOR — non-async exports (const / type / interface) 는
 // ./update-child-profile-shape 으로 분리.
@@ -67,6 +69,19 @@ export async function updateChildProfile(
       success: false,
       reason: "unauthorized",
       message: "로그인 상태를 확인할 수 없어요. 잠시 후 다시 시도해 주세요.",
+    };
+  }
+
+  // SEC-COMP-PIPA hard 가드 (Grill #3A) — 미동의 인증 user 차단.
+  // /settings/child 페이지는 ConsentRedirectGate 제외 path 가 아니라 layout 측에서도
+  // 차단되지만, Server Action 측 가드로 UI 우회 (dev tools / 직접 API) 까지 차단.
+  try {
+    await assertConsentedIfAuthenticated();
+  } catch {
+    return {
+      success: false,
+      reason: "consent_required",
+      message: "개인정보 동의 후 다시 시도해 주세요.",
     };
   }
 

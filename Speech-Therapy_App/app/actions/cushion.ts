@@ -19,6 +19,10 @@ import { generatePlainText, LLMTimeoutError, RateLimitedError } from "@/lib/ai/g
 import { SYSTEM_PROMPT_CUSHION, buildCushionPrompt } from "@/lib/ai/prompts";
 import { hasBannedTerm } from "@/lib/forbidden-words";
 import { sanitizeUserFacingText } from "@/lib/text-safety";
+// SEC-COMP-PIPA (Grill #3A) — 인증 user 의 PIPA 동의 hard 가드.
+// 본 Action 은 Gemini 호출 (국외 이전) + 자녀 메타 (월령 + 음소) 전송 → 가드 필수.
+// 익명 user 는 가드 통과 (assertConsentedIfAuthenticated 가 graceful 분기).
+import { assertConsentedIfAuthenticated } from "@/lib/policy/consent-guard";
 
 const SAFE_CUSHION_FALLBACK = "오늘도 즐겁게 발음 연습을 해 보아요. 부담 갖지 말고 천천히.";
 
@@ -31,6 +35,15 @@ const InputSchema = z.object({
 
 export async function generateCushion(rawInput: unknown): Promise<GenerateCushionResult> {
   const { sessionId } = InputSchema.parse(rawInput);
+
+  // SEC-COMP-PIPA hard 가드 (Grill #3A) — 인증 user 미동의 시 fallback 반환 (Gemini 미호출).
+  // graceful — UI 가 fallback 카피 노출, 사용자 흐름 비차단. ConsentRedirectGate 가
+  // 페이지 자체를 redirect 하므로 본 Server Action 도달 자체가 드문 edge case.
+  try {
+    await assertConsentedIfAuthenticated();
+  } catch {
+    return { aiCushionText: SAFE_CUSHION_FALLBACK, fromCache: false };
+  }
 
   const row = await prisma.evaluationResult.findUnique({
     where: { sessionId },
