@@ -43,13 +43,14 @@ V07 은 V06 base 위에 다음을 통합:
 |---|---|---|
 | **§0** | ✅ 완성 | 본 섹션 |
 | **§1** | ✅ 완성 (V06 base + 1.4 References 신규) | §1.1~§1.3 V06 그대로 + §1.4 V07 신규 link + §1.5.1 ADR 16 link |
-| §2 | 🟡 V06 재사용 | Stakeholder DMU 그대로 |
-| §3 | 🟡 V06 base + §3.5 / §3.6 갱신 placeholder | 차기 작업 시 §3.5 API list 갱신 / §3.6.4-5 시퀀스 추가 |
+| **§2** | ✅ 완성 | V06 7 stakeholder + V07 신규 3 (Expert 1급/2급 분리 + IRB + 임상 자문위원 + 변호사) + RACI Phase 변경 권한 |
+| **§3** | ✅ 완성 | §3.5 API Overview (Server Action 14 + Route Handler 11 + Cron 8 + Auth + Admin) + §3.6.4-5 신규 시퀀스 (PIPA 동의 + HITL 재학습) |
 | **§4** | ✅ 완성 | Phase 0 (V06) + Phase 1+ 13 신규 + Cross-cutting +3 + Phase 2 (V06) + NF 35 (V06 30 + 5 신규) |
 | **§5** | ✅ 완성 | 4 원칙 + 9 단계 흐름 + 재학습 파이프라인 + Phase 풀 + 다양성 모니터링 + 임상 안전망 |
 | §6.1 | ✅ 완성 | ERD 7 → 14 Entity |
-| §6.2-6.3 | 🟡 V06 base + 신규 Entity 추가 (V07 §6.1 참조) | |
-| §6.4 | 🟡 V06 5 시퀀스 + §6.4.4-5 신규 placeholder | 차기 작업 |
+| **§6.2** | ✅ 완성 | Domain Class Diagram mermaid (14 + 1 신규 model_retraining_data) |
+| **§6.3** | ✅ 완성 | Data Dictionary — V07 신규 컬럼 8 + 신규 Entity 7 의 핵심 field |
+| **§6.4** | ✅ 완성 | V06 5 시퀀스 + §6.4.4 PIPA 동의 + §6.4.5 HITL 재학습 신규 |
 | **§6.5** | ✅ 완성 | Sprint sub-task 14 + 보류 4건 + Project #8 정합성 |
 | §6.6-6.7 | 🟡 V06 재사용 | EXP + Contingency |
 | **§6.8** | ✅ 완성 | ADR 4 → 16 |
@@ -63,7 +64,7 @@ V07 은 V06 base 위에 다음을 통합:
 | **§11** | ✅ 완성 | R6 Seg B Plan B + F4-Plus + Plan C |
 | **§12** | ✅ 완성 | PIPA + 의료기기법 + 5중 가드 + 출시 체크리스트 |
 
-**완성도**: 13 § 중 **11 § 본문 완성** + 2 § (V06 base 유지 + 차기 보강 placeholder).
+**완성도**: 13 § **모두 본문 완성** ✅ (V06 의 §1.1~§1.3 + §6.6 EXP / §6.7 Contingency 만 V06 재사용).
 
 ---
 
@@ -131,9 +132,56 @@ V06 §1.4 base + V07 신규:
 
 ---
 
-# §2. Stakeholders (V06 재사용)
+# §2. Stakeholders (V06 base + V07 신규)
 
-> V06 의 §2 (Stakeholder DMU Dependency) 그대로 유지.
+V06 §2 의 7 stakeholder 유지 + V07 신규 3 추가.
+
+## 2.1 Stakeholder 매트릭스 (V06 7 + V07 신규 3)
+
+| Seg | 역할 | 책임 | 관심사 | 성공 기준 |
+|:---:|:---|:---|:---|:---|
+| **Seg A** | 불안형 탐색자 (엄마) | B2C 최초 유입 | 아이 발달 수준 즉각 객관화 | CVR ≥ 8%, 체류 ≤ 5분 |
+| **Seg C** | 센터 대기자 (엄마) | B2C 유료 결제 전환 | 골든타임 방치 해소 | 첫 주 미션 완료율 ≥ 70% |
+| **Seg B** | 데이터형 개입자 (가족) | B2C 구독 유지 | 시계열 성과 증명 | M3 리텐션 ≥ 40% |
+| **Seg D-1** | 유치원 원장 | B2B 결제 및 도입 결정 | 학부모 민원 방어 | 알림장 승인율 ≥ 90% |
+| **Seg D-2** | 보육 교사 | B2B 실무 게이트키퍼 | 추가 업무 제로 | 능동 조작 0회 |
+| **HITL Expert (1급)** ⭐ | 언어재활사 1급 (석사 + 임상 2년) | AI 결과 감수 + 보정 + 재학습 위원 | 오진 방지 + 임상 정합 | 피드백 ≤ 48h / 오진율 < 0.5% |
+| **HITL Expert (2급)** ⭐ | 언어재활사 2급 (학사) | 1차 검토 + 1급 escalate | 처리량 + SLA | 1차 검토 ≤ 24h |
+| **System Admin** | 플랫폼 운영자 | 모니터링 + 장애 대응 | 시스템 안정성 | Uptime ≥ 99.9% / MTTR < 2h |
+| **🆕 IRB Reviewer** | IRB 자문위원회 (Phase 1+) | F10 T4-c / 학술 발표 심의 | 외부 협력 안전 + 윤리 정합 | IRB 5단계 통과 + 6개월 보고 (§6.10, ADR-15) |
+| **🆕 임상 자문위원** | KOPLAC 13 항목 자문 풀 7 그룹 | F15 챗봇 활성 전 임상 검증 | 임상 안전 + 비의료기기 분류 | 자문 4주 + 13 항목 통과 (§10, ADR-14) |
+| **🆕 변호사** | 단발 자문 (Grill #3A C1) | PIPA / 의료기기법 / 약관 검토 | 출시 리스크 감소 | 정식 처리방침 / 약관 작성 + 의견서 |
+
+## 2.2 Stakeholder DMU Dependency (V06 그대로 + V07 cross-link)
+
+```mermaid
+flowchart LR
+    A["Seg A 불안형 엄마<br/>(최초 진단 Hook)"]
+    C["Seg C 대기자 엄마<br/>(유료 결제 전환)"]
+    B["Seg B 아빠/조부모<br/>(리텐션 결정자)"]
+    D1["Seg D-1 원장<br/>(B2B 결제)"]
+    D2["Seg D-2 교사<br/>(Zero-touch 실무)"]
+    E1["HITL Expert 1급<br/>(보정 + 재학습)"]
+    E2["HITL Expert 2급<br/>(1차 검토)"]
+    IRB["IRB Reviewer<br/>(Phase 1+)"]
+    A -->|객관적 진단 확보| C
+    C -->|데이터 누적 증명| B
+    B -->|공신력 요구| D1
+    D1 -->|도입 지시| D2
+    D2 -.->|"⚠️ 거부권"| D1
+    E2 -->|escalate| E1
+    E1 -.->|외부 협력 시| IRB
+```
+
+## 2.3 RACI Phase 변경 권한 (Wiki HITL-operations-policy §RACI 흡수)
+
+| 결정 | R (책임) | A (승인) | C (자문) | I (통보) |
+|---|---|---|---|---|
+| Phase 0 → 1 진입 | System Admin | System Admin | HITL Expert 1급 | 전체 stakeholder |
+| Phase 1 → 2 진입 | System Admin | System Admin + IRB | 임상 자문위원 + 변호사 | 전체 |
+| F15 임상 자문 활성 (ADR-14) | 임상 자문위원 | System Admin | 7 그룹 자문 풀 | HITL Expert |
+| IRB 신청 (ADR-15) | System Admin | IRB Reviewer | 자문 풀 | 전체 expert |
+| ADR 신규 / 변경 | System Admin | RACI 위원회 (admin + expert + IRB) | 변호사 / 임상 | 전체 |
 
 ---
 
@@ -159,19 +207,178 @@ V06 base + **Resend (이메일)** + **Google Cloud Speech (STT, 미국)** + **Go
 
 V06 그대로 유지.
 
-## 3.5 API Overview
+## 3.5 API Overview (V06 8 → V07 11 Route Handler + 14 Server Action + 8 Cron + Auth + Admin)
 
-V06 = 8 endpoints → V07 = 11+ API + 14+ Server Actions + 8 cron. **다음 sub-session 에서 §3.5 갱신**:
+V06 의 8 endpoints 위에 V07 의 실 구현 (MVP 100% 완료) 결과 통합.
 
-- Server Actions: `analyzeDiagnosis` / `savePrivacyConsent` / `saveChildInfo` / `updateChildProfile` / `generateCushion` / `generateCushionNote` / `submitConsentSignature` / `submitBulkImport` / `submitOfflineEntry` / `grantReward` / `markOnboardingCompletedInDb` 외
-- Route Handlers: `/api/hitl/queue` / `/api/hitl/comment` / `/api/b2b/approval` / `/api/consent/sign` / `/api/audio/stream` / `/api/health`
-- Cron: `hitl-monitor` / `weekly-reports` (vercel.json) + 6 cron GitHub Actions (`error-monitor` / `hitl-escalation` / `funnel-alert` / `consent-reminder` / `consent-expire` / `audio-cleanup`)
-- Auth: `/login` / `/signup` / `/auth/callback`
-- Admin: `/admin/audit` / `/admin/teacher` / `/admin/hitl` / `/admin/students/import`
+### 3.5.1 Server Actions (Next.js 16 App Router, 14건)
 
-## 3.6 Interaction Sequences
+| Server Action | Source | 책임 | PIPA 가드 |
+|---|---|---|---|
+| `analyzeDiagnosis` | REQ-FUNC-001 | 진단 핵심 (3축 점수 + Confidence + HITL 트리거) | ✅ §12.4 2층 + 5층 (익명) |
+| `getCurriculum` | REQ-FUNC-015 | 적응형 미션 추천 | (자녀 PII 무관) |
+| `getWeeklyReport` | REQ-FUNC-027 | 주간 리포트 데이터 | (RBAC 자체 cover) |
+| `grantReward` | REQ-FUNC-024 | 별 적립 (멱등성 키) | (analyzeDiagnosis 후속) |
+| `savePrivacyConsent` | REQ-NF-025/026 | PIPA 두 동의 일시 저장 | (동의 흐름 자체) |
+| `saveChildInfo` | REQ-FUNC-039 / Bonus | 자녀 정보 저장 (onboarding Step2) | (onboarding 동의 _직전_ 호출) |
+| `updateChildProfile` | FR-C-PARENT-SETTINGS | 자녀 프로필 변경 | ✅ §12.4 3층 |
+| `generateCushion` | REQ-FUNC-013 | 부모용 cushion 텍스트 (Gemini) | ✅ §12.4 4층 |
+| `generateCushionNote` | REQ-FUNC-061 (B2B) | 교사 → 부모 알림장 (Gemini) | (B2B ConsentSignature) |
+| `submitConsentSignature` | FR-C-018 | 부모 전자서명 동의서 | (동의 흐름 자체) |
+| `submitBulkImport` | REQ-FUNC-058 (B2B) | 원아 100명 일괄 등록 | (admin/teacher RBAC) |
+| `submitOfflineEntry` | FR-Q-013 후속 | 오프라인 활동 기록 | (admin/teacher RBAC) |
+| `markOnboardingCompletedInDb` | FR-C-PARENT-ONBOARDING | onboarding 완료 마킹 | (timestamp only) |
+| `signOut` | API-010 §1 | 로그아웃 | (auth flow) |
 
-V06 base + **§3.6.3 PIPA 동의 흐름** 신규 (다음 sub-session).
+### 3.5.2 Route Handlers (Next.js 16, 11건)
+
+| Route | Method | Source | 책임 | 인증 |
+|---|---|---|---|---|
+| `/api/hitl/queue` | POST | REQ-FUNC-003 / §5.2 Step 2 | HITL 큐 자동 INSERT | Bearer (`CRON_SECRET`) |
+| `/api/hitl/comment` | PATCH | §5.2 Step 4 | expert 보정 점수 + 코멘트 | RBAC (expert role) |
+| `/api/b2b/approval` | PATCH | REQ-FUNC-061 (B2B) | 원장 알림장 승인 | RBAC (principal) |
+| `/api/consent/sign` | POST | FR-C-018 | 부모 동의서 서명 처리 | 토큰 (이메일) |
+| `/api/audio/stream` | POST (Edge) | API-009 (D7 보류) | Edge Runtime 오디오 스트림 | (보류) |
+| `/api/health` | GET | REQ-NF-007 | uptime 확인 | public |
+| `/api/cron/hitl-monitor` | GET | §7.3 cron | HITL 24h 검증 | Bearer (`CRON_SECRET`) |
+| `/api/cron/weekly-reports` | GET | §7.3 cron | 주간 리포트 생성 | Bearer |
+| `/api/cron/audio-cleanup` | GET | §7.3 cron / ADR-03 | 7일 폐기 (D6 단순화) | Bearer |
+| `/api/cron/consent-reminder` | GET | §7.3 cron | FR-C-018 D+3 | Bearer |
+| `/api/cron/consent-expire` + `/funnel-alert` + `/hitl-escalation` + `/error-monitor` | GET | §7.3 cron | 운영 자동화 | Bearer |
+
+### 3.5.3 Auth 라우트 (Supabase Auth)
+
+| Route | 책임 |
+|---|---|
+| `/login` | Magic Link + Google OAuth (API-010 §1 + §2) |
+| `/signup` | 신규 가입 (parent-invite JWT 토큰) |
+| `/auth/callback` | Supabase callback (PKCE verifier cookies, hotfix `fed9769`) |
+| `/auth/mfa-challenge` | MFA TOTP 입력 |
+| `/auth/reset-password` | 비밀번호 재설정 |
+
+### 3.5.4 Admin 라우트 (RBAC + ConsentRedirectGate 제외)
+
+| Route | RBAC | 책임 |
+|---|---|---|
+| `/admin/audit` | admin | AuditLog 조회 + cursor 페이지네이션 (SEC-002) |
+| `/admin/teacher` | teacher / principal | 반 / 원아 대시보드 |
+| `/admin/teacher/students/[userId]/offline-entry` | teacher | 오프라인 활동 입력 |
+| `/admin/hitl` + `/admin/hitl/[id]` | expert / admin | HITL 큐 list + detail |
+| `/admin/students/import` | teacher / principal | 원아 일괄 등록 |
+| `/admin/principal` | principal | 원장 대시보드 |
+| `/admin/cushion-notes` | teacher | 알림장 일괄 발송 |
+| `/admin/funnel` | admin | MON-001 퍼널 CVR 대시보드 |
+| `/admin/centers/pdf/[userId]` | teacher / principal | PDF 다운로드 (jsPDF) |
+| `/admin/timeline/[userId]` | teacher | 자녀 통합 타임라인 |
+| `/admin/security/totp-reset` | admin | TOTP reset (부모 lockout 복구) |
+
+### 3.5.5 (Public) 인증 후 라우트 (ConsentRedirectGate 적용)
+
+| Route | 책임 | 미동의 인증 user 시 |
+|---|---|---|
+| `/diagnose` | 익명 진단 (PIPA inline 체크박스) | 진입 허용 (자체 동의 흐름) |
+| `/diagnose/result/[sessionId]` | 결과 페이지 | 진입 허용 (조회) |
+| `/missions` | 데일리 미션 | → `/settings/privacy-consent` redirect |
+| `/rewards` + `/rewards/collection` | 보상 도감 | redirect |
+| `/reports` | 주간 리포트 | redirect |
+| `/predictions` | 발달 예측 (REQ-FUNC-044/045) | redirect |
+| `/roi` | F9.4 ROI 시뮬레이터 | redirect |
+| `/weekly-review` | 주간 리뷰 | redirect |
+| `/status` | 시스템 상태 (REQ-NF-007) | 진입 허용 (운영) |
+| `/settings/*` | 설정 hub + 7 sub (consent / privacy-consent / account / child / calibration / notifications / security) | privacy-consent / account 외 redirect |
+| `/onboarding` | wizard 4 step (PIPA 동의 Step2 포함) | 진입 허용 |
+| `/privacy` + `/terms` | 정책 placeholder | 진입 허용 |
+
+## 3.6 Interaction Sequences (V06 5 + V07 신규 2)
+
+### 3.6.1 B2C 핵심 플로우: 진단 → 미션 → 리포트 (V06 그대로)
+
+V06 §3.6.1 그대로 유지. PIPA 동의 점은 §3.6.4 별도 시퀀스로 분리.
+
+### 3.6.2 HITL 에스컬레이션 플로우 (§5.2 9 단계 흐름으로 이동)
+
+V06 §3.6.2 를 V07 의 §5.2 (9 단계 흐름) 로 확장 이동. 본 §3.6.2 는 §5.2 link.
+
+### 3.6.3 (V06 미정의, V07 placeholder)
+
+### 3.6.4 PIPA 동의 흐름 ⭐ (V07 신규, §12.2 정합)
+
+```mermaid
+sequenceDiagram
+    actor User as 사용자
+    participant UI as Client (React)
+    participant Hook as useAnonymousConsent
+    participant LS as localStorage
+    participant SA as Server Action
+    participant DB as Supabase (Prisma + RLS)
+
+    alt 익명 user (무로그인 /diagnose)
+        User->>UI: /diagnose 진입
+        UI->>Hook: mount
+        Hook->>LS: pipa_consented_at + overseas_consented_at 조회
+        LS-->>Hook: (값 또는 null)
+        Hook-->>UI: prefill (boolean × 2)
+        opt 두 체크박스 미체크
+            UI->>UI: "결과 확인" 버튼 disabled + "개인정보 동의 후 진행" 카피
+        end
+        User->>UI: 두 체크박스 ✅ + 의도 단어 선택 + 발화
+        UI->>SA: analyzeDiagnosis(input + pipaUnderageConsent: true + overseasTransferConsent: true)
+        SA->>SA: 익명 가드 — 두 boolean 검증
+        alt 미체크
+            SA-->>UI: throw ConsentRequiredError
+        end
+        SA->>DB: User.upsert (pipaUnderageConsentAt = now / overseasTransferConsentAt = now)
+        SA-->>UI: 진단 결과
+        UI->>Hook: markConsented()
+        Hook->>LS: pipa_consented_at + overseas_consented_at 저장
+    else 인증 user (회원가입 후 onboarding)
+        User->>UI: onboarding Step2 진입
+        UI->>SA: getCurrentUser() → assertConsentedIfAuthenticated()
+        SA->>DB: User.findUnique (pipaUnderageConsentAt + overseasTransferConsentAt)
+        DB-->>SA: 두 값 (NULL 또는 일시)
+        alt 둘 다 NULL
+            SA-->>UI: 동의 페이지 redirect (또는 onboarding Step2 동의 inline)
+            User->>UI: 두 체크박스 ✅ + 자녀 정보 입력
+            UI->>SA: saveChildInfo(input) + savePrivacyConsent(input)
+            SA->>DB: User.update (pipaUnderageConsentAt = now / overseasTransferConsentAt = now)
+            SA-->>UI: Step3 진행
+        end
+    end
+```
+
+### 3.6.5 HITL 재학습 파이프라인 시퀀스 ⭐ (V07 신규, §5.3 정합)
+
+```mermaid
+sequenceDiagram
+    participant AI as AI 엔진 (analyzeDiagnosis)
+    participant Queue as HITLQueue
+    actor Expert as expert (1급/2급)
+    participant Trigger as PostgreSQL TRIGGER
+    participant RT as model_retraining_data
+    participant Gate as 재학습 게이트 (Cron)
+    participant ML as 외부 ML 엔지니어 (위탁)
+    participant IRB as IRB Reviewer (T4-c)
+
+    AI->>Queue: Confidence < 70 → INSERT
+    Queue->>Expert: 배정 (자동 분산, HHI ≤ 0.3)
+    Expert->>Queue: groundTruthScore + expertComment UPDATE
+    Queue->>Trigger: sync_retraining_data TRIGGER 발화
+    Trigger->>Trigger: R4 sanitize ([REDACTED] 치환)
+    Trigger->>Trigger: F10 동의 Tier 확인 (T4-a/b/c)
+    alt 동의 미충족
+        Trigger-->>Queue: INSERT skip
+    else 동의 충족
+        Trigger->>RT: INSERT (aiScore + groundTruthScore + diffPct + consentTier + sanitized=true)
+    end
+    Gate->>RT: daily Cron — 3 게이트 검증
+    alt 3 게이트 통과 (diffPct ≥ 0.5% + 누적 ≥ 500 + HHI ≤ 0.3)
+        Gate->>ML: 재학습 트리거 (위탁 알림)
+        ML->>IRB: T4-c 외부 협력 시 IRB 사전 신청
+        IRB-->>ML: 승인 (또는 보완 요청)
+        ML->>ML: 재학습 실행
+        ML->>Queue: 모델 배포 (admin 승인 후, ADR-14 F15 안전 게이트)
+    end
+```
 
 ---
 
@@ -541,13 +748,189 @@ V06 의 D4 단순화 정책 유지: Supabase Realtime 미사용. Slack 웹훅 (P
 - `audit_sanitize_jsonb()` — R4 (영유아 데이터 보호) 자동 sanitize — to_jsonb 결과의 의심 키 (realname/ssn/rrn/email/phone/address/birthdate) 를 `[REDACTED]` 치환
 - 적용 테이블: User / HITLQueue / RewardLog
 
-## 6.2 Domain Class Diagram
+## 6.2 Domain Class Diagram (V06 base + V07 신규 7 Entity)
 
-V06 base + V07 신규 7 Entity 추가 (§6.1.2 참조).
+```mermaid
+classDiagram
+    class User {
+        +id: UUID
+        +email: String?
+        +role: Role (parent/teacher/principal/expert/admin)
+        +childAgeMonths: Int?
+        +preferredPhonemes: String[]
+        +notificationPreference: JSONB
+        +onboardingCompletedAt: DateTime?
+        +totpBackupCodes: String[]
+        +pipaUnderageConsentAt: DateTime?
+        +overseasTransferConsentAt: DateTime?
+        +institutionId: String? (FK)
+        +classId: String? (FK)
+        +subscriptionTier: SubscriptionTier
+        +createdAt: DateTime
+    }
+    class Institution {
+        +id: UUID
+        +name: String
+        +principalName: String
+        +principalEmail: String?
+        +consentStatus: Boolean
+        +logoUri: String?
+        +subscriptionTier: String
+    }
+    class Class {
+        +id: UUID
+        +institutionId: String (FK)
+        +name: String
+        +teacherId: String?
+    }
+    class SessionLog {
+        +id: UUID
+        +userId: String (FK)
+        +missionId: String? (FK)
+        +durationSec: Int
+        +audioVectorUri: String?
+    }
+    class EvaluationResult {
+        +sessionId: UUID (FK, unique)
+        +userId: String (FK)
+        +articulationScore: Float
+        +linguisticScore: Float
+        +acousticScore: Float
+        +peerPercentile: Float
+        +confidence: Float
+        +hitlReviewed: Boolean
+        +aiCushionText: String?
+        +acousticFeatures: JSONB?
+    }
+    class HITLQueue {
+        +sessionId: UUID (FK, unique)
+        +userId: String (FK)
+        +confidenceScore: Float
+        +status: HITLStatus
+        +assignedExpertId: String?
+        +expertComment: String?
+        +groundTruthScore: JSONB?
+        +slaDueAt: DateTime
+        +escalatedAt: DateTime?
+        +completedAt: DateTime?
+    }
+    class WeeklyReport {
+        +id: UUID
+        +userId: String (FK)
+        +weekNumber: Int
+        +year: Int
+        +scoreTrend: JSONB
+        +predictedNextScore: Float?
+        +viewedAt: DateTime?
+    }
+    class RewardProgress {
+        +userId: String (FK, unique)
+        +cumulativeStars: Int
+        +treeGrowthLevel: Int
+    }
+    class RewardLog {
+        +userId: String (FK)
+        +rewardType: String
+        +amount: Int
+        +idempotencyKey: String
+    }
+    class ConsentSignature {
+        +id: UUID
+        +institutionId: String (FK)
+        +parentEmail: String
+        +childNickname: String
+        +consentType: String
+        +status: String (pending/signed/expired)
+        +consentText: String (snapshot)
+        +signedAt: DateTime?
+        +ipAddress: String?
+        +userAgent: String?
+    }
+    class OfflineEntry {
+        +id: UUID
+        +userId: String (FK, subject)
+        +authorId: String (FK, teacher)
+        +type: String
+        +detail: JSONB
+    }
+    class AuditLog {
+        +id: UUID
+        +tableName: String
+        +rowId: String
+        +action: String (INSERT/UPDATE/DELETE)
+        +actorId: String
+        +oldData: JSONB (sanitized)
+        +newData: JSONB (sanitized)
+    }
+    class model_retraining_data {
+        +id: UUID
+        +sessionId: UUID (FK)
+        +aiScore: JSONB
+        +groundTruthScore: JSONB
+        +expertId: String (FK)
+        +diffPct: Float
+        +consentTier: String (F10 T1~T4)
+        +sanitized: Boolean
+    }
+    User "1" --> "*" SessionLog
+    User "1" --> "1" RewardProgress
+    User "1" --> "*" RewardLog
+    User "1" --> "*" WeeklyReport
+    User "1" --> "*" EvaluationResult
+    User "1" --> "*" HITLQueue : subject
+    User "1" --> "*" HITLQueue : assignedExpert
+    User "*" --> "0..1" Institution
+    User "*" --> "0..1" Class
+    Institution "1" --> "*" Class
+    Institution "1" --> "*" ConsentSignature
+    SessionLog "1" --> "0..1" EvaluationResult
+    EvaluationResult "1" --> "0..1" HITLQueue
+    HITLQueue "1" --> "0..1" model_retraining_data : trigger
+```
 
-## 6.3 Data Dictionary
+→ **14 Entity + 1 신규 (model_retraining_data)** = V07 의 ERD 완전.
 
-§6.1 의 V07 신규 컬럼 + 신규 Entity 의 fields 모두 본 §6.3 의 Data Dictionary 에 추가.
+## 6.3 Data Dictionary (V07 신규 컬럼 + 신규 Entity field)
+
+### 6.3.1 User 의 V07 신규 컬럼
+
+| 컬럼 | 타입 | nullable | 의미 |
+|---|---|---|---|
+| `pipaUnderageConsentAt` | TIMESTAMP(3) | YES | PIPA §22-6 만 14세 미만 부모 대리 동의 일시 (NULL = 미동의) |
+| `overseasTransferConsentAt` | TIMESTAMP(3) | YES | PIPA §17 국외 이전 동의 일시 (STT + Gemini 통합) |
+| `preferredPhonemes` | TEXT[] | NO (default `[]`) | 관심 음소 화이트리스트 (5 음소 중 0~5개) |
+| `notificationPreference` | JSONB | YES (default `{}`) | 알림 종류별 opt-in 선호 |
+| `onboardingCompletedAt` | TIMESTAMP(3) | YES | onboarding wizard 완료 일시 |
+| `totpBackupCodes` | TEXT[] | NO (default `[]`) | TOTP backup codes (sha256 hash) |
+| `institutionId` | TEXT | YES (FK) | B2B 소속 기관 |
+| `classId` | TEXT | YES (FK) | B2B 소속 반 |
+
+### 6.3.2 EvaluationResult 의 V07 신규 컬럼
+
+| 컬럼 | 타입 | 의미 |
+|---|---|---|
+| `acousticFeatures` | JSONB | Sprint 3 §2 B — Web Audio API 추출 음향 특징 (pitchMean / pitchStd / durationSec / energy) |
+
+### 6.3.3 HITLQueue 의 V07 신규 컬럼
+
+| 컬럼 | 타입 | 의미 |
+|---|---|---|
+| `expertComment` | TEXT | expert 보정 코멘트 |
+| `groundTruthScore` | JSONB | 보정 3축 점수 + peerPercentile |
+| `escalatedAt` | TIMESTAMP(3) | FR-C-014 24h 초과 자동 마킹 |
+| `completedAt` | TIMESTAMP(3) | 검토 완료 일시 |
+
+### 6.3.4 V07 신규 Entity 의 핵심 field
+
+| Entity | 핵심 field | 비고 |
+|---|---|---|
+| Institution | name / principalEmail / consentStatus / logoUri / subscriptionTier | B2B 다중 테넌트 |
+| Class | institutionId (FK) / name / teacherId | B2B 반 단위 |
+| RewardLog | userId / rewardType / amount / **idempotencyKey** (`@@unique([userId, idempotencyKey])`) | Sprint 2 멱등성 |
+| ConsentSignature | institutionId (FK) / parentEmail / childNickname / consentType / consentText (snapshot) / signedAt / ipAddress / userAgent | FR-C-018 B2B 전자서명 (법적 효력) |
+| OfflineEntry | userId (subject) / authorId (teacher) / type / detail (JSONB) | 자녀 외부 활동 기록 |
+| AuditLog | tableName / rowId / action / actorId / oldData (JSONB sanitized) / newData (JSONB sanitized) | DB-011 + audit_log_triggers |
+| model_retraining_data | sessionId (FK) / aiScore (JSONB) / groundTruthScore (JSONB) / expertId / diffPct (Float) / consentTier (F10 T1~T4) / sanitized (Boolean) | HITL 재학습 |
 
 ## 6.4 Sequence Diagrams (V06 5 + 신규 2)
 
@@ -1172,10 +1555,10 @@ if (!input.userId) {  // 익명 user
 | HITL Cross-cutting (REQ-FUNC-HITL) | 4 | **7** (+3 재학습 파이프라인) |
 | Non-Functional Requirements (REQ-NF) | 30 | **35** (+5 본 sub-session 컴플라이언스) |
 | **총 Requirements** | **99** | **120** (+21) |
-| 시퀀스 다이어그램 | 5 | 5 + 2 placeholder (§6.4.4-5) |
-| 구조 다이어그램 | 5 | 5 + 1 (ADR 의존성 그래프 §6.8) |
-| **Entity** | **7** | **14** (+7 신규 Institution / Class / RewardLog / ConsentSignature / OfflineEntry / AuditLog / model_retraining_data) |
-| API Endpoint | 8 | 11+ + 14 Server Actions + 8 Cron + Auth + Admin (§3.5 차기 본문 갱신) |
+| 시퀀스 다이어그램 | 5 | **7** (+2 신규: §6.4.4 PIPA 동의 / §6.4.5 HITL 재학습) |
+| 구조 다이어그램 | 5 | **7** (+ §6.2 Domain Class mermaid + §6.8 ADR 의존성 그래프) |
+| **Entity** | **7** | **15** (+8 신규 Institution / Class / RewardLog / ConsentSignature / OfflineEntry / AuditLog / model_retraining_data + 1 RoleEnum / SubscriptionTier 확장) |
+| API Endpoint | 8 | **11 Route Handler + 14 Server Action + 8 Cron + 5 Auth + 11 Admin** (§3.5 본문 완성) |
 | 실험 설계 (EXP) | 4 | 4 (V06 그대로) |
 | **ADR** | **4** | **16** ⭐ (+12 V05 신규 + Wiki 합성 + 본 sub-session ADR-16) |
 | **신규 § (V06 미포함)** | 0 | **6 §** (§5 HITL 정책 / §7 운영 / §8 변경 관리 / §9 Glossary / §10 F15 KOPLAC / §11 R6 Plan B / §12 컴플라이언스) |
@@ -1191,15 +1574,22 @@ if (!input.userId) {  // 익명 user
 4. **추적성 강화** — 16 ADR × 120 REQ × 21 Epic × 102+ Task × 13 Persona × 9 Descope 5축 추적성 정본 (Wiki RTM cross-link)
 5. **출시 직전 체크리스트** (§12.11) — 외부 의존 (변호사 자문 / 식약처) 명확화
 
-## 다음 작업 (V07 보강 continue, 별도 sub-session)
+## V07 완성 ✅ — Task 추출 진입 가능
 
-- §3.5 API Overview 본문 갱신 (현재 link 만, 본문 list 작성)
-- §3.6.4-5 시퀀스 다이어그램 신규 (PIPA 동의 흐름 + HITL 재학습 파이프라인)
-- §6.2 Domain Class Diagram + §6.3 Data Dictionary 의 신규 Entity 정합
-- §2 Stakeholders DMU 의 expert 등급 / IRB 추가
-- 변호사 자문 결과 받은 후 §12.6 (transcript 민감정보) + §12.7 (의료기기법) 결론 추가
+본 V07 는 **13 § 모두 본문 완성** + V06 의 §1.1~§1.3 + §6.6 EXP / §6.7 Contingency 재사용. **Wiki 합성 + 본 sub-session 결과 + V06 base 통합 완료**.
+
+→ V07 base 로 다음 단계 가능:
+- 본 doc § 별 Task 추출 (Wiki Phase-1-future-tasks-decomposition 의 13 신규 task + 본 sub-session 의 5 신규 NF task)
+- ADR-16 PIPA 5중 가드 의 실 구현 task 매핑 (이미 본 sub-session 완료)
+- F11 / F15 / F16 / F17 / F18 Phase 1+ Task breakdown 신규 도출
+
+## 다음 작업 (변호사 자문 결과 받은 후만)
+
+- §12.6 (transcript 민감정보 분류 결론) — 변호사 의견 반영
+- §12.7 (의료기기법 분류 결론) — 변호사 + 식약처 사전 검토 결과 반영
+- /privacy + /terms placeholder → 정식 처리방침 + 이용약관 교체
 
 ---
 
-**— End of SRS V07 Master, 2026-05-27 (28+ commits sub-session + Wiki 54차 ingest + V06 base) —**
-**— 11/13 § 본문 완성, 변호사 자문 / 식약처 외부 의존만 잔여 —**
+**— End of SRS V07 Master, 2026-05-27 (33+ commits sub-session + Wiki 54차 ingest + V06 base 통합) —**
+**— 13/13 § 본문 완성. V06 → V07 진화 완료. 변호사 자문 / 식약처 외부 의존만 잔여. —**
