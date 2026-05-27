@@ -12,6 +12,7 @@
 //   - usePathname() 은 client-only hook — 따라서 본 컴포넌트만 'use client'.
 //
 // 제외 경로 정책 (redirect 안 함):
+//   - /                         : 홈 (둘러보기 — "나중에 결정할게요" 출구).
 //   - /settings/privacy-consent : 동의 페이지 자체.
 //   - /onboarding               : wizard Step2 가 동의 받는 흐름 (중복 redirect 방지).
 //   - /login*                   : 로그인 흐름 중간.
@@ -53,9 +54,13 @@ export const CONSENT_REDIRECT_EXCLUDED_PREFIXES: ReadonlyArray<string> = [
 /**
  * 주어진 pathname 이 redirect 대상에서 제외되는지 판정.
  * 정확 매칭 + prefix 매칭 (예: "/login/parent", "/auth/callback") 모두 지원.
+ *
+ * "/" 는 single-char path 라 prefix 매칭 (`startsWith("/")`) 시 모든 path 와 충돌하므로
+ * exact match 만 별도 처리. CONSENT_REDIRECT_EXCLUDED_PREFIXES 에서는 의도적으로 제외.
  */
 export function isConsentRedirectExcluded(pathname: string): boolean {
   if (!pathname) return true; // 안전 기본값 — 경로 미확정이면 redirect 안 함.
+  if (pathname === "/") return true; // 홈은 exact match 만 제외 (둘러보기 출구).
   return CONSENT_REDIRECT_EXCLUDED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );

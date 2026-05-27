@@ -126,7 +126,7 @@ export default async function SettingsPrivacyConsentPage() {
         initialOverseasConsented={overseasAt !== null}
       />
 
-      <section className="mt-8 space-y-2 text-sm text-slate-500 dark:text-slate-500">
+      <section className="mt-8 space-y-3 text-sm text-slate-500 dark:text-slate-500">
         <p>
           자세한 내용은{" "}
           <Link href="/privacy" className="underline hover:no-underline">
@@ -138,6 +138,23 @@ export default async function SettingsPrivacyConsentPage() {
           </Link>{" "}
           을 참고해 주세요.
         </p>
+        {!bothConsented ? (
+          <p
+            className="text-slate-600 dark:text-slate-400"
+            data-testid="privacy-consent-skip-section"
+          >
+            <Link
+              href="/"
+              data-testid="privacy-consent-skip-link"
+              className="underline hover:no-underline"
+            >
+              나중에 결정할게요 (홈으로 이동)
+            </Link>
+            <span className="ml-2 text-xs text-slate-500">
+              — 자녀 진단 / 미션 / 리포트는 동의 후에만 이용 가능
+            </span>
+          </p>
+        ) : null}
         <p>
           <Link
             href="/settings"

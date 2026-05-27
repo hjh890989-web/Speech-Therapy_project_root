@@ -91,6 +91,12 @@ describe("ConsentRedirectGate", () => {
     render(<ConsentRedirectGate hasConsented={false} />);
     expect(routerReplaceMock).not.toHaveBeenCalled();
   });
+
+  it("미동의 + / (홈, exact) → redirect 안 함 (둘러보기 출구)", () => {
+    usePathnameMock.mockReturnValue("/");
+    render(<ConsentRedirectGate hasConsented={false} />);
+    expect(routerReplaceMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("isConsentRedirectExcluded", () => {
@@ -121,5 +127,12 @@ describe("isConsentRedirectExcluded", () => {
   it("/login 으로 시작하지만 prefix 가 아닌 path → 안전 매칭", () => {
     // /loginextra 같은 케이스 — prefix + "/" 가드로 차단.
     expect(isConsentRedirectExcluded("/loginextra")).toBe(false);
+  });
+
+  it("/ (홈) exact match → true / 다른 path 는 영향 없음", () => {
+    expect(isConsentRedirectExcluded("/")).toBe(true);
+    // "/" 단순 prefix 매칭 충돌 방지 검증.
+    expect(isConsentRedirectExcluded("/missions")).toBe(false);
+    expect(isConsentRedirectExcluded("/diagnose")).toBe(false);
   });
 });
