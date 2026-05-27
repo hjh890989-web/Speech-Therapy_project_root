@@ -267,8 +267,9 @@ describe("REQ-FUNC-007 mission SPL 게이트 — 통합 시나리오", () => {
     fireEvent.click(screen.getByRole("button", { name: /미션 시작/ }));
 
     await flushMicrotasks();
+    // FR-Q-003 fix — MIN_MISSION_DURATION_SEC=30 가드 통과 위해 30초 advance.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_000);
+      await vi.advanceTimersByTimeAsync(30_000);
     });
     expect(getUserMedia).toHaveBeenCalledTimes(1);
 
@@ -291,8 +292,9 @@ describe("REQ-FUNC-007 mission SPL 게이트 — 통합 시나리오", () => {
     currentSimDb = 70;
 
     await flushMicrotasks();
+    // FR-Q-003 fix — MIN_MISSION_DURATION_SEC=30 가드 통과 위해 30초 advance (이전 10s).
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(10_000);
+      await vi.advanceTimersByTimeAsync(30_000);
     });
 
     // 미션 자체는 정상 진행 — running 상태 유지 + 완료 버튼 노출.

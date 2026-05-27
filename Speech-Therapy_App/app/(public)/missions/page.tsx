@@ -195,19 +195,31 @@ export default async function MissionsPage() {
         />
       </section>
 
-      {/* 전체 카드 그리드 */}
+      {/* 전체 카드 그리드 — 5 자모 × 3 난이도 = 15개 모두 노출.
+          (2026-05-27 fix — recommended/mockRecommended filter 제거. 사용자가 "왜 ㄱ 따라하기 /
+          ㅅ 문장 만들기 안 보이지?" 혼란 회피. 추천 카드는 시각 강조 ring 으로 분리.) */}
       <section aria-label="미션 카드 그리드">
-        <h2 className="mb-3 text-lg font-semibold">다른 미션 둘러보기</h2>
+        <h2 className="mb-3 text-lg font-semibold">전체 미션 둘러보기</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {dailyMissionFixtures
-            .filter((m: MissionFixture) => m.id !== recommended.id && m.id !== mockRecommended.id)
-            .map((mission) => (
+          {dailyMissionFixtures.map((mission) => {
+            const isRecommended =
+              mission.id === recommended.id || mission.id === mockRecommended.id;
+            return (
               <article
                 key={mission.id}
-                className="rounded-lg border border-gray-200 p-4 transition hover:border-emerald-400 dark:border-gray-700"
+                className={`rounded-lg border p-4 transition hover:border-emerald-400 dark:border-gray-700 ${
+                  isRecommended
+                    ? "border-emerald-500 ring-2 ring-emerald-200 dark:ring-emerald-900/40"
+                    : "border-gray-200"
+                }`}
               >
                 <p className="mb-1 text-xs text-gray-500 dark:text-gray-400">
                   {PHONEME_TITLE[mission.targetPhoneme] ?? `${mission.targetPhoneme} 소리`}
+                  {isRecommended && (
+                    <span className="ml-2 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">
+                      ★ 오늘의 추천
+                    </span>
+                  )}
                 </p>
                 <h3 className="mb-2 text-base font-semibold">{mission.title}</h3>
                 <p className="mb-3 line-clamp-2 text-xs text-gray-600 dark:text-gray-400">
@@ -225,7 +237,8 @@ export default async function MissionsPage() {
                   시작
                 </Link>
               </article>
-            ))}
+            );
+          })}
         </div>
       </section>
 

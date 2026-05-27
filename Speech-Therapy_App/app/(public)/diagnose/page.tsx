@@ -54,8 +54,25 @@ async function fetchPrefillForCurrentUser(): Promise<PrefillValues> {
   }
 }
 
-export default async function DiagnosePage() {
-  const prefill = await fetchPrefillForCurrentUser();
+interface DiagnosePageProps {
+  // Next.js 16 — searchParams 는 async (Promise).
+  searchParams: Promise<{ phoneme?: string }>;
+}
+
+export default async function DiagnosePage({ searchParams }: DiagnosePageProps) {
+  const [sp, prefill] = await Promise.all([
+    searchParams,
+    fetchPrefillForCurrentUser(),
+  ]);
+
+  // FR-Q-003 fix — /missions 카드 "시작" 이 /diagnose?phoneme=X 로 routing.
+  // 기존: searchParams 무시 → user.preferredPhonemes[0] 만 사용 → 모든 카드 같은 음소.
+  // 수정: searchParams.phoneme valid 시 우선. fallback = user prefill.
+  const queryPhoneme: AllowedPhoneme | null =
+    (ALLOWED_PHONEMES as ReadonlyArray<string>).includes(sp.phoneme ?? "")
+      ? (sp.phoneme as AllowedPhoneme)
+      : null;
+  const finalPhoneme = queryPhoneme ?? prefill.phoneme;
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
@@ -77,7 +94,7 @@ export default async function DiagnosePage() {
 
       <DiagnosisForm
         prefillChildAgeMonths={prefill.childAgeMonths}
-        prefillPhoneme={prefill.phoneme}
+        prefillPhoneme={finalPhoneme}
       />
 
       {/* 하단 Disclaimer */}
