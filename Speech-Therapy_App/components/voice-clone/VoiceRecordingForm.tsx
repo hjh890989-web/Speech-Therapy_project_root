@@ -49,19 +49,25 @@ export function VoiceRecordingForm() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
       chunksRef.current = [];
+      // FR-Q-021 fix — `onstop` closure 안에서 stale `state.startedAt` 참조 회피.
+      // 기존 코드: `state.kind === "recording" ? state.startedAt : Date.now()` 는
+      // closure 의 state 가 startRecording 호출 시점 (=idle) 이라 항상 false →
+      // durationMs = 0 → isUnderMin 항상 true → 모든 녹음에 "30초 미만" 경고 노출.
+      // 수정: local `startedAt` 캡처 → closure 안전.
+      const startedAt = Date.now();
       mr.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
       mr.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const durationMs = Date.now() - (state.kind === "recording" ? state.startedAt : Date.now());
+        const durationMs = Date.now() - startedAt;
         setState({ kind: "recorded", blob, durationMs });
         // stream tracks 정리.
         for (const t of stream.getTracks()) t.stop();
       };
       mediaRecorderRef.current = mr;
       mr.start();
-      setState({ kind: "recording", startedAt: Date.now() });
+      setState({ kind: "recording", startedAt });
       setElapsed(0);
     } catch (err) {
       setState({
@@ -72,7 +78,7 @@ export function VoiceRecordingForm() {
             : "마이크 접근에 실패했어요. 권한을 확인해 주세요.",
       });
     }
-  }, [state]);
+  }, []);
 
   const stopRecording = useCallback(() => {
     const mr = mediaRecorderRef.current;
