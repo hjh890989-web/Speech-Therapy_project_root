@@ -24,9 +24,27 @@ export interface OfflineEntry {
   institutionId: string | null;
 }
 
-/** 허용 kind — Server Action Zod 와 정합. */
-export const OFFLINE_ENTRY_KINDS = ["practice", "observation", "note"] as const;
+/** 허용 kind — Server Action Zod 와 정합.
+ *
+ * - practice / observation / note: teacher / principal / admin 입력 (FR-Q-013 base)
+ * - parent_play / parent_external_session: 부모 본인 입력 (FR-C-030 F17, V07 신규)
+ *   parent 본인 user.id == userId == authorId 인 RBAC 분기에서만 허용.
+ */
+export const OFFLINE_ENTRY_KINDS = [
+  "practice",
+  "observation",
+  "note",
+  "parent_play",
+  "parent_external_session",
+] as const;
 export type OfflineEntryKind = (typeof OFFLINE_ENTRY_KINDS)[number];
+
+/** 부모용 kind subset — FR-C-030 의 Zod 가드에서 사용. */
+export const PARENT_CARE_LOG_KINDS = [
+  "parent_play",
+  "parent_external_session",
+] as const;
+export type ParentCareLogKind = (typeof PARENT_CARE_LOG_KINDS)[number];
 
 /** note 본문 최대 길이 — Zod 검증 표면과 동일. */
 export const OFFLINE_ENTRY_NOTE_MAX_LENGTH = 500;

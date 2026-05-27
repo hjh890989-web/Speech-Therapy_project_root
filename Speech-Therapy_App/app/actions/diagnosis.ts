@@ -35,6 +35,8 @@ import { trackEvent } from "@/lib/analytics";
 // SEC-COMP-PIPA (Grill #3A) — 인증 user 의 PIPA 동의 hard 가드 (UI 가드 보완).
 // + 익명 user 가드 — 본 PR 에서 input.pipaUnderageConsent + input.overseasTransferConsent 검증.
 import { assertConsentedIfAuthenticated, ConsentRequiredError } from "@/lib/policy/consent-guard";
+// MON-005 (V07) — PIPA 가드 위반 시도 Slack alert (fire-and-forget, R4 정합).
+import { reportPipaViolation } from "@/lib/monitoring/pipa-violation";
 import {
   DiagnosisInputSchema,
   DiagnosisOutputSchema,
@@ -86,13 +88,31 @@ export async function analyzeDiagnosis(
   // DiagnosisForm 의 catch 가 "PIPA_CONSENT_REQUIRED" message 를 잡아 /settings/privacy-consent
   // 로 안내.
   // MOCK 모드 진입 _전_ 에 호출하여 우회 차단 (USE_MOCK_DIAGNOSIS 도 인증 user 가드 적용).
-  await assertConsentedIfAuthenticated();
+  // MON-005: ConsentRequiredError catch → fire-and-forget Slack alert + re-throw.
+  try {
+    await assertConsentedIfAuthenticated();
+  } catch (err) {
+    if (err instanceof ConsentRequiredError) {
+      // Fire-and-forget — Slack 발송이 메인 흐름 차단 X.
+      void reportPipaViolation({
+        ctx: { layer: "2_analyze_authenticated", serverAction: "analyzeDiagnosis" },
+      });
+    }
+    throw err;
+  }
 
   // 익명 user 가드 — 인증 user 가 아닐 때 (input.userId 미제공)
   // input.pipaUnderageConsent + input.overseasTransferConsent 둘 다 true 여야 통과.
   // DiagnosisForm 의 inline 체크박스가 클라이언트 측 가드 → 본 가드는 hard enforcement.
   if (!input.userId) {
     if (!input.pipaUnderageConsent || !input.overseasTransferConsent) {
+      // MON-005: 익명 5층 가드 위반 — fire-and-forget Slack alert.
+      void reportPipaViolation({
+        ctx: {
+          layer: "5_analyze_anonymous_boolean",
+          serverAction: "analyzeDiagnosis",
+        },
+      });
       throw new ConsentRequiredError();
     }
   }

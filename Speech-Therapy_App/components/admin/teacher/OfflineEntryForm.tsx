@@ -41,6 +41,9 @@ const KIND_LABEL: Record<OfflineEntryKind, string> = {
   practice: "발음 연습",
   observation: "관찰",
   note: "메모",
+  // FR-C-030 (F17) — 부모 본인 입력용 kind. teacher 측 UI 에서는 미선택 — Server Action 에서 RBAC 분기.
+  parent_play: "가정 놀이",
+  parent_external_session: "외부 센터 세션",
 };
 
 /** YYYY-MM-DDTHH:mm 형식 — `<input type="datetime-local" />` 기본값. */

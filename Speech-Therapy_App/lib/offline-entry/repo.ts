@@ -28,9 +28,11 @@ import {
   OFFLINE_ENTRY_KINDS,
   OFFLINE_ENTRY_NOTE_MAX_LENGTH,
   OFFLINE_ENTRY_DEFAULT_LIMIT,
+  PARENT_CARE_LOG_KINDS,
   type CreateOfflineEntryInput,
   type OfflineEntry,
   type OfflineEntryKind,
+  type ParentCareLogKind,
 } from "./types";
 
 // 기존 import path 호환 — server-only callers (lib/timeline, Server Action, RSC page,
@@ -39,9 +41,11 @@ export {
   OFFLINE_ENTRY_KINDS,
   OFFLINE_ENTRY_NOTE_MAX_LENGTH,
   OFFLINE_ENTRY_DEFAULT_LIMIT,
+  PARENT_CARE_LOG_KINDS,
   type CreateOfflineEntryInput,
   type OfflineEntry,
   type OfflineEntryKind,
+  type ParentCareLogKind,
 };
 
 /**
