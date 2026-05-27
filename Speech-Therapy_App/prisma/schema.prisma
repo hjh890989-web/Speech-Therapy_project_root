@@ -512,3 +512,48 @@ model AuditLog {
   @@index([actorId])
   @@index([tableName, rowId])
 }
+
+// ============================================================================
+// DB-016 (V07 신규) — HITL 재학습 데이터 적재 테이블
+//
+// Refs: V07 §5.3 (재학습 파이프라인), REQ-FUNC-HITL-005, ADR-11.
+//
+// 책임:
+//   - 전문가가 HITLQueue.groundTruthScore 를 UPDATE 하면 PostgreSQL TRIGGER
+//     `sync_retraining_data` 가 본 테이블에 자동 INSERT.
+//   - 3 게이트 Daily Cron (FR-C-HITL-006) 이 diffPct + cumulative + HHI 통과 시만
+//     외부 ML 엔지니어 위탁 알림 → admin 승인 후 재배포.
+//
+// R4 정합:
+//   - aiScore / groundTruthScore JSONB 는 audit_sanitize_jsonb 강제 통과.
+//   - expertComment 등 PII 위험 컬럼은 미포함 (HITLQueue 의 metadata 만 추출).
+//
+// F10 consent Tier 정합:
+//   - consentTier T1~T4 — T1/T2/T3 는 즉시 INSERT 차단 (사용자 동의 미충족).
+//   - T4-a/b/c 만 INSERT 허용 — TRIGGER 내부 분기.
+//   - 현재 사용자 base 에 T4 consent tier 컬럼 부재 — 본 PR 의 sanitized 컬럼이
+//     "동의 검증 통과 후 INSERT 된" 표식 (default false, TRIGGER 가 true 로 세팅).
+model ModelRetrainingData {
+  id                String   @id @default(uuid()) @db.Uuid
+  /// EvaluationResult.sessionId 와 1:1 (TRIGGER 가 캡처).
+  sessionId         String   @unique
+  /// AI 의 원본 3축 점수 + peerPercentile + confidence — JSONB sanitized.
+  aiScore           Json
+  /// expert 의 보정 3축 점수 + peerPercentile — JSONB sanitized.
+  groundTruthScore  Json
+  /// 전문가 user.id (HITLQueue.assignedExpertId 또는 reviewedBy 우선).
+  expertId          String
+  /// |aiScore.articulation - groundTruthScore.articulation| / aiScore.articulation × 100
+  /// — 3 게이트 의 첫 게이트 (≥ 0.5%) 비교 기준.
+  diffPct           Float
+  /// F10 동의 Tier — "T4-a" / "T4-b" / "T4-c" 만 허용. TRIGGER 가 미충족 row INSERT skip.
+  consentTier       String
+  /// R4 sanitize 통과 표식 — audit_sanitize_jsonb 적용 후 true.
+  sanitized         Boolean  @default(false)
+  /// 적재 시각.
+  createdAt         DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([expertId, createdAt(sort: Desc)])
+  @@index([diffPct])
+}

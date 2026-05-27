@@ -52,11 +52,15 @@ on:
     # audio-cleanup — SEC-001 / FR-C-004 D6 음성 7일 폐기 (PIPA 준수).
     # vercel.json 과 동일 — weekly Sun 3AM UTC.
     - cron: "0 3 * * 0"
+    # hitl-retraining-gate — FR-C-HITL-006 (V07 §5.3.3) 재학습 3 게이트 검증.
+    # 직전 7일 cohort 의 diffPct + cumulative + HHI 검증 후 외부 ML 위탁 알림.
+    # daily 3:30AM UTC (audio-cleanup 와 분리 — 동일 시간 자원 경합 회피).
+    - cron: "30 3 * * *"
   # 수동 trigger — Actions 탭 Run workflow 에서 특정 cron 만 호출 가능.
   workflow_dispatch:
     inputs:
       target:
-        description: "수동 실행할 cron path (예: audio-cleanup). 'all' 시 6개 모두."
+        description: "수동 실행할 cron path (예: audio-cleanup). 'all' 시 7개 모두."
         required: true
         default: "all"
         type: choice
@@ -68,6 +72,7 @@ on:
           - consent-reminder
           - consent-expire
           - audio-cleanup
+          - hitl-retraining-gate
 
 jobs:
   fire-cron:
@@ -98,11 +103,12 @@ jobs:
             ["0 1 * * *"]="consent-reminder"
             ["0 2 * * *"]="consent-expire"
             ["0 3 * * 0"]="audio-cleanup"
+            ["30 3 * * *"]="hitl-retraining-gate"
           )
           if [ -n "$SCHEDULE" ]; then
             paths="${SCHED_MAP[$SCHEDULE]:-}"
           elif [ "$MANUAL" = "all" ] || [ -z "$MANUAL" ]; then
-            paths="error-monitor hitl-escalation funnel-alert consent-reminder consent-expire audio-cleanup"
+            paths="error-monitor hitl-escalation funnel-alert consent-reminder consent-expire audio-cleanup hitl-retraining-gate"
           else
             paths="$MANUAL"
           fi
