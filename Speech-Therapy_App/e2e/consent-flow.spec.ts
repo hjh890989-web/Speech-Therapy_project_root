@@ -111,8 +111,13 @@ test.describe("SEC-COMP-PIPA — 인증 필요 라우트", () => {
     // 최종 도착 URL 이 /login 으로 시작해야 함.
     await page.waitForURL(/\/login/);
     expect(page.url()).toContain("/login");
-    // next 파라미터에 원래 path 포함.
-    expect(page.url()).toContain("next=%2Fsettings%2Fprivacy-consent");
+    // next 파라미터에 원래 path 포함 — Next.js 의 redirect 가 URL-decode 또는
+    // -encode 형식 으로 유지 (환경 따라 다름). 둘 다 통과 허용.
+    const urlAfter = page.url();
+    expect(
+      urlAfter.includes("next=/settings/privacy-consent") ||
+        urlAfter.includes("next=%2Fsettings%2Fprivacy-consent"),
+    ).toBe(true);
     // response 자체는 200 (login 페이지 로드 결과) 또는 redirect chain — 둘 다 OK.
     expect(response?.status()).toBeLessThan(500);
   });

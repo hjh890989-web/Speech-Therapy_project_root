@@ -4,9 +4,15 @@
 // 첫 cut 범위 (FR-Q-001/002 동작 검증):
 // - chromium 데스크톱 + 모바일 viewport
 // - Vitest 와 별개 — `npm run test:e2e` 로 실행
-// - webServer 옵션으로 `npm run dev` 자동 부팅 + cleanup
+//
+// baseURL 분기 (2026-05-27 sub-session):
+// - PLAYWRIGHT_BASE_URL 설정 시: 해당 URL 직접 테스트 (예: Vercel prod). webServer 부팅 skip.
+//   → 본 PC 의 E: drive symlink 이슈로 `next dev` 부팅 실패 회피.
+// - 미설정 시: localhost:4000 + `npm run dev` webServer 자동 부팅.
 
 import { defineConfig, devices } from "@playwright/test";
+
+const usingExternalBaseUrl = Boolean(process.env.PLAYWRIGHT_BASE_URL);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -29,10 +35,13 @@ export default defineConfig({
       use: { ...devices["iPhone 13"] },
     },
   ],
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:4000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  // PLAYWRIGHT_BASE_URL 미설정 시만 webServer 자동 부팅. prod 외부 URL 테스트 시 skip.
+  webServer: usingExternalBaseUrl
+    ? undefined
+    : {
+        command: "npm run dev",
+        url: "http://localhost:4000",
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      },
 });
