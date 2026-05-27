@@ -30,10 +30,16 @@ const RECOMMENDED_MAX_MS = 5 * 60_000; // 5분
 export function VoiceRecordingForm() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  // FR-Q-021 UX 개선 — 업로드 버튼 클릭 시 누락 항목으로 자동 scroll + 강조용 ref.
+  const labelInputRef = useRef<HTMLInputElement>(null);
+  const consentCardRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<RecordingState>({ kind: "idle" });
   const [label, setLabel] = useState("");
   const [consentGiven, setConsentGiven] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  // 시각 강조 (ring) 잠시 표시 — submit 시 누락 항목에 적용.
+  const [highlightConsent, setHighlightConsent] = useState(false);
+  const [highlightLabel, setHighlightLabel] = useState(false);
 
   // 녹음 중 elapsed 시간 표시 (재렌더 트리거).
   useEffect(() => {
@@ -95,12 +101,21 @@ export function VoiceRecordingForm() {
 
   const submit = useCallback(async () => {
     if (state.kind !== "recorded") return;
-    if (!consentGiven) {
-      setState({ kind: "error", message: "음성 클로닝 사용 동의를 체크해 주세요." });
+    // FR-Q-021 UX 개선 — 누락 항목 검사 시 해당 요소로 scroll + 시각 강조 (2s ring).
+    // 라벨 우선 (위쪽) → 동의 (아래쪽) 순서로 안내.
+    if (!label.trim()) {
+      labelInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      labelInputRef.current?.focus();
+      setHighlightLabel(true);
+      setTimeout(() => setHighlightLabel(false), 2000);
+      setState({ kind: "error", message: "라벨을 입력해 주세요 (예: 엄마 목소리)." });
       return;
     }
-    if (!label.trim()) {
-      setState({ kind: "error", message: "라벨을 입력해 주세요 (예: 엄마 목소리)." });
+    if (!consentGiven) {
+      consentCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightConsent(true);
+      setTimeout(() => setHighlightConsent(false), 2000);
+      setState({ kind: "error", message: "음성 클로닝 사용 동의를 체크해 주세요." });
       return;
     }
 
@@ -149,12 +164,15 @@ export function VoiceRecordingForm() {
       <div className="rounded-lg border bg-card p-6">
         <label className="block text-sm font-medium">라벨</label>
         <input
+          ref={labelInputRef}
           type="text"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="예: 엄마 목소리"
           maxLength={50}
-          className="mt-2 w-full rounded-md border px-3 py-2 text-sm"
+          className={`mt-2 w-full rounded-md border px-3 py-2 text-sm transition-shadow ${
+            highlightLabel ? "ring-2 ring-amber-500" : ""
+          }`}
           disabled={state.kind === "submitting" || state.kind === "success"}
         />
 
@@ -188,11 +206,12 @@ export function VoiceRecordingForm() {
                 >
                   다시 녹음
                 </button>
+                {/* FR-Q-021 UX 개선 — disabled 제거. 클릭 시 누락 항목으로 scroll
+                    + 시각 강조 + error 메시지로 안내 (마찰 해소). */}
                 <button
                   type="button"
                   onClick={submit}
-                  disabled={!consentGiven || !label.trim()}
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                   업로드
                 </button>
@@ -213,7 +232,12 @@ export function VoiceRecordingForm() {
         )}
       </div>
 
-      <div className="rounded-lg border bg-card p-6">
+      <div
+        ref={consentCardRef}
+        className={`rounded-lg border bg-card p-6 transition-shadow ${
+          highlightConsent ? "ring-2 ring-amber-500" : ""
+        }`}
+      >
         <label className="flex items-start gap-3">
           <input
             type="checkbox"
