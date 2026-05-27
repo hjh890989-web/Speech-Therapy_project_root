@@ -47,6 +47,9 @@ export interface MissionRunnerProps {
   difficultyLevel: number;
   /// 기본 120s (2분). REQ-FUNC-016 의 1~3분 범위 내. 호출 측에서 60~180 조정 가능.
   durationSec?: number;
+  /// FR-Q-003-CONTENT — running phase 에 inject 되는 미션 콘텐츠 (난이도 2 빈칸 / 난이도 3 문장).
+  /// timer + progress 아래, intervention/mirror 위 영역에 렌더된다. 미지정 시 기존 호출자와 동일하게 동작.
+  children?: React.ReactNode;
 }
 
 /**
@@ -71,6 +74,7 @@ function MissionRunnerInner({
   targetPhoneme,
   difficultyLevel,
   durationSec = 120,
+  children,
 }: MissionRunnerProps) {
   const [phase, setPhase] = useState<Phase>("ready");
   const [remainingSec, setRemainingSec] = useState(durationSec);
@@ -247,6 +251,8 @@ function MissionRunnerInner({
             style={{ width: `${progressPct}%` }}
           />
         </div>
+        {/* FR-Q-003-CONTENT — 난이도별 콘텐츠 (난이도 2 빈칸, 난이도 3 문장) inject 슬롯. */}
+        {children}
         {intervention.tooltipVisible && (
           <ParentInterventionTooltip
             targetPhoneme={targetPhoneme}

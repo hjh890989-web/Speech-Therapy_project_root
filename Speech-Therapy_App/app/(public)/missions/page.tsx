@@ -230,8 +230,10 @@ export default async function MissionsPage() {
                   <span>·</span>
                   <span>{mission.ageRangeMin}~{mission.ageRangeMax}개월</span>
                 </div>
+                {/* FR-Q-003-CONTENT — 난이도별 콘텐츠 분기. 5/27 prod 검증 회귀 fix
+                    (이전엔 모든 카드가 /diagnose 로 fallback). */}
                 <Link
-                  href={`/diagnose?phoneme=${encodeURIComponent(mission.targetPhoneme)}`}
+                  href={`/missions/${encodeURIComponent(mission.id)}/play`}
                   className="inline-block min-h-[44px] rounded-md border border-emerald-500 px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
                 >
                   시작
