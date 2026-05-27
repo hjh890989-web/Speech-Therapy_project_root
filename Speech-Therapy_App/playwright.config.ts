@@ -31,8 +31,12 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
     {
+      // 2026-05-27 sub-session: iPhone 13 (webkit 엔진) → Pixel 5 (chromium 엔진).
+      // webkit 미설치 환경 (`npx playwright install chromium` 만) 에서도 모바일 viewport
+      // 테스트 가능. 모바일 사용자 경험 검증의 본질은 viewport / touch / breakpoint 이므로
+      // 엔진 차이는 무시 가능 (별도 사용자 측 webkit 검증 필요 시 install).
       name: "chromium-mobile",
-      use: { ...devices["iPhone 13"] },
+      use: { ...devices["Pixel 5"] },
     },
   ],
   // PLAYWRIGHT_BASE_URL 미설정 시만 webServer 자동 부팅. prod 외부 URL 테스트 시 skip.

@@ -229,8 +229,8 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
             data-testid="result-anonymous-signup-hint"
             className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
           >
-            💡 <strong>회원가입하면 별 ⭐ 과 결과가 영구 보존</strong>돼요. 다음 진단 시 자녀
-            정보도 자동으로 불러와요.
+            💡 <strong>회원가입하면 별 ⭐ 과 결과가 영구 보존</strong>돼요. 다음 발음 확인 시
+            자녀 정보도 자동으로 불러와요.
           </p>
         )}
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
