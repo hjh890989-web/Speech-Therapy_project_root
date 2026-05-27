@@ -28,6 +28,9 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
     difficultyLevel: 2,
     durationSec: 5,
   };
+  // FR-Q-003 fix — MIN_MISSION_DURATION_SEC=30 가드 통과용 long-duration props.
+  // 완료 분기 테스트만 사용 (시작/타이머 자동 종료/silence intervention 은 5s 유지).
+  const longDurationProps = { ...baseProps, durationSec: 120 };
 
   it("초기 phase=ready: '미션 시작하기' 버튼 노출", () => {
     render(<MissionRunner {...baseProps} />);
@@ -49,10 +52,15 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
     });
   });
 
-  it("완료 버튼 → mission_completed{manual_done} + completed phase", () => {
-    render(<MissionRunner {...baseProps} />);
+  it("완료 버튼 → mission_completed{manual_done} + completed phase (30s+ 후)", () => {
+    render(<MissionRunner {...longDurationProps} />);
     fireEvent.click(screen.getByRole("button", { name: /미션 시작/ }));
     trackMock.mockClear();
+
+    // FR-Q-003 fix — MIN_MISSION_DURATION_SEC=30 가드 통과 위해 30초 advance.
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "완료" }));
 
@@ -64,6 +72,26 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
         completedReason: "manual_done",
       }),
     );
+  });
+
+  it("FR-Q-003 fix — 30s 미만 '완료' 클릭 → warning + mission_completed 미발송 (W-AUR KPI 보호)", () => {
+    render(<MissionRunner {...longDurationProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /미션 시작/ }));
+    trackMock.mockClear();
+
+    // 5초만 advance (30s 미만).
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "완료" }));
+
+    // mission_completed 미발송 + warning 노출 + phase 유지 (running).
+    expect(trackMock).not.toHaveBeenCalledWith(
+      "mission_completed",
+      expect.anything(),
+    );
+    expect(screen.getByTestId("mission-runner-warning")).toBeInTheDocument();
+    expect(screen.getByTestId("mission-runner-running")).toBeInTheDocument();
   });
 
   it("건너뛰기 → mission_completed{skipped}", () => {

@@ -14,6 +14,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MirrorButton } from "@/components/MirrorButton";
 import { MirrorMode } from "@/components/MirrorMode";
 import { SplToast } from "@/components/SplToast";
 import { MicStreamProvider } from "@/lib/audio/MicStreamProvider";
@@ -30,6 +31,11 @@ const SUPPORTED_PHONEMES: ReadonlyArray<SupportedPhoneme> = ["ㄱ", "ㄴ", "ㅅ"
 // useMissionIntervention 의 cooldownMs (300_000) 와 동일 정책 — 미션 1회 안에서 같은
 // SPL alert 가 spam 처럼 발화하지 않도록 보호. Toast 노출도 cooldown 안엔 skip.
 const SPL_ALERT_COOLDOWN_MS = 300_000;
+
+// FR-Q-003 fix — 미션 진실성 가드 (W-AUR KPI 보호).
+// 사용자가 미션 시작 즉시 "완료" 클릭 시 mission_completed 발송 → KPI inflate 위험.
+// 30초 미만 "완료" 클릭 시 차단 + "건너뛰기" 안내 (skipped reason 으로 분리 분석).
+const MIN_MISSION_DURATION_SEC = 30;
 
 function isSupportedPhoneme(p: string): p is SupportedPhoneme {
   return (SUPPORTED_PHONEMES as ReadonlyArray<string>).includes(p);
@@ -70,6 +76,8 @@ function MissionRunnerInner({
   const [remainingSec, setRemainingSec] = useState(durationSec);
   const startTimestampRef = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // FR-Q-003 fix — 30초 미만 "완료" 시 사용자에게 warning 노출용 errorMessage state.
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // FR-C-006 — 미션 침묵 감지 → 2단계 intervention (60s tooltip → 90s mirror).
   // orchestrator 가 trackEvent("mission_silence_intervention") 발화 + cooldown / reset 모두 처리.
@@ -132,9 +140,21 @@ function MissionRunnerInner({
 
   const finish = useCallback(
     (reason: "timer_ended" | "manual_done" | "skipped") => {
-      clearTimer();
       const started = startTimestampRef.current ?? Date.now();
       const elapsedSec = Math.min(durationSec, Math.round((Date.now() - started) / 1000));
+
+      // FR-Q-003 fix — manual_done 시 30초 미만 차단 (W-AUR KPI 보호).
+      // 진짜 종료를 원하면 "건너뛰기" 사용 — skipped reason 으로 funnel 분석 분리.
+      // timer_ended (자동) / skipped (명시) 는 통과.
+      if (reason === "manual_done" && elapsedSec < MIN_MISSION_DURATION_SEC) {
+        setErrorMessage(
+          `미션 시작 후 ${MIN_MISSION_DURATION_SEC}초 이상 연습한 뒤 완료해 주세요. 지금 종료하시려면 '건너뛰기' 를 눌러 주세요.`,
+        );
+        return;
+      }
+
+      setErrorMessage(null);
+      clearTimer();
       trackEvent("mission_completed", {
         missionId,
         elapsedSec,
@@ -241,6 +261,23 @@ function MissionRunnerInner({
               referenceOverlay={phonemeToOverlay(targetPhoneme)}
             />
           </div>
+        )}
+        {/* FR-Q-014 — 수동 mirror trigger. 자동 (90s 침묵) trigger 활성 중이면 중복 노출 회피. */}
+        {!intervention.mirrorActive && (
+          <MirrorButton
+            missionId={missionId}
+            referenceOverlay={phonemeToOverlay(targetPhoneme)}
+          />
+        )}
+        {/* FR-Q-003 fix — 30초 미만 "완료" 시 warning. */}
+        {errorMessage && (
+          <p
+            role="alert"
+            data-testid="mission-runner-warning"
+            className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+          >
+            {errorMessage}
+          </p>
         )}
         <div className="flex gap-2">
           <button
