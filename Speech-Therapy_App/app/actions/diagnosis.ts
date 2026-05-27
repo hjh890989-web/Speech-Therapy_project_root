@@ -32,6 +32,8 @@ import { maybeEnqueueHitl, HITL_CONFIDENCE_THRESHOLD } from "@/lib/hitl/enqueue"
 import { notifyHITLBySlack } from "@/lib/notifications/slack";
 import { getDiagnosisMock } from "@/lib/mocks/diagnosis";
 import { trackEvent } from "@/lib/analytics";
+// SEC-COMP-PIPA (Grill #3A) — 인증 user 의 PIPA 동의 hard 가드 (UI 가드 보완).
+import { assertConsentedIfAuthenticated } from "@/lib/policy/consent-guard";
 import {
   DiagnosisInputSchema,
   DiagnosisOutputSchema,
@@ -76,6 +78,14 @@ export async function analyzeDiagnosis(
 ): Promise<DiagnosisOutput> {
   // ── 1단계: 입력 검증 ────────────────────────────────────────────
   const input: DiagnosisInput = DiagnosisInputSchema.parse(rawInput);
+
+  // ── SEC-COMP-PIPA hard 가드 (Grill #3A) ─────────────────────────
+  // 인증 user 의 두 동의 (pipaUnderageConsentAt + overseasTransferConsentAt) 가
+  // 모두 not-NULL 인지 server-side 에서 검증. 미동의 시 ConsentRequiredError throw —
+  // DiagnosisForm 의 catch 가 "PIPA_CONSENT_REQUIRED" message 를 잡아 /settings/privacy-consent
+  // 로 안내. 익명 user 는 가드 통과 (별도 PR scope).
+  // MOCK 모드 진입 _전_ 에 호출하여 우회 차단 (USE_MOCK_DIAGNOSIS 도 인증 user 가드 적용).
+  await assertConsentedIfAuthenticated();
 
   // ── MOCK 모드 fallback (USE_MOCK_DIAGNOSIS=true) ────────────────
   if (options.searchParams) {

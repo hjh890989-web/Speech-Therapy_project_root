@@ -55,18 +55,36 @@ const PROGRESS_STAGES: ReadonlyArray<{ ms: number; label: string }> = [
  * MicStreamProvider 가 reference-counted getUserMedia 호출 / cleanup 을 단일화.
  * SpeechRecognition 은 Web Speech API 자체 mic 관리 → 본 Provider scope 밖.
  */
-export function DiagnosisForm() {
+export interface DiagnosisFormProps {
+  /// 인증 user 의 onboarding 입력값 — 진단 폼 prefill 에 사용.
+  /// 익명 user 또는 미입력은 기본값 (36개월 / ㅅ) 폴백.
+  prefillChildAgeMonths?: number | null;
+  prefillPhoneme?: (typeof PHONEMES)[number] | null;
+}
+
+export function DiagnosisForm(props: DiagnosisFormProps = {}) {
   return (
     <MicStreamProvider>
-      <DiagnosisFormInner />
+      <DiagnosisFormInner {...props} />
     </MicStreamProvider>
   );
 }
 
-function DiagnosisFormInner() {
+function DiagnosisFormInner({
+  prefillChildAgeMonths,
+  prefillPhoneme,
+}: DiagnosisFormProps) {
   const router = useRouter();
-  const [childAgeMonths, setChildAgeMonths] = useState(36);
-  const [targetPhoneme, setTargetPhoneme] = useState<(typeof PHONEMES)[number]>("ㅅ");
+  const [childAgeMonths, setChildAgeMonths] = useState(
+    prefillChildAgeMonths != null && prefillChildAgeMonths >= 24 && prefillChildAgeMonths <= 84
+      ? prefillChildAgeMonths
+      : 36,
+  );
+  const [targetPhoneme, setTargetPhoneme] = useState<(typeof PHONEMES)[number]>(
+    prefillPhoneme != null && (PHONEMES as ReadonlyArray<string>).includes(prefillPhoneme)
+      ? prefillPhoneme
+      : "ㅅ",
+  );
   /// Sprint 2 §2 — 부모가 발화 전에 선택하는 의도 단어. 미선택 시 발화/제출 차단.
   const [intendedWord, setIntendedWord] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
@@ -344,8 +362,15 @@ function DiagnosisFormInner() {
       });
       router.push(`/diagnose/result/${result.sessionId}?${params.toString()}`);
     } catch (err) {
-      // LLM_TIMEOUT / INTERNAL_ERROR / Zod validation 등.
+      // LLM_TIMEOUT / INTERNAL_ERROR / Zod validation / PIPA_CONSENT_REQUIRED 등.
       const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("PIPA_CONSENT_REQUIRED")) {
+        // SEC-COMP-PIPA hard 가드 — 인증 user 가 미동의 상태로 진단 시도.
+        // ConsentRedirectGate (layout) 가 평소엔 잡지만, 동의 직후 취소 / DB race 등
+        // edge case 에서 Server Action 측 가드가 작동. 즉시 동의 페이지로 안내.
+        router.push("/settings/privacy-consent");
+        return;
+      }
       if (message.includes("LLM_TIMEOUT")) {
         setSubmitError("분석에 시간이 오래 걸려요. 잠시 후 다시 시도해 주세요.");
       } else if (message.includes("GOOGLE_GENERATIVE_AI_API_KEY")) {

@@ -1,7 +1,14 @@
 // FR-Q-001 — 무로그인 5분 발음 확인 SSR 페이지 (Server Component).
 // REQ-FUNC-008~010, REQ-NF-003. Disclaimer 페이지 상단+하단 노출.
 // CON-04 UI 카피 금칙어 0건: "발음 확인 / 발달 단계 / 부모 안내" 등 비의료 표현 사용.
+//
+// 5/27 prefill 추가 (Grill #3A 후속):
+//   - 인증 user 의 User.childAgeMonths + User.preferredPhonemes 를 1 query 로 fetch.
+//   - DiagnosisForm 에 prefill props 로 전달 → onboarding Step2 입력값 자동 반영.
+//   - 익명 user 또는 graceful 실패 시 기본값 (36개월 / ㅅ) — DiagnosisForm 내부 useState 가 처리.
 
+import { prisma } from "@/lib/db";
+import { getCachedUser } from "@/lib/auth/cached-get-user";
 import { DiagnosisForm } from "./DiagnosisForm";
 
 export const metadata = {
@@ -10,7 +17,46 @@ export const metadata = {
     "회원가입 없이 5분 안에 아이의 발음 발달 상태를 부모님께 안내해 드려요. 의료적 평가가 아닌 발달 확인용 보조 도구입니다.",
 };
 
-export default function DiagnosePage() {
+// 인증 + DB 상태는 매 요청 fresh — 정적 캐시 차단.
+export const dynamic = "force-dynamic";
+
+const ALLOWED_PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
+type AllowedPhoneme = (typeof ALLOWED_PHONEMES)[number];
+
+interface PrefillValues {
+  childAgeMonths: number | null;
+  phoneme: AllowedPhoneme | null;
+}
+
+async function fetchPrefillForCurrentUser(): Promise<PrefillValues> {
+  const fallback: PrefillValues = { childAgeMonths: null, phoneme: null };
+  // Performance: getCachedUser 는 layout 의 MainNav / OnboardingRedirectShim / ConsentRedirectShim 와 dedup.
+  const user = await getCachedUser();
+  if (!user) return fallback;
+  try {
+    const row = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { childAgeMonths: true, preferredPhonemes: true },
+    });
+    if (!row) return fallback;
+    const phoneme = (row.preferredPhonemes ?? []).find((p): p is AllowedPhoneme =>
+      (ALLOWED_PHONEMES as ReadonlyArray<string>).includes(p),
+    );
+    return {
+      childAgeMonths:
+        row.childAgeMonths != null && row.childAgeMonths >= 24 && row.childAgeMonths <= 84
+          ? row.childAgeMonths
+          : null,
+      phoneme: phoneme ?? null,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export default async function DiagnosePage() {
+  const prefill = await fetchPrefillForCurrentUser();
+
   return (
     <main className="mx-auto max-w-2xl px-4 py-8 sm:py-12">
       {/* 상단 Disclaimer */}
@@ -29,7 +75,10 @@ export default function DiagnosePage() {
         </p>
       </header>
 
-      <DiagnosisForm />
+      <DiagnosisForm
+        prefillChildAgeMonths={prefill.childAgeMonths}
+        prefillPhoneme={prefill.phoneme}
+      />
 
       {/* 하단 Disclaimer */}
       <p
