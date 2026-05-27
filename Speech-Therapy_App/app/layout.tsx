@@ -7,6 +7,7 @@ import "./globals.css";
 import { ServiceWorkerRegister } from "./sw-register";
 import { InstitutionHeader } from "@/components/InstitutionHeader";
 import { OfflineToast } from "@/components/OfflineToast";
+import { MedicalDisclaimerFooter } from "@/components/MedicalDisclaimerFooter";
 
 // 부팅 시 1회 환경변수 검증 — 누락 시 부팅 단계에서 throw (사용자 첫 요청 전 차단).
 // 본 import 의 side-effect (zod parse) 가 검증 트리거. ESLint 의 "unused" 회피 위해
@@ -63,6 +64,10 @@ export default function RootLayout({
           <InstitutionHeader />
         </Suspense>
         {children}
+        {/* SEC-COMP-MED (Grill #3A A5) — 전역 의료기기법 disclaimer footer.
+            "본 서비스는 의료기기가 아닙니다" + /privacy + /terms 링크. mt-auto 로
+            body 의 flex column 끝에 고정 → 콘텐츠가 짧아도 footer 가 viewport 하단. */}
+        <MedicalDisclaimerFooter />
         {/* FR-C-007 (#30 Replace D5) — 전역 오프라인 감지 Toast. 단일 mount 위치 (다중 노출 회피).
             Service Worker / IndexedDB 미사용 단순화 안 — navigator.onLine 만 구독. */}
         <OfflineToast />

@@ -23,6 +23,8 @@ import { Suspense } from "react";
 import { OnboardingRedirectGate } from "@/components/onboarding/OnboardingRedirectGate";
 import { hasCompletedOnboardingServerSide } from "@/lib/onboarding/server-state";
 import { MainNav } from "@/components/nav/MainNav";
+import { ConsentRedirectGate } from "@/components/consent/ConsentRedirectGate";
+import { hasCompletedPrivacyConsentServerSide } from "@/lib/auth/consent-status";
 
 // Supabase auth + DB 상태는 매 요청 fresh — 정적 캐시 차단.
 export const dynamic = "force-dynamic";
@@ -34,6 +36,15 @@ export const dynamic = "force-dynamic";
 async function OnboardingRedirectShim() {
   const dbCompleted = await hasCompletedOnboardingServerSide();
   return <OnboardingRedirectGate dbCompleted={dbCompleted} />;
+}
+
+/**
+ * 서버 측 PIPA 동의 상태 조회 + 게이트 prop drop.
+ * 미동의 인증 user 가 (public) 페이지 진입 시 /settings/privacy-consent 로 안내.
+ */
+async function ConsentRedirectShim() {
+  const hasConsented = await hasCompletedPrivacyConsentServerSide();
+  return <ConsentRedirectGate hasConsented={hasConsented} />;
 }
 
 export default function PublicLayout({
@@ -49,6 +60,9 @@ export default function PublicLayout({
       </Suspense>
       <Suspense fallback={null}>
         <OnboardingRedirectShim />
+      </Suspense>
+      <Suspense fallback={null}>
+        <ConsentRedirectShim />
       </Suspense>
       <main>{children}</main>
     </>
