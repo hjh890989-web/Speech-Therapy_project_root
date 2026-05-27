@@ -71,3 +71,6 @@ Speech-Therapy_App/coverage/
 Speech-Therapy_App/test-results/
 Speech-Therapy_App/playwright-report/
 Speech-Therapy_App/.swc/
+
+.vercel
+.env*
