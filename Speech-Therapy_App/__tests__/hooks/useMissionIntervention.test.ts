@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 const baseArgs = {
-  missionId: "mock-ㅅ-2",
+  missionId: "mock-s-2",
   enabled: true,
   thresholdMs: 60_000,
   mirrorThresholdMs: 90_000,
@@ -54,7 +54,7 @@ describe("useMissionIntervention — FR-C-006", () => {
     const calls = trackMock.mock.calls.filter((c) => c[0] === "mission_silence_intervention");
     expect(calls).toHaveLength(1);
     expect(calls[0][1]).toMatchObject({
-      missionId: "mock-ㅅ-2",
+      missionId: "mock-s-2",
       intervention: "tooltip",
     });
     expect(calls[0][1].silenceMs).toBeGreaterThanOrEqual(60_000);

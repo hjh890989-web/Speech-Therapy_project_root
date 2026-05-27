@@ -87,7 +87,7 @@ beforeEach(() => {
 
 describe("/missions/[missionId]/play — FR-Q-003-CONTENT 미션 플레이 페이지", () => {
   it("[1] 난이도 2 fixture (mock-ㅅ-2) → MissionWordFill mount + 단어 props 전달", async () => {
-    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-ㅅ-2" }) });
+    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-s-2" }) });
     const { container } = render(ui);
 
     expect(container.querySelector("[data-testid='mock-word-fill']")).not.toBeNull();
@@ -100,7 +100,7 @@ describe("/missions/[missionId]/play — FR-Q-003-CONTENT 미션 플레이 페�
   });
 
   it("[2] 난이도 3 fixture (mock-ㅈ-3) → MissionSentenceBuild mount + 문장 props 전달", async () => {
-    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-ㅈ-3" }) });
+    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-j-3" }) });
     const { container } = render(ui);
 
     expect(container.querySelector("[data-testid='mock-sentence-build']")).not.toBeNull();
@@ -113,7 +113,7 @@ describe("/missions/[missionId]/play — FR-Q-003-CONTENT 미션 플레이 페�
   });
 
   it("[3] 난이도 1 fixture (mock-ㄱ-1) → 콘텐츠 컴포넌트 미 mount, MissionRunner 단독", async () => {
-    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-ㄱ-1" }) });
+    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-g-1" }) });
     const { container } = render(ui);
 
     expect(container.querySelector("[data-testid='mock-mission-runner']")).not.toBeNull();
@@ -131,7 +131,7 @@ describe("/missions/[missionId]/play — FR-Q-003-CONTENT 미션 플레이 페�
   });
 
   it("[5] CON-04 금칙어 0건 (난이도 2 페이지 전체 textContent)", async () => {
-    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-ㅅ-2" }) });
+    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-s-2" }) });
     const { container } = render(ui);
     const text = container.textContent ?? "";
     for (const w of FORBIDDEN) {

@@ -23,7 +23,7 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
   });
 
   const baseProps = {
-    missionId: "mock-ㅅ-2",
+    missionId: "mock-s-2",
     targetPhoneme: "ㅅ",
     difficultyLevel: 2,
     durationSec: 5,
@@ -45,7 +45,7 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
     expect(screen.getByTestId("mission-runner-running")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
     expect(trackMock).toHaveBeenCalledWith("mission_started", {
-      missionId: "mock-ㅅ-2",
+      missionId: "mock-s-2",
       targetPhoneme: "ㅅ",
       difficultyLevel: 2,
       plannedDurationSec: 5,
@@ -68,7 +68,7 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
     expect(trackMock).toHaveBeenCalledWith(
       "mission_completed",
       expect.objectContaining({
-        missionId: "mock-ㅅ-2",
+        missionId: "mock-s-2",
         completedReason: "manual_done",
       }),
     );
@@ -144,7 +144,7 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
       (c) => c[0] === "mission_silence_intervention" && c[1].intervention === "tooltip",
     );
     expect(tooltipCall).toBeTruthy();
-    expect(tooltipCall![1]).toMatchObject({ missionId: "mock-ㅅ-2", intervention: "tooltip" });
+    expect(tooltipCall![1]).toMatchObject({ missionId: "mock-s-2", intervention: "tooltip" });
   });
 
   it("running 90s 무인터랙션 → tooltip + 거울 모드 동시 노출 + 2종 이벤트 (FR-C-006 2단계)", async () => {

@@ -15,6 +15,17 @@ export type MissionFixture = {
 
 // 한국어 음운론 위계 순서 (seed.ts 와 일치): 파열음(ㄱ) → 비음(ㄴ) → 마찰음(ㅅ) → 파찰음(ㅈ) → 유음(ㄹ).
 const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
+
+// 2026-05-27 fix — fixture id 의 한국어 자음 (예: `mock-ㅅ-2`) 이 URL path segment
+// 로 들어갈 때 인코딩/디코딩 + unicode normalization 차이로 prod 의 dynamic route
+// 매칭이 실패하는 회귀 발견. ASCII slug 로 변경하면 URL 호환성 + 라우팅 안정성 보장.
+const PHONEME_SLUG: Record<(typeof PHONEMES)[number], string> = {
+  "ㄱ": "g",
+  "ㄴ": "n",
+  "ㅅ": "s",
+  "ㅈ": "j",
+  "ㄹ": "l",
+};
 const REWARDS = ["star", "tree", "drawing"] as const;
 
 const TITLE_BY_LEVEL: Record<number, string> = {
@@ -25,7 +36,8 @@ const TITLE_BY_LEVEL: Record<number, string> = {
 
 export const dailyMissionFixtures: MissionFixture[] = PHONEMES.flatMap((phoneme) =>
   [1, 2, 3].map((level) => ({
-    id: `mock-${phoneme}-${level}`,
+    // ASCII slug 사용 — URL path segment 안전 (2026-05-27 fix).
+    id: `mock-${PHONEME_SLUG[phoneme]}-${level}`,
     targetPhoneme: phoneme,
     difficultyLevel: level,
     title: `${phoneme} 소리 ${TITLE_BY_LEVEL[level]}`,
