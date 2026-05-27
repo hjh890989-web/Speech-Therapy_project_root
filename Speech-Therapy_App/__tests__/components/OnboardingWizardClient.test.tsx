@@ -49,6 +49,12 @@ vi.mock("@/app/actions/mark-onboarding-completed", () => ({
     markCompletedInDbMock(...args),
 }));
 
+// SEC-COMP-PIPA (Grill #3A A1+A2) — savePrivacyConsent mock.
+const savePrivacyConsentMock = vi.fn();
+vi.mock("@/app/actions/privacy-consent", () => ({
+  savePrivacyConsent: (...args: unknown[]) => savePrivacyConsentMock(...args),
+}));
+
 // trackEvent mock.
 const trackMock = vi.fn();
 vi.mock("@/lib/analytics", () => ({
@@ -67,6 +73,7 @@ beforeEach(() => {
   routerReplaceMock.mockReset();
   saveChildInfoMock.mockReset();
   markCompletedInDbMock.mockReset();
+  savePrivacyConsentMock.mockReset();
   trackMock.mockReset();
   saveChildInfoMock.mockResolvedValue({
     success: true,
@@ -75,6 +82,7 @@ beforeEach(() => {
     targetPhonemes: ["ㅅ"],
   });
   markCompletedInDbMock.mockResolvedValue({ success: true });
+  savePrivacyConsentMock.mockResolvedValue({ success: true });
 });
 
 afterEach(() => {
@@ -147,16 +155,30 @@ describe("OnboardingWizardClient — FR-C-PARENT-ONBOARDING", () => {
     expect(pressedCount).toBeGreaterThanOrEqual(1);
   });
 
-  it("Step2 '다음' → saveChildInfo 호출 + 성공 시 Step3 진입", async () => {
+  it("Step2 '다음' → saveChildInfo + savePrivacyConsent 호출 + 성공 시 Step3 진입", async () => {
     render(<OnboardingWizardClient initialStep={2} />);
+    // SEC-COMP-PIPA: 두 동의 모두 체크 후 다음 버튼 활성화.
+    fireEvent.click(
+      screen.getByTestId("onboarding-pipa-checkbox").querySelector("input")!,
+    );
+    fireEvent.click(
+      screen
+        .getByTestId("onboarding-overseas-checkbox")
+        .querySelector("input")!,
+    );
     await act(async () => {
       fireEvent.click(screen.getByTestId("onboarding-next-btn"));
     });
     expect(saveChildInfoMock).toHaveBeenCalledTimes(1);
+    expect(savePrivacyConsentMock).toHaveBeenCalledTimes(1);
     const callArg = saveChildInfoMock.mock.calls[0][0];
     expect(callArg.childAgeMonths).toBeGreaterThanOrEqual(24);
     expect(callArg.childAgeMonths).toBeLessThanOrEqual(84);
     expect(Array.isArray(callArg.targetPhonemes)).toBe(true);
+    // savePrivacyConsent 입력 검증.
+    const consentArg = savePrivacyConsentMock.mock.calls[0][0];
+    expect(consentArg.pipaUnderage).toBe(true);
+    expect(consentArg.overseasTransfer).toBe(true);
     await waitFor(() => {
       expect(screen.getByTestId("onboarding-step-3")).toBeInTheDocument();
     });
@@ -169,6 +191,15 @@ describe("OnboardingWizardClient — FR-C-PARENT-ONBOARDING", () => {
       message: "저장에 실패했어요. 잠시 후 다시 시도해 주세요.",
     });
     render(<OnboardingWizardClient initialStep={2} />);
+    // SEC-COMP-PIPA: 두 동의 모두 체크 후 다음 버튼 활성화.
+    fireEvent.click(
+      screen.getByTestId("onboarding-pipa-checkbox").querySelector("input")!,
+    );
+    fireEvent.click(
+      screen
+        .getByTestId("onboarding-overseas-checkbox")
+        .querySelector("input")!,
+    );
     await act(async () => {
       fireEvent.click(screen.getByTestId("onboarding-next-btn"));
     });
@@ -177,6 +208,20 @@ describe("OnboardingWizardClient — FR-C-PARENT-ONBOARDING", () => {
     });
     expect(screen.getByTestId("onboarding-step-2")).toBeInTheDocument();
     expect(screen.queryByTestId("onboarding-step-3")).toBeNull();
+  });
+
+  it("Step2 동의 미체크 → 버튼 비활성 + saveChildInfo 미호출", async () => {
+    render(<OnboardingWizardClient initialStep={2} />);
+    // 두 동의 모두 미체크 상태에서 클릭.
+    const btn = screen.getByTestId("onboarding-next-btn");
+    expect(btn).toBeDisabled();
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+    expect(saveChildInfoMock).not.toHaveBeenCalled();
+    expect(savePrivacyConsentMock).not.toHaveBeenCalled();
+    // Step2 유지.
+    expect(screen.getByTestId("onboarding-step-2")).toBeInTheDocument();
   });
 
   it("Step3 → 마이크 권한 안내 + '지금 시작하기' 클릭 → /diagnose 이동", () => {

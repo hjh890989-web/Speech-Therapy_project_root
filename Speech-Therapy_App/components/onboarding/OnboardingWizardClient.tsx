@@ -49,6 +49,8 @@ import {
   type AllowedPhoneme,
 } from "@/app/actions/onboarding-save-child-shape";
 import { markOnboardingCompletedInDb } from "@/app/actions/mark-onboarding-completed";
+// SEC-COMP-PIPA (Grill #3A A1+A2) — onboarding Step2 에서 PIPA 동의 통합.
+import { savePrivacyConsent } from "@/app/actions/privacy-consent";
 
 /** 본 컴포넌트가 외부로부터 받는 props. */
 export interface OnboardingWizardClientProps {
@@ -95,6 +97,11 @@ export function OnboardingWizardClient({
   const [selectedPhonemes, setSelectedPhonemes] = useState<AllowedPhoneme[]>([
     "ㅅ",
   ]);
+
+  // SEC-COMP-PIPA (Grill #3A A1+A2) — Step2 에서 받는 두 동의 state.
+  // 둘 다 체크되어야 "다음으로" 버튼 활성. saveChildInfo 성공 후 savePrivacyConsent 도 호출.
+  const [pipaConsent, setPipaConsent] = useState(false);
+  const [overseasConsent, setOverseasConsent] = useState(false);
 
   // Server Action 호출 상태 (Step2 → Step3 진행).
   const [isSaving, setIsSaving] = useState(false);
@@ -212,17 +219,35 @@ export function OnboardingWizardClient({
     [router],
   );
 
-  /** Step 2 → Server Action 호출 → Step 3 으로 진행. */
+  /** Step 2 → Server Action 호출 (자녀 정보 + PIPA 동의) → Step 3 으로 진행. */
   const handleSubmitChildInfo = useCallback(async () => {
+    // SEC-COMP-PIPA 가드 — 두 동의 모두 필수.
+    if (!pipaConsent || !overseasConsent) {
+      setSaveError("두 동의 모두 체크해 주세요.");
+      return;
+    }
     setIsSaving(true);
     setSaveError(null);
     try {
+      // 1) 자녀 정보 저장.
       const result = await saveChildInfo({
         childAgeMonths,
         targetPhonemes: selectedPhonemes,
       });
       if (!result.success) {
         setSaveError(result.message);
+        return;
+      }
+      // 2) PIPA 동의 저장 — 실패해도 자녀 정보는 저장된 상태이므로 graceful 분기.
+      //    실패 시 사용자는 /settings/privacy-consent 에서 재동의 가능.
+      const consentResult = await savePrivacyConsent({
+        pipaUnderage: pipaConsent,
+        overseasTransfer: overseasConsent,
+      });
+      if (!consentResult.success) {
+        setSaveError(
+          "동의 저장에 실패했어요. /settings/privacy-consent 에서 다시 시도해 주세요.",
+        );
         return;
       }
       goToNextStep(2);
@@ -235,7 +260,13 @@ export function OnboardingWizardClient({
     } finally {
       setIsSaving(false);
     }
-  }, [childAgeMonths, selectedPhonemes, goToNextStep]);
+  }, [
+    childAgeMonths,
+    selectedPhonemes,
+    pipaConsent,
+    overseasConsent,
+    goToNextStep,
+  ]);
 
   /** Step 3 의 "시작하기" — 분석 이벤트 후 /diagnose 로 이동. */
   const handleStartDiagnose = useCallback(() => {
@@ -320,6 +351,10 @@ export function OnboardingWizardClient({
           onChangeAge={setChildAgeMonths}
           selectedPhonemes={selectedPhonemes}
           onTogglePhoneme={togglePhoneme}
+          pipaConsent={pipaConsent}
+          onTogglePipa={setPipaConsent}
+          overseasConsent={overseasConsent}
+          onToggleOverseas={setOverseasConsent}
           onSubmit={handleSubmitChildInfo}
           onSkip={() => handleSkip(2)}
           isSaving={isSaving}
@@ -412,6 +447,10 @@ function Step2ChildInfo({
   onChangeAge,
   selectedPhonemes,
   onTogglePhoneme,
+  pipaConsent,
+  onTogglePipa,
+  overseasConsent,
+  onToggleOverseas,
   onSubmit,
   onSkip,
   isSaving,
@@ -421,11 +460,18 @@ function Step2ChildInfo({
   onChangeAge: (v: number) => void;
   selectedPhonemes: ReadonlyArray<AllowedPhoneme>;
   onTogglePhoneme: (p: AllowedPhoneme) => void;
+  /// SEC-COMP-PIPA (Grill #3A A1) — 만 14세 미만 부모 대리 동의 체크 여부.
+  pipaConsent: boolean;
+  onTogglePipa: (v: boolean) => void;
+  /// SEC-COMP-PIPA (Grill #3A A2) — STT + Gemini 국외 이전 동의 체크 여부.
+  overseasConsent: boolean;
+  onToggleOverseas: (v: boolean) => void;
   onSubmit: () => void;
   onSkip: () => void;
   isSaving: boolean;
   error: string | null;
 }) {
+  const bothConsented = pipaConsent && overseasConsent;
   return (
     <div data-testid="onboarding-step-2" className="space-y-6">
       <h2 className="text-2xl font-bold text-emerald-700">
@@ -493,6 +539,57 @@ function Step2ChildInfo({
         </div>
       </div>
 
+      {/* SEC-COMP-PIPA (Grill #3A A1+A2) — 부모 대리 동의 + 국외 이전 동의 (둘 다 필수). */}
+      <div className="space-y-3 rounded-lg bg-slate-50 p-5 dark:bg-slate-900">
+        <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          개인정보 동의 (필수)
+        </p>
+        <label
+          data-testid="onboarding-pipa-checkbox"
+          className="flex items-start gap-3 rounded-md p-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          <input
+            type="checkbox"
+            checked={pipaConsent}
+            onChange={(e) => onTogglePipa(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+          />
+          <span className="flex-1 text-sm text-slate-700 dark:text-slate-300">
+            <span className="font-semibold text-slate-900 dark:text-slate-100">
+              [필수] 만 14세 미만 자녀의 개인정보 처리 (PIPA §22조 6항)
+            </span>
+            <span className="mt-1 block">
+              자녀의 발화 텍스트 + 월령 + 발달 점수 등을 발음 가이드 목적으로 처리하는 데
+              법정대리인 (부모) 의 동의가 필요해요.
+            </span>
+          </span>
+        </label>
+        <label
+          data-testid="onboarding-overseas-checkbox"
+          className="flex items-start gap-3 rounded-md p-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          <input
+            type="checkbox"
+            checked={overseasConsent}
+            onChange={(e) => onToggleOverseas(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+          />
+          <span className="flex-1 text-sm text-slate-700 dark:text-slate-300">
+            <span className="font-semibold text-slate-900 dark:text-slate-100">
+              [필수] 개인정보 국외 이전 (PIPA §17조)
+            </span>
+            <span className="mt-1 block">
+              Google Cloud Speech (미국, 음성 → 텍스트) + Google Gemini (미국, 안내 문구)
+              로 이전돼요. 자세한 항목은{" "}
+              <Link href="/privacy" className="underline">
+                개인정보 처리방침
+              </Link>{" "}
+              참고.
+            </span>
+          </span>
+        </label>
+      </div>
+
       {error && (
         <p
           data-testid="onboarding-save-error"
@@ -516,10 +613,10 @@ function Step2ChildInfo({
         <button
           type="button"
           onClick={onSubmit}
-          disabled={isSaving}
+          disabled={isSaving || !bothConsented}
           data-testid="onboarding-next-btn"
-          className="w-full rounded-full bg-emerald-500 px-8 py-4 text-lg font-semibold text-white shadow-md hover:bg-emerald-600 disabled:opacity-60 sm:w-auto"
-          aria-label="자녀 정보 저장하고 다음 단계로 이동"
+          className="w-full rounded-full bg-emerald-500 px-8 py-4 text-lg font-semibold text-white shadow-md hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          aria-label="자녀 정보 + 동의 저장하고 다음 단계로 이동"
         >
           {isSaving ? "저장 중..." : "다음으로"}
         </button>
