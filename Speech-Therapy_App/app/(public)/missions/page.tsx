@@ -158,6 +158,11 @@ export default async function MissionsPage() {
         <p className="text-sm text-gray-600 dark:text-gray-400">
           짧고 즐거운 발음 미션이에요. 하루 1~3분만 함께해 보세요.
         </p>
+        {/* FR-Q-003-CONTENT-V2 UX — 미션 = 연습, 진단 = 점수 측정 역할 분리. */}
+        <p className="text-xs text-gray-500 dark:text-gray-500">
+          미션은 발음을 입에 익히는 <strong>연습</strong>이고, 정확도 점수는 미션 완료 후
+          <strong> &lsquo;발음 연습&rsquo;</strong>에서 받아요.
+        </p>
       </header>
     </>
   );

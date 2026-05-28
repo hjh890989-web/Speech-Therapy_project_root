@@ -309,14 +309,18 @@ function MissionRunnerInner({
   return (
     <div className="space-y-3" data-testid="mission-runner-completed">
       {splToast}
-      <p className="rounded-md bg-emerald-100 px-4 py-3 text-sm text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
-        잘 했어요! 발음 연습으로 별을 모아 볼까요?
-      </p>
+      <div className="rounded-md bg-emerald-100 px-4 py-3 text-sm text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
+        <p className="mb-1 font-medium">연습 완료! 잘 따라했어요.</p>
+        <p className="text-xs">
+          이제 <strong>&lsquo;발음 연습&rsquo;</strong>에서 실제 발음을 들려주면 정확도 점수와 별을
+          받을 수 있어요.
+        </p>
+      </div>
       <Link
         href={`/diagnose?phoneme=${encodeURIComponent(targetPhoneme)}`}
         className="inline-block min-h-[44px] rounded-md bg-emerald-600 px-5 py-3 text-sm font-medium text-white hover:bg-emerald-700"
       >
-        발음 연습 가기
+        발음 연습으로 가기 →
       </Link>
     </div>
   );

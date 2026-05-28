@@ -75,6 +75,14 @@ export default async function MissionPlayPage({ params }: PageProps) {
             월령: <strong>{mission.ageRangeMin}~{mission.ageRangeMax}개월</strong>
           </span>
         </div>
+        {/* FR-Q-003-CONTENT-V2 UX — 미션 vs 진단 역할 분리 안내. */}
+        <p
+          data-testid="practice-note"
+          className="mt-2 rounded-md border border-sky-200 bg-sky-50 px-4 py-2 text-xs text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100"
+        >
+          이 미션은 발음을 입에 익히는 <strong>연습</strong>이에요. 정확도 점수는 미션 완료 후
+          <strong> &lsquo;발음 연습&rsquo;</strong> 단계에서 확인할 수 있어요.
+        </p>
       </header>
 
       <section
