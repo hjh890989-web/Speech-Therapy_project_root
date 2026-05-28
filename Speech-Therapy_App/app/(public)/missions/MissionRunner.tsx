@@ -19,6 +19,7 @@ import { MirrorMode } from "@/components/MirrorMode";
 import { SplToast } from "@/components/SplToast";
 import { MicStreamProvider } from "@/lib/audio/MicStreamProvider";
 import { useSplMeter } from "@/lib/audio/useSplMeter";
+import { useVoiceActivity } from "@/lib/audio/useVoiceActivity";
 import { trackEvent } from "@/lib/analytics";
 import { useMissionIntervention } from "@/lib/hooks/useMissionIntervention";
 
@@ -96,10 +97,19 @@ function MissionRunnerInner({
   // splOffsetDb 는 default 사용 — 추후 sibling Agent B 의 calibration UI 가 반영 (lib/audio/useSplMeter 본체 책임).
   // SPL 게이트는 useMissionIntervention 과 독립 축 (90s 침묵 + 60dB 환경 소음 동시 발생 시 두 UI 모두 노출 가능).
   const {
+    currentDb: noiseCurrentDb,
     isOverThreshold: noiseOverThreshold,
     peakDb: noisePeakDb,
     overThresholdMs: noiseOverMs,
   } = useSplMeter({ enabled: phase === "running", thresholdDb: 60, persistMs: 5_000 });
+
+  // FR-Q-003-CONTENT-V3 — 발화 감지 (Voice Activity Detection).
+  // useSplMeter 의 currentDb 를 input 으로 받아 별도 AnalyserNode 없이 speech state 추적.
+  // 감지 시 intervention.reportSpeech() 호출 → 60/90s 침묵 카운터 자동 reset + UI indicator.
+  const { isSpeaking, lastSpeechAt } = useVoiceActivity({
+    currentDb: noiseCurrentDb,
+    enabled: phase === "running",
+  });
 
   const [splToastVisible, setSplToastVisible] = useState(false);
   // 본 미션 instance 안에서 마지막 SPL alert 시각 — 5분 cooldown 판정용.
@@ -108,6 +118,15 @@ function MissionRunnerInner({
   const splLastAlertAtRef = useRef<number | null>(null);
   // 현재 over-threshold 사이클 안에서 이미 alert 처리했는지 — 사이클 끝 (below-threshold) 에 리셋.
   const splAlertedThisRunRef = useRef(false);
+
+  // FR-Q-003-CONTENT-V3 — 발화 감지 시 침묵 intervention 카운터 reset.
+  // lastSpeechAt 갱신 (idle → speaking 전환 시점) 마다 intervention.reportSpeech() 호출.
+  // 결과: 60s tooltip / 90s mirror trigger 가 실제 침묵에만 발화하도록 정확도 향상.
+  useEffect(() => {
+    if (lastSpeechAt !== null) {
+      intervention.reportSpeech();
+    }
+  }, [lastSpeechAt, intervention]);
 
   // SPL toast 트리거 — 5초 임계 도달 1회 + 5분 cooldown 체크 + 1회 trackEvent 발송.
   // 정책: cooldown 안엔 Toast 노출/이벤트 발송 모두 skip (한 번 알렸으면 그만).
@@ -233,7 +252,20 @@ function MissionRunnerInner({
       <div className="space-y-3" aria-live="polite" data-testid="mission-runner-running">
         {splToast}
         <div className="flex items-baseline justify-between">
-          <p className="text-xs text-gray-600 dark:text-gray-400">남은 시간</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-gray-600 dark:text-gray-400">남은 시간</p>
+            {/* FR-Q-003-CONTENT-V3 — 발화 감지 indicator. CON-04: 점수/평가 카피 금지, 단순 "듣고 있어요" 표시만. */}
+            {isSpeaking && (
+              <span
+                data-testid="voice-activity-indicator"
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200"
+                aria-live="polite"
+              >
+                <span aria-hidden="true" className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                듣고 있어요
+              </span>
+            )}
+          </div>
           <p className="text-2xl font-bold tabular-nums">
             {mm}:{ss.toString().padStart(2, "0")}
           </p>

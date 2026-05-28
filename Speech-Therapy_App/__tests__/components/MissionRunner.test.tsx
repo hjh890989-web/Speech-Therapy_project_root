@@ -12,9 +12,25 @@ vi.mock("@/lib/analytics", () => ({
   trackEvent: (...args: unknown[]) => trackMock(...args),
 }));
 
+// FR-Q-003-CONTENT-V3 — useVoiceActivity mock 으로 isSpeaking 제어.
+// happy-dom 환경에선 getUserMedia 실패 → currentDb=null → 실제 hook 도 idle 이지만,
+// indicator UI 검증 위해 명시 stub 노출이 필요.
+import { useVoiceActivity } from "@/lib/audio/useVoiceActivity";
+vi.mock("@/lib/audio/useVoiceActivity", () => ({
+  useVoiceActivity: vi.fn(),
+}));
+
+const mockedUseVoiceActivity = vi.mocked(useVoiceActivity);
+
 describe("MissionRunner — FR-Q-003 phase 전이", () => {
   beforeEach(() => {
     trackMock.mockClear();
+    mockedUseVoiceActivity.mockReset();
+    mockedUseVoiceActivity.mockReturnValue({
+      isSpeaking: false,
+      speechCount: 0,
+      lastSpeechAt: null,
+    });
     vi.useFakeTimers();
   });
 
@@ -145,6 +161,27 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
     );
     expect(tooltipCall).toBeTruthy();
     expect(tooltipCall![1]).toMatchObject({ missionId: "mock-s-2", intervention: "tooltip" });
+  });
+
+  it("FR-Q-003-CONTENT-V3 — useVoiceActivity.isSpeaking=false → indicator 미노출", () => {
+    render(<MissionRunner {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /미션 시작/ }));
+
+    expect(screen.queryByTestId("voice-activity-indicator")).not.toBeInTheDocument();
+  });
+
+  it("FR-Q-003-CONTENT-V3 — useVoiceActivity.isSpeaking=true → '듣고 있어요' indicator 노출", () => {
+    mockedUseVoiceActivity.mockReturnValue({
+      isSpeaking: true,
+      speechCount: 1,
+      lastSpeechAt: Date.now(),
+    });
+    render(<MissionRunner {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /미션 시작/ }));
+
+    const indicator = screen.getByTestId("voice-activity-indicator");
+    expect(indicator).toBeInTheDocument();
+    expect(indicator.textContent).toContain("듣고 있어요");
   });
 
   it("running 90s 무인터랙션 → tooltip + 거울 모드 동시 노출 + 2종 이벤트 (FR-C-006 2단계)", async () => {
