@@ -30,6 +30,7 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
       isSpeaking: false,
       speechCount: 0,
       lastSpeechAt: null,
+      baselineDb: null,
     });
     vi.useFakeTimers();
   });
@@ -175,6 +176,7 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
       isSpeaking: true,
       speechCount: 1,
       lastSpeechAt: Date.now(),
+      baselineDb: 35,
     });
     render(<MissionRunner {...baseProps} />);
     fireEvent.click(screen.getByRole("button", { name: /미션 시작/ }));
