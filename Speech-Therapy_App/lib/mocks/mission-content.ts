@@ -1,13 +1,22 @@
-// FR-Q-003-CONTENT — 난이도 2/3 미션 콘텐츠 데이터 (5 자모 × 2 난이도 = 10 sets).
+// FR-Q-003-CONTENT — 난이도 1/2/3 미션 콘텐츠 데이터 (5 자모 × 3 난이도 = 15 sets).
 //
 // 본 파일은 dailyMissionFixtures 와 1:1 매칭되는 콘텐츠 정의.
+// - 난이도 1: 단어 따라하기 (`MissionWordSimple[]`)
 // - 난이도 2: 단어 빈칸 채우기 (`MissionWord[]`)
 // - 난이도 3: 짧은 문장 만들기 (`MissionSentence[]`)
 //
 // 5/27 prod 검증 회귀 fix — 기존엔 모든 미션 카드가 /diagnose 로 fallback 되어
 // 난이도별 UI 가 동일했음. 본 데이터 + /missions/[missionId]/play 페이지가 분리한다.
+// FR-Q-003-CONTENT-V2 — 난이도 1 콘텐츠 추가 (이전엔 fallback timer 만 노출됨).
 //
 // CON-04: 모든 단어/문장은 자녀 친화 (만 2~7세 발달 적합) + 의료/진단/장애 금칙어 0건.
+
+/// 난이도 1 — 단어 따라하기.
+/// `text` 전체 단어, `reading` 음절 분리 표기 (`사·과`) — 부모가 자녀에게 읽어주는 가이드.
+export interface MissionWordSimple {
+  text: string;
+  reading: string;
+}
 
 /// 난이도 2 — 단어 빈칸 채우기.
 /// `full` 전체 단어, `blank` 빈칸 노출용 (마스킹 표기), `hint` 부모 → 자녀 안내.
@@ -26,8 +35,49 @@ export interface MissionSentence {
 }
 
 export type MissionContentSet =
+  | { phoneme: string; difficultyLevel: 1; words: MissionWordSimple[] }
   | { phoneme: string; difficultyLevel: 2; words: MissionWord[] }
   | { phoneme: string; difficultyLevel: 3; sentences: MissionSentence[] };
+
+// =============================================================================
+// 난이도 1 — 단어 따라하기 (5 자모 × 4~5 단어).
+// =============================================================================
+
+const WORDS_SIMPLE_GIYEOK: MissionWordSimple[] = [
+  { text: "가방", reading: "가·방" },
+  { text: "거북이", reading: "거·북·이" },
+  { text: "기차", reading: "기·차" },
+  { text: "가위", reading: "가·위" },
+];
+
+const WORDS_SIMPLE_NIEUN: MissionWordSimple[] = [
+  { text: "나무", reading: "나·무" },
+  { text: "나비", reading: "나·비" },
+  { text: "노래", reading: "노·래" },
+  { text: "너구리", reading: "너·구·리" },
+];
+
+const WORDS_SIMPLE_SIOT: MissionWordSimple[] = [
+  { text: "사과", reading: "사·과" },
+  { text: "사진", reading: "사·진" },
+  { text: "신발", reading: "신·발" },
+  { text: "사람", reading: "사·람" },
+  { text: "수박", reading: "수·박" },
+];
+
+const WORDS_SIMPLE_JIEUT: MissionWordSimple[] = [
+  { text: "지렁이", reading: "지·렁·이" },
+  { text: "자동차", reading: "자·동·차" },
+  { text: "주스", reading: "주·스" },
+  { text: "장난감", reading: "장·난·감" },
+];
+
+const WORDS_SIMPLE_RIEUL: MissionWordSimple[] = [
+  { text: "라면", reading: "라·면" },
+  { text: "로봇", reading: "로·봇" },
+  { text: "라디오", reading: "라·디·오" },
+  { text: "리본", reading: "리·본" },
+];
 
 // =============================================================================
 // 난이도 2 — 단어 빈칸 채우기 (5 자모 × 4~5 단어).
@@ -117,6 +167,11 @@ const SENTENCES_RIEUL: MissionSentence[] = [
 // =============================================================================
 
 const CONTENT_SETS: MissionContentSet[] = [
+  { phoneme: "ㄱ", difficultyLevel: 1, words: WORDS_SIMPLE_GIYEOK },
+  { phoneme: "ㄴ", difficultyLevel: 1, words: WORDS_SIMPLE_NIEUN },
+  { phoneme: "ㅅ", difficultyLevel: 1, words: WORDS_SIMPLE_SIOT },
+  { phoneme: "ㅈ", difficultyLevel: 1, words: WORDS_SIMPLE_JIEUT },
+  { phoneme: "ㄹ", difficultyLevel: 1, words: WORDS_SIMPLE_RIEUL },
   { phoneme: "ㄱ", difficultyLevel: 2, words: WORDS_GIYEOK },
   { phoneme: "ㄴ", difficultyLevel: 2, words: WORDS_NIEUN },
   { phoneme: "ㅅ", difficultyLevel: 2, words: WORDS_SIOT },

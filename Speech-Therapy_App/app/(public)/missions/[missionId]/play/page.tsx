@@ -4,7 +4,8 @@
 // 기존엔 /missions 의 모든 카드가 /diagnose?phoneme=X 로 fallback 되어 난이도별 UI 가
 // 동일했음. 본 페이지가 missionId 로 fixture 를 lookup → 난이도에 맞는 콘텐츠 inject.
 //
-// 난이도 1 → 콘텐츠 없음 (MissionRunner 단독, 기존 발음 진단 흐름)
+// FR-Q-003-CONTENT-V2 — 난이도 1 콘텐츠 컴포넌트 추가.
+// 난이도 1 → MissionWordRepeat (단어 따라하기)
 // 난이도 2 → MissionWordFill (단어 빈칸 채우기)
 // 난이도 3 → MissionSentenceBuild (짧은 문장 만들기)
 
@@ -13,6 +14,7 @@ import { notFound } from "next/navigation";
 import { dailyMissionFixtures } from "@/lib/mocks/missions";
 import { getMissionContent } from "@/lib/mocks/mission-content";
 import { MissionRunner } from "../../MissionRunner";
+import { MissionWordRepeat } from "@/components/missions/MissionWordRepeat";
 import { MissionWordFill } from "@/components/missions/MissionWordFill";
 import { MissionSentenceBuild } from "@/components/missions/MissionSentenceBuild";
 
@@ -84,6 +86,9 @@ export default async function MissionPlayPage({ params }: PageProps) {
           targetPhoneme={mission.targetPhoneme}
           difficultyLevel={mission.difficultyLevel}
         >
+          {content?.difficultyLevel === 1 && (
+            <MissionWordRepeat phoneme={content.phoneme} words={content.words} />
+          )}
           {content?.difficultyLevel === 2 && (
             <MissionWordFill phoneme={content.phoneme} words={content.words} />
           )}

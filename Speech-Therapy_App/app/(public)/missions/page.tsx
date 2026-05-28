@@ -16,6 +16,10 @@ import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { dailyMissionFixtures, type MissionFixture } from "@/lib/mocks/missions";
 import { MissionRunner } from "./MissionRunner";
+import { getMissionContent } from "@/lib/mocks/mission-content";
+import { MissionWordRepeat } from "@/components/missions/MissionWordRepeat";
+import { MissionWordFill } from "@/components/missions/MissionWordFill";
+import { MissionSentenceBuild } from "@/components/missions/MissionSentenceBuild";
 import { mockContinue } from "@/lib/mocks/curriculum";
 import { analyzeStreaks, decideRecommendation } from "@/lib/curriculum";
 import {
@@ -169,6 +173,10 @@ export default async function MissionsPage() {
   }
 
   const recommended = state.recommendation.mission;
+  // FR-Q-003-CONTENT-V2 — 추천 영역 inline MissionRunner 도 콘텐츠 inject.
+  // (이전엔 carousel children 미통합 → 추천 영역 "시작" 시 콘텐츠 없음. 카드 그리드의
+  // /missions/<id>/play 흐름과 동일한 콘텐츠 노출로 정합화.)
+  const recContent = getMissionContent(recommended.targetPhoneme, recommended.difficultyLevel);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
@@ -192,7 +200,17 @@ export default async function MissionsPage() {
           missionId={recommended.id}
           targetPhoneme={recommended.targetPhoneme}
           difficultyLevel={recommended.difficultyLevel}
-        />
+        >
+          {recContent?.difficultyLevel === 1 && (
+            <MissionWordRepeat phoneme={recContent.phoneme} words={recContent.words} />
+          )}
+          {recContent?.difficultyLevel === 2 && (
+            <MissionWordFill phoneme={recContent.phoneme} words={recContent.words} />
+          )}
+          {recContent?.difficultyLevel === 3 && (
+            <MissionSentenceBuild phoneme={recContent.phoneme} sentences={recContent.sentences} />
+          )}
+        </MissionRunner>
       </section>
 
       {/* 전체 카드 그리드 — 5 자모 × 3 난이도 = 15개 모두 노출.
