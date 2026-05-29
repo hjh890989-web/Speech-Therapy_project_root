@@ -1,20 +1,30 @@
-// FR-Q-003-CONTENT — /missions/[missionId]/play Server Component 통합 테스트.
+// REQ-FUNC-CL-05 — /missions/[missionId]/play Server Component 통합 테스트 (6단계 위계).
 //
 // 격리:
 //   - MissionRunner mock (MicStreamProvider 의존성 회피) — children passthrough
-//   - MissionWordRepeat / MissionWordFill / MissionSentenceBuild mock — props 캡처
-//   - next/link mock — 단순 <a>
-//   - next/navigation notFound mock — throw 흉내
+//   - 6 콘텐츠 컴포넌트 mock — props 캡처
+//   - next/link mock — 단순 <a> / next/navigation notFound mock — throw 흉내
 //
-// 검증 시나리오:
-//   1. 난이도 2 fixture → MissionWordFill mount (단어 props 전달)
-//   2. 난이도 3 fixture → MissionSentenceBuild mount (문장 props 전달)
-//   3. 난이도 1 fixture → MissionWordRepeat mount (단어 props 전달) — FR-Q-003-CONTENT-V2
-//   4. 존재하지 않는 missionId → notFound()
-//   5. CON-04 금칙어 0건
+// 위계 라우팅 (CL-05-0): L1 단독음소 / L2 음절 / L3 단어 / L4 구 / L5 문장 / L6 대화.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "@testing-library/react";
+
+const isolationMock = vi.fn();
+vi.mock("@/components/missions/MissionPhonemeIsolation", () => ({
+  MissionPhonemeIsolation: (props: Record<string, unknown>) => {
+    isolationMock(props);
+    return <div data-testid="mock-isolation">isolation</div>;
+  },
+}));
+
+const syllableMock = vi.fn();
+vi.mock("@/components/missions/MissionSyllable", () => ({
+  MissionSyllable: (props: Record<string, unknown>) => {
+    syllableMock(props);
+    return <div data-testid="mock-syllable">syllable</div>;
+  },
+}));
 
 const wordRepeatMock = vi.fn();
 vi.mock("@/components/missions/MissionWordRepeat", () => ({
@@ -24,11 +34,11 @@ vi.mock("@/components/missions/MissionWordRepeat", () => ({
   },
 }));
 
-const wordFillMock = vi.fn();
-vi.mock("@/components/missions/MissionWordFill", () => ({
-  MissionWordFill: (props: Record<string, unknown>) => {
-    wordFillMock(props);
-    return <div data-testid="mock-word-fill">word-fill</div>;
+const phraseMock = vi.fn();
+vi.mock("@/components/missions/MissionPhrase", () => ({
+  MissionPhrase: (props: Record<string, unknown>) => {
+    phraseMock(props);
+    return <div data-testid="mock-phrase">phrase</div>;
   },
 }));
 
@@ -40,8 +50,14 @@ vi.mock("@/components/missions/MissionSentenceBuild", () => ({
   },
 }));
 
-// MissionRunner — MicStreamProvider 의 navigator.mediaDevices 의존성 회피.
-// children 만 그대로 렌더 (콘텐츠 mount 여부 검증용).
+const conversationMock = vi.fn();
+vi.mock("@/components/missions/MissionConversation", () => ({
+  MissionConversation: (props: Record<string, unknown>) => {
+    conversationMock(props);
+    return <div data-testid="mock-conversation">conversation</div>;
+  },
+}));
+
 vi.mock("@/app/(public)/missions/MissionRunner", () => ({
   MissionRunner: ({
     missionId,
@@ -55,10 +71,6 @@ vi.mock("@/app/(public)/missions/MissionRunner", () => ({
     </div>
   ),
 }));
-
-// Worktree 내부 import 경로가 길어 위 경로와 별개로 한 번 더 등록 — page.tsx 가
-// 상대 경로 (`../../MissionRunner`) 로 import 하므로 alias mock 만으로는 부족할 수 있음.
-// vitest resolve 시 모듈 ID 가 동일하게 해석되므로 alias mock 1건이면 충분하다.
 
 const notFoundMock = vi.fn(() => {
   throw new Error("NEXT_NOT_FOUND");
@@ -88,68 +100,89 @@ import MissionPlayPage from "@/app/(public)/missions/[missionId]/play/page";
 const FORBIDDEN = ["치료", "진단", "장애"];
 
 beforeEach(() => {
+  isolationMock.mockClear();
+  syllableMock.mockClear();
   wordRepeatMock.mockClear();
-  wordFillMock.mockClear();
+  phraseMock.mockClear();
   sentenceBuildMock.mockClear();
+  conversationMock.mockClear();
   notFoundMock.mockClear();
 });
 
-describe("/missions/[missionId]/play — FR-Q-003-CONTENT 미션 플레이 페이지", () => {
-  it("[1] 난이도 2 fixture (mock-ㅅ-2) → MissionWordFill mount + 단어 props 전달", async () => {
-    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-s-2" }) });
-    const { container } = render(ui);
+async function renderPlay(missionId: string) {
+  const ui = await MissionPlayPage({ params: Promise.resolve({ missionId }) });
+  return render(ui);
+}
 
-    expect(container.querySelector("[data-testid='mock-word-fill']")).not.toBeNull();
-    expect(container.querySelector("[data-testid='mock-sentence-build']")).toBeNull();
-    expect(container.querySelector("[data-testid='mock-word-repeat']")).toBeNull();
-    expect(wordFillMock).toHaveBeenCalledTimes(1);
-    const props = wordFillMock.mock.calls[0][0];
+describe("/missions/[missionId]/play — REQ-FUNC-CL-05 6단계 위계 라우팅", () => {
+  it("[L1] mock-s-1 → MissionPhonemeIsolation mount + isolation props", async () => {
+    const { container } = await renderPlay("mock-s-1");
+    expect(container.querySelector("[data-testid='mock-isolation']")).not.toBeNull();
+    expect(isolationMock).toHaveBeenCalledTimes(1);
+    const props = isolationMock.mock.calls[0][0];
     expect(props.phoneme).toBe("ㅅ");
-    expect(Array.isArray(props.words)).toBe(true);
-    expect(props.words.length).toBeGreaterThan(0);
+    expect((props.isolation as { mouthHint: string }).mouthHint.length).toBeGreaterThan(0);
   });
 
-  it("[2] 난이도 3 fixture (mock-ㅈ-3) → MissionSentenceBuild mount + 문장 props 전달", async () => {
-    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-j-3" }) });
-    const { container } = render(ui);
-
-    expect(container.querySelector("[data-testid='mock-sentence-build']")).not.toBeNull();
-    expect(container.querySelector("[data-testid='mock-word-fill']")).toBeNull();
-    expect(container.querySelector("[data-testid='mock-word-repeat']")).toBeNull();
-    expect(sentenceBuildMock).toHaveBeenCalledTimes(1);
-    const props = sentenceBuildMock.mock.calls[0][0];
-    expect(props.phoneme).toBe("ㅈ");
-    expect(Array.isArray(props.sentences)).toBe(true);
-    expect(props.sentences.length).toBeGreaterThan(0);
+  it("[L2] mock-s-2 → MissionSyllable mount + syllables props", async () => {
+    const { container } = await renderPlay("mock-s-2");
+    expect(container.querySelector("[data-testid='mock-syllable']")).not.toBeNull();
+    expect(syllableMock).toHaveBeenCalledTimes(1);
+    const props = syllableMock.mock.calls[0][0];
+    expect(props.phoneme).toBe("ㅅ");
+    expect(Array.isArray(props.syllables)).toBe(true);
+    expect((props.syllables as unknown[]).length).toBeGreaterThan(0);
   });
 
-  it("[3] 난이도 1 fixture (mock-ㅅ-1) → MissionWordRepeat mount + 단어 props 전달 (FR-Q-003-CONTENT-V2)", async () => {
-    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-s-1" }) });
-    const { container } = render(ui);
-
-    expect(container.querySelector("[data-testid='mock-mission-runner']")).not.toBeNull();
+  it("[L3] mock-s-3 → MissionWordRepeat mount + words props (reading 음절 분리)", async () => {
+    const { container } = await renderPlay("mock-s-3");
     expect(container.querySelector("[data-testid='mock-word-repeat']")).not.toBeNull();
-    expect(container.querySelector("[data-testid='mock-word-fill']")).toBeNull();
-    expect(container.querySelector("[data-testid='mock-sentence-build']")).toBeNull();
     expect(wordRepeatMock).toHaveBeenCalledTimes(1);
     const props = wordRepeatMock.mock.calls[0][0];
     expect(props.phoneme).toBe("ㅅ");
     expect(Array.isArray(props.words)).toBe(true);
-    expect(props.words.length).toBeGreaterThan(0);
-    expect(props.words[0].text).toBeTypeOf("string");
-    expect(props.words[0].reading).toMatch(/·/);
+    expect((props.words as Array<{ reading: string }>)[0].reading).toMatch(/·/);
   });
 
-  it("[4] 존재하지 않는 missionId → notFound()", async () => {
+  it("[L4] mock-s-4 → MissionPhrase mount + phrases props", async () => {
+    const { container } = await renderPlay("mock-s-4");
+    expect(container.querySelector("[data-testid='mock-phrase']")).not.toBeNull();
+    expect(phraseMock).toHaveBeenCalledTimes(1);
+    const props = phraseMock.mock.calls[0][0];
+    expect(props.phoneme).toBe("ㅅ");
+    expect(Array.isArray(props.phrases)).toBe(true);
+    expect((props.phrases as unknown[]).length).toBeGreaterThan(0);
+  });
+
+  it("[L5] mock-j-5 → MissionSentenceBuild mount + sentences props", async () => {
+    const { container } = await renderPlay("mock-j-5");
+    expect(container.querySelector("[data-testid='mock-sentence-build']")).not.toBeNull();
+    expect(sentenceBuildMock).toHaveBeenCalledTimes(1);
+    const props = sentenceBuildMock.mock.calls[0][0];
+    expect(props.phoneme).toBe("ㅈ");
+    expect(Array.isArray(props.sentences)).toBe(true);
+    expect((props.sentences as unknown[]).length).toBeGreaterThan(0);
+  });
+
+  it("[L6] mock-s-6 → MissionConversation mount + conversations props", async () => {
+    const { container } = await renderPlay("mock-s-6");
+    expect(container.querySelector("[data-testid='mock-conversation']")).not.toBeNull();
+    expect(conversationMock).toHaveBeenCalledTimes(1);
+    const props = conversationMock.mock.calls[0][0];
+    expect(props.phoneme).toBe("ㅅ");
+    expect(Array.isArray(props.conversations)).toBe(true);
+    expect((props.conversations as unknown[]).length).toBeGreaterThan(0);
+  });
+
+  it("[notFound] 존재하지 않는 missionId → notFound()", async () => {
     await expect(
       MissionPlayPage({ params: Promise.resolve({ missionId: "does-not-exist" }) }),
     ).rejects.toThrow(/NEXT_NOT_FOUND/);
     expect(notFoundMock).toHaveBeenCalledTimes(1);
   });
 
-  it("[5] CON-04 금칙어 0건 (난이도 2 페이지 전체 textContent)", async () => {
-    const ui = await MissionPlayPage({ params: Promise.resolve({ missionId: "mock-s-2" }) });
-    const { container } = render(ui);
+  it("[CON-04] 금칙어 0건 (L3 페이지 전체 textContent)", async () => {
+    const { container } = await renderPlay("mock-s-3");
     const text = container.textContent ?? "";
     for (const w of FORBIDDEN) {
       expect(text).not.toContain(w);

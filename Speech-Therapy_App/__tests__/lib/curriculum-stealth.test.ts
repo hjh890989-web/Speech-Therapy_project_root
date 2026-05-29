@@ -212,15 +212,16 @@ describe("TEST-007 / 시나리오 5 — 5연속 성공 → level_up + 격려 카
     expect(findNegativeMarkers(out!.copy)).toEqual([]);
   });
 
-  it("난이도 5 도달 후 5연속 성공도 cap=5 (over-shoot 방지)", () => {
+  it("난이도 6 도달 후 5연속 성공도 cap=6 (over-shoot 방지)", () => {
+    // REQ-FUNC-CL-05 — MAX_DIFFICULTY 6.
     const sessions: SessionResult[] = Array.from({ length: 5 }, (_, i) =>
       session(0x900 + i, 0xeee, true, i + 1),
     );
     // recentPhoneme 를 preferredPhoneme 와 다르게 설정 → phoneme_switch 분기 회피.
-    const streak = analyzeStreaks(sessions, 5, "ㅈ");
-    const decision = decideRecommendation(streak, 5, "ㅅ");
+    const streak = analyzeStreaks(sessions, 6, "ㅈ");
+    const decision = decideRecommendation(streak, 6, "ㅅ");
     expect(decision.reason).toBe("level_up");
-    expect(decision.difficulty).toBe(5); // cap
+    expect(decision.difficulty).toBe(6); // cap (MAX_DIFFICULTY)
   });
 });
 

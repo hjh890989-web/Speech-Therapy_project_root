@@ -22,13 +22,13 @@ describe("pickRecommendedMission — fixture 매칭", () => {
   });
 
   it("정확 매칭 없으면 같은 phoneme 의 가장 가까운 difficulty", () => {
-    // ㅅ 은 1~3 단계만 fixture 에 있음. 5 요청 시 가장 가까운 3 반환.
+    // REQ-FUNC-CL-05 — ㅅ 은 1~6 단계 fixture 존재. 범위 밖(7) 요청 시 가장 가까운 6 반환.
     const out = pickRecommendedMission(
-      { phoneme: "ㅅ", difficulty: 5, reason: "level_up" },
+      { phoneme: "ㅅ", difficulty: 7, reason: "level_up" },
       dailyMissionFixtures,
     );
     expect(out!.mission.targetPhoneme).toBe("ㅅ");
-    expect(out!.mission.difficultyLevel).toBe(3);
+    expect(out!.mission.difficultyLevel).toBe(6);
     expect(out!.copy).toBe("더 멋진 발음에 도전해볼까요?");
   });
 

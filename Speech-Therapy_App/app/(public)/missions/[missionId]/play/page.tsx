@@ -4,19 +4,22 @@
 // 기존엔 /missions 의 모든 카드가 /diagnose?phoneme=X 로 fallback 되어 난이도별 UI 가
 // 동일했음. 본 페이지가 missionId 로 fixture 를 lookup → 난이도에 맞는 콘텐츠 inject.
 //
-// FR-Q-003-CONTENT-V2 — 난이도 1 콘텐츠 컴포넌트 추가.
-// 난이도 1 → MissionWordRepeat (단어 따라하기)
-// 난이도 2 → MissionWordFill (단어 빈칸 채우기)
-// 난이도 3 → MissionSentenceBuild (짧은 문장 만들기)
+// REQ-FUNC-CL-05 — 6단계 임상 위계 라우팅 (CL-05-0 매핑):
+// L1 단독음소 → MissionPhonemeIsolation / L2 음절 → MissionSyllable /
+// L3 단어 → MissionWordRepeat / L4 구 → MissionPhrase /
+// L5 문장 → MissionSentenceBuild / L6 대화 → MissionConversation.
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dailyMissionFixtures } from "@/lib/mocks/missions";
 import { getMissionContent } from "@/lib/mocks/mission-content";
 import { MissionRunner } from "../../MissionRunner";
+import { MissionPhonemeIsolation } from "@/components/missions/MissionPhonemeIsolation";
+import { MissionSyllable } from "@/components/missions/MissionSyllable";
 import { MissionWordRepeat } from "@/components/missions/MissionWordRepeat";
-import { MissionWordFill } from "@/components/missions/MissionWordFill";
+import { MissionPhrase } from "@/components/missions/MissionPhrase";
 import { MissionSentenceBuild } from "@/components/missions/MissionSentenceBuild";
+import { MissionConversation } from "@/components/missions/MissionConversation";
 
 interface PageProps {
   params: Promise<{ missionId: string }>;
@@ -69,7 +72,7 @@ export default async function MissionPlayPage({ params }: PageProps) {
             음소: <strong>{mission.targetPhoneme}</strong>
           </span>
           <span>
-            난이도: <strong>{mission.difficultyLevel}/5</strong>
+            난이도: <strong>{mission.difficultyLevel}/6</strong>
           </span>
           <span>
             월령: <strong>{mission.ageRangeMin}~{mission.ageRangeMax}개월</strong>
@@ -95,13 +98,22 @@ export default async function MissionPlayPage({ params }: PageProps) {
           difficultyLevel={mission.difficultyLevel}
         >
           {content?.difficultyLevel === 1 && (
-            <MissionWordRepeat phoneme={content.phoneme} words={content.words} />
+            <MissionPhonemeIsolation phoneme={content.phoneme} isolation={content.isolation} />
           )}
           {content?.difficultyLevel === 2 && (
-            <MissionWordFill phoneme={content.phoneme} words={content.words} />
+            <MissionSyllable phoneme={content.phoneme} syllables={content.syllables} />
           )}
           {content?.difficultyLevel === 3 && (
+            <MissionWordRepeat phoneme={content.phoneme} words={content.words} />
+          )}
+          {content?.difficultyLevel === 4 && (
+            <MissionPhrase phoneme={content.phoneme} phrases={content.phrases} />
+          )}
+          {content?.difficultyLevel === 5 && (
             <MissionSentenceBuild phoneme={content.phoneme} sentences={content.sentences} />
+          )}
+          {content?.difficultyLevel === 6 && (
+            <MissionConversation phoneme={content.phoneme} conversations={content.conversations} />
           )}
         </MissionRunner>
       </section>

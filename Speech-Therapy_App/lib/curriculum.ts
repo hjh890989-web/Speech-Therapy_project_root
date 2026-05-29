@@ -14,7 +14,9 @@ import type {
 } from "@/lib/schemas/curriculum";
 
 const SUPPORTED_PHONEMES = ["ㅅ", "ㅈ", "ㄱ", "ㄴ", "ㄹ"] as const;
-const MAX_DIFFICULTY = 5;
+// REQ-FUNC-CL-05 — 6단계 임상 위계 (단독음소→음절→단어→구→문장→대화).
+// phoneme_switch 는 MAX_DIFFICULTY 마스터 시 발동하므로 상수 변경만으로 level≥6 정합.
+const MAX_DIFFICULTY = 6;
 const MIN_DIFFICULTY = 1;
 const FAILURE_STREAK_DOWN = 3;
 const SUCCESS_STREAK_UP = 5;

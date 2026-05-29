@@ -84,8 +84,9 @@ describe("decideRecommendation", () => {
     expect(decision.difficulty).toBe(3);
   });
 
-  it("동일 음소 5단계 마스터 + 최근 성공 → phoneme_switch (난이도 1 + 다음 음소)", () => {
-    const streak = { ...baseStreak, recentDifficulty: 5, recentPhoneme: "ㅅ", trailingSuccesses: 2 };
+  it("동일 음소 6단계 마스터 + 최근 성공 → phoneme_switch (난이도 1 + 다음 음소)", () => {
+    // REQ-FUNC-CL-05 — MAX_DIFFICULTY 6 (대화 단계 마스터 시 음소 전환).
+    const streak = { ...baseStreak, recentDifficulty: 6, recentPhoneme: "ㅅ", trailingSuccesses: 2 };
     const decision = decideRecommendation(streak, 1, "ㅅ");
     expect(decision.reason).toBe("phoneme_switch");
     expect(decision.difficulty).toBe(1);

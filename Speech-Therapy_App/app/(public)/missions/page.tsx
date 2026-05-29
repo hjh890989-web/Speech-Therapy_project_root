@@ -17,9 +17,12 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { dailyMissionFixtures, type MissionFixture } from "@/lib/mocks/missions";
 import { MissionRunner } from "./MissionRunner";
 import { getMissionContent } from "@/lib/mocks/mission-content";
+import { MissionPhonemeIsolation } from "@/components/missions/MissionPhonemeIsolation";
+import { MissionSyllable } from "@/components/missions/MissionSyllable";
 import { MissionWordRepeat } from "@/components/missions/MissionWordRepeat";
-import { MissionWordFill } from "@/components/missions/MissionWordFill";
+import { MissionPhrase } from "@/components/missions/MissionPhrase";
 import { MissionSentenceBuild } from "@/components/missions/MissionSentenceBuild";
+import { MissionConversation } from "@/components/missions/MissionConversation";
 import { mockContinue } from "@/lib/mocks/curriculum";
 import { analyzeStreaks, decideRecommendation } from "@/lib/curriculum";
 import {
@@ -198,7 +201,7 @@ export default async function MissionsPage() {
         </p>
         <div className="mb-4 flex gap-3 text-xs text-gray-600 dark:text-gray-400">
           <span>음소: <strong>{recommended.targetPhoneme}</strong></span>
-          <span>난이도: <strong>{recommended.difficultyLevel}/5</strong></span>
+          <span>난이도: <strong>{recommended.difficultyLevel}/6</strong></span>
           <span>월령: <strong>{recommended.ageRangeMin}~{recommended.ageRangeMax}개월</strong></span>
         </div>
         <MissionRunner
@@ -207,13 +210,22 @@ export default async function MissionsPage() {
           difficultyLevel={recommended.difficultyLevel}
         >
           {recContent?.difficultyLevel === 1 && (
-            <MissionWordRepeat phoneme={recContent.phoneme} words={recContent.words} />
+            <MissionPhonemeIsolation phoneme={recContent.phoneme} isolation={recContent.isolation} />
           )}
           {recContent?.difficultyLevel === 2 && (
-            <MissionWordFill phoneme={recContent.phoneme} words={recContent.words} />
+            <MissionSyllable phoneme={recContent.phoneme} syllables={recContent.syllables} />
           )}
           {recContent?.difficultyLevel === 3 && (
+            <MissionWordRepeat phoneme={recContent.phoneme} words={recContent.words} />
+          )}
+          {recContent?.difficultyLevel === 4 && (
+            <MissionPhrase phoneme={recContent.phoneme} phrases={recContent.phrases} />
+          )}
+          {recContent?.difficultyLevel === 5 && (
             <MissionSentenceBuild phoneme={recContent.phoneme} sentences={recContent.sentences} />
+          )}
+          {recContent?.difficultyLevel === 6 && (
+            <MissionConversation phoneme={recContent.phoneme} conversations={recContent.conversations} />
           )}
         </MissionRunner>
       </section>
