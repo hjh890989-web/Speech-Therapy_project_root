@@ -11,28 +11,33 @@
 - [play/page.tsx](../app/(public)/missions/[missionId]/play/page.tsx): 난이도 표시 `{level}/5`, 콘텐츠 라우팅 1/2/3 분기.
 - 즉 **난이도 체계(1~5) ↔ 콘텐츠(3단계) ↔ 임상 위계(6단계)** 3자가 불일치.
 
-## 결정 사항 (본 태스크 산출 = 결정 문서)
-- **D1. 난이도 단계 수**: `MAX_DIFFICULTY` 5 → **6 확장** vs 5 유지(단계 병합).
-  - 권장: **6 확장** — 임상 6단계와 1:1 정합, 의미 명확. (대안: 단독음소+음절 병합으로 5 유지)
-- **D2. 6단계 ↔ level 번호 매핑표** 확정 (아래 초안).
-- **D3. 기존 3 콘텐츠 재배치** — 현 L1 단어 → 신 L3, 현 L3 문장 → 신 L5, 현 L2 빈칸 → 신 L4(구)로 재해석 또는 단어변형 유지.
-- **D4. curriculum 영향** — `MAX_DIFFICULTY=6` 시 phoneme_switch 임계(`level ≥ 6`), 기존 세션 `difficultyLevel`(1~5) 데이터 의미 변화 처리.
+## 결정 사항 ✅ 확정 (admin 승인 2026-05-29)
+- **D1. 난이도 단계 수**: `MAX_DIFFICULTY` **5 → 6 확장** (병합 아님).
+  - 사유: ① 임상 6단계와 1:1 정합 ② 현 level 4~5 는 콘텐츠 없는 **유령 단계**(엔진은 추천하나 `getMissionContent` undefined) — 확장이 곧 그 공백을 메움 ③ pilot(100가정) 전이라 재해석할 prod `difficultyLevel` 데이터 거의 없음 → 마이그레이션 불요.
+- **D2. 매핑표**: 아래 확정표.
+- **D3. 기존 콘텐츠 재배치 + 빈칸 처리**:
+  - 현 L1 단어(MissionWordRepeat) → **신 L3**, 현 L3 문장(MissionSentenceBuild) → **신 L5**.
+  - **현 L2 빈칸(MissionWordFill) = L3 단어의 선택 변형으로 보존** (컴포넌트·테스트 폐기 안 함). 임상적으로 빈칸 채우기는 단어 레벨 과제 → 구(L4) 아님.
+  - **L4(구) = 신규 MissionPhrase** 별도 작성.
+- **D4. curriculum 영향**: `MAX_DIFFICULTY=6`, phoneme_switch 임계 `level ≥ 5` → **`level ≥ 6`**(최상위=대화 마스터 시 음소 전환), `FAILURE_STREAK_DOWN=3`/`SUCCESS_STREAK_UP=5` 불변. 기존 `difficultyLevel`(1~5) 데이터는 마이그레이션 없이 의미만 문서화(본 표 기준).
 
-### D2 매핑표 (초안 — 6 확장 안)
+### D2 매핑표 ✅ 확정 (6 단계)
 | level | 임상 단계 | 콘텐츠 형태 | 현 구현 |
 |---|---|---|---|
-| 1 | 단독 음소 | 음소 1개 소리 내기 + 입모양 힌트 | ❌ 신규 |
-| 2 | 음절 | 음절 카드 (사·시·수) | ❌ 신규 |
-| 3 | 단어 | 단어 따라하기 | ✅ 현 L1 (MissionWordRepeat) |
-| 4 | 구 | 짧은 구 (빨간 사과) | 🟡 현 L2 빈칸 재해석 |
-| 5 | 문장 | 짧은 문장 만들기 | ✅ 현 L3 (MissionSentenceBuild) |
-| 6 | 대화 | 턴테이킹 발화 유도 | ❌ 신규 |
+| 1 | 단독 음소 | 음소 1개 소리 내기 + 입모양 힌트 | ❌ 신규 (MissionPhonemeIsolation) |
+| 2 | 음절 | 음절 카드 (사·시·수) | ❌ 신규 (MissionSyllable) |
+| 3 | 단어 | 단어 따라하기 (+ 빈칸 변형) | ✅ 현 L1 MissionWordRepeat 이동 (+ MissionWordFill 변형 보존) |
+| 4 | 구 | 짧은 구 (빨간 사과) | ❌ 신규 (MissionPhrase) |
+| 5 | 문장 | 짧은 문장 만들기 | ✅ 현 L3 MissionSentenceBuild 이동 |
+| 6 | 대화 | 턴테이킹 발화 유도 | ❌ 신규 (MissionConversation) |
 
 ## Acceptance Criteria
-- [ ] D1~D4 결정이 본 문서에 확정 기재 (선택 + 사유)
-- [ ] D2 매핑표 최종본 확정 (level ↔ 단계 ↔ 콘텐츠 타입)
-- [ ] `MAX_DIFFICULTY` 변경 시 curriculum.ts 영향 범위 + 기존 데이터(`difficultyLevel` 1~5) 호환/마이그레이션 방침 명시
-- [ ] 후속 태스크(CL-05-1/2/3) 의 범위가 본 결정에 정렬
+- [x] D1~D4 결정이 본 문서에 확정 기재 (선택 + 사유)
+- [x] D2 매핑표 최종본 확정 (level ↔ 단계 ↔ 콘텐츠 타입)
+- [x] `MAX_DIFFICULTY` 변경 시 curriculum.ts 영향 범위 + 기존 데이터(`difficultyLevel` 1~5) 호환/마이그레이션 방침 명시 (D4)
+- [x] 후속 태스크(CL-05-1/2/3) 의 범위가 본 결정에 정렬 (CL-05-3 가 D1·D4 반영)
+
+> **상태: ✅ 설계 확정 (admin 승인 2026-05-29)** — CL-05-1/2/3 착수 가능.
 
 ## 영향 범위 (결정만 — 코드 변경 없음)
 - 결정 영향 파일: [lib/curriculum.ts](../lib/curriculum.ts), [lib/mocks/mission-content.ts](../lib/mocks/mission-content.ts), [lib/mocks/missions.ts](../lib/mocks/missions.ts)
