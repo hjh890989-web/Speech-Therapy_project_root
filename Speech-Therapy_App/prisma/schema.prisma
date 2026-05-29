@@ -214,7 +214,7 @@ model MissionCard {
   id              String   @id @default(uuid())
   /// 한국어 음소 (예: "ㅅ").
   targetPhoneme   String
-  /// 1~5.
+  /// 1~6 (REQ-FUNC-CL-05 임상 위계: 단독음소→음절→단어→구→문장→대화).
   difficultyLevel Int
   /// "star" | "tree" | "drawing".
   rewardType      String

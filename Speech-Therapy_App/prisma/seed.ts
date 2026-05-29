@@ -85,37 +85,49 @@ async function seedInstitutions() {
 }
 
 async function seedMissionCards() {
-  // DB-006 §AC Scenario 1: 5음소 × 5난이도 = 25 카드.
+  // DB-006 + REQ-FUNC-CL-05: 5음소 × 6단계 임상 위계 = 30 카드.
   // 한국어 음운론 위계: 파열음(ㄱ) → 비음(ㄴ) → 마찰음(ㅅ) → 파찰음(ㅈ) → 유음(ㄹ).
   const phonemes = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
   const rewardTypes = ["star", "tree", "drawing"] as const;
 
+  // FR-C-003-0 — fixtures(lib/mocks/missions.ts) 와 동일한 ASCII slug id 매핑.
+  // 결정적 id (mock-${slug}-${level}) → 라우팅/FK 안정 + fixtures 정합.
+  const phonemeSlug: Record<(typeof phonemes)[number], string> = {
+    "ㄱ": "g",
+    "ㄴ": "n",
+    "ㅅ": "s",
+    "ㅈ": "j",
+    "ㄹ": "l",
+  };
+
+  // REQ-FUNC-CL-05 6단계 임상 위계 (CL-05-0 매핑).
   const titleByLevel: Record<number, string> = {
-    1: "단어 따라하기",
-    2: "단어 빈칸 채우기",
-    3: "짧은 문장 만들기",
-    4: "이야기 이어가기",
-    5: "자유 대화 도전",
+    1: "소리 내기",
+    2: "음절 따라하기",
+    3: "단어 따라하기",
+    4: "구 만들기",
+    5: "짧은 문장 만들기",
+    6: "대화 나누기",
   };
 
   for (const phoneme of phonemes) {
-    for (let level = 1; level <= 5; level++) {
-      const existing = await prisma.missionCard.findFirst({
-        where: { targetPhoneme: phoneme, difficultyLevel: level },
-      });
+    for (let level = 1; level <= 6; level++) {
+      const id = `mock-${phonemeSlug[phoneme]}-${level}`;
+      const existing = await prisma.missionCard.findFirst({ where: { id } });
       if (existing) continue;
 
-      // 월령 범위: 난이도 1~5 를 24~84 개월에 단계적 매핑.
+      // 월령 범위: 난이도 1~6 을 24~84 개월에 단계적 매핑.
       const ageRangeMin = 24 + (level - 1) * 12;
       const ageRangeMax = Math.min(36 + (level - 1) * 12, 84);
 
       await prisma.missionCard.create({
         data: {
+          id,
           targetPhoneme: phoneme,
           difficultyLevel: level,
           rewardType: rewardTypes[level % rewardTypes.length],
           title: `${phoneme} 소리 ${titleByLevel[level]}`,
-          instructionText: `${phoneme} 소리가 들어간 단어로 ${titleByLevel[level]} 활동을 해보세요.`,
+          instructionText: `${phoneme} 소리로 ${titleByLevel[level]} 활동을 해보세요.`,
           ageRangeMin,
           ageRangeMax,
         },
