@@ -102,3 +102,24 @@ assignees: ''
 - **Depends on**: DB-016 (model_retraining_data 스키마), DB-013 (audit_sanitize_jsonb 재사용), DB-009 (HITLQueue), DB-005 (EvaluationResult), DB-015 (User.consentTier column — F10 T1~T4)
 - **Blocks**: FR-C-HITL-006 (3 게이트 Cron 의 INSERT 결과 입력), FR-C-HITL-007 (다양성 모니터링의 row 통계 원본), TEST-022 (3 게이트 단위 테스트)
 - **Discope 영향**: 해당 없음 (Phase 1+ 본격 활성)
+
+---
+
+## 📌 2026-05-29 구현 상태 조사 (workflow `whs18oh77`, 4축 병렬 + 직접 검증)
+
+> wiki 방향성 검토의 "HITL 재학습 = skeleton only" 는 **부정확**. 빌드는 거의 완성, 실제 미완은 데이터 수집 1점.
+
+### ✅ 이미 빌드+테스트 완료 (명세 대비)
+- 3게이트 로직: [`lib/hitl/retraining-gate.ts`](../lib/hitl/retraining-gate.ts) `evaluateRetrainingGate` + 임계상수(diffPct≥0.5% / cumulative≥500 / HHI≤0.3) + TEST-022 8건.
+- expert 다양성: [`lib/hitl/expert-diversity.ts`](../lib/hitl/expert-diversity.ts) HHI/Gini + Phase1/2 판정 + 8건.
+- cron route: [`app/api/cron/hitl-retraining-gate/route.ts`](../app/api/cron/hitl-retraining-gate/route.ts) + 통합 7건. external-crons.yml 스케줄 등록(`30 3 * * *`).
+- TRIGGER: [`migration 20260527180000`](../prisma/migrations/20260527180000_add_model_retraining_data/migration.sql) `sync_retraining_data` (AFTER UPDATE OF groundTruthScore) + diffPct + R4 sanitize.
+
+### 🔴 검증된 결함 2 (보류 사유)
+1. **데이터 수집 no-op (CONFIRMED)**: [`lib/hitl/admin-actions.ts:72-96`](../lib/hitl/admin-actions.ts#L72) `submitExpertComment` 가 `correctedScore` 만 UPDATE, **`groundTruthScore`(3축) 미기록**. TRIGGER 는 `AFTER UPDATE OF groundTruthScore` 라 영원히 발화 안 함 → `model_retraining_data` 0건 → 게이트/다양성/cron 전부 빈 입력. **이 task(005)의 Scenario 1·Task Breakdown #5 가 미구현** (TRIGGER SQL 은 있으나 입력 경로 부재).
+2. **R4 결합 (CONFIRMED)**: migration.sql:124-125 `v_consent_tier := 'T4-c'` **하드코딩** (`User.f10ResearchConsentTier`/`consentTier` 컬럼 부재 — DB-015 미반영). 본 task Scenario 2(T1~T3 skip)·Task Breakdown #4 미구현. → groundTruthScore 를 그냥 배선하면 **F10 미동의 데이터까지 T4-c 로 적재 = PIPA/R4 위반**.
+
+### ⛔ 결론 — 보류 (2026-05-29 admin 결정)
+- 안전 수집 활성화 = **(a) groundTruthScore 배선 + (b) `User.consentTier` 컬럼(DDL) + (c) TRIGGER 분기(미동의 skip)** 가 한 묶음. 그러나 동의를 *실제로 받는* F10 연구동의 인프라가 부재 → 지금 배선해도 수집 0건(동면) + DDL/PIPA surface 증가.
+- **→ 데이터 수집 활성화는 F10 연구동의(PIPA) 트랙과 함께 설계·구현.** 본 조사 시점엔 보류. (게이트/다양성/TRIGGER 빌드는 그대로 자산.)
+- 잔여 gap 상세(멱등성 가드 / expert-diversity 별도 cron / admin 모니터링 페이지 / getCurrentPhase ADR-13 / system_config 테이블 부재)는 FR-C-HITL-006/007 에 동일 보류 적용.
