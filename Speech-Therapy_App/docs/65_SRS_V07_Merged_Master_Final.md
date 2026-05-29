@@ -642,7 +642,7 @@ sequenceDiagram
 | REQ ID | 요구사항 | Source | AC |
 |:---|:---|:---:|:---|
 | **REQ-FUNC-001** | 16kHz 오디오 스트림을 수신하여 3축(Linguistic, Articulation, Acoustic) 점수를 산출 | S1 | Given: 유아 발화 입력, When: `/analyze` 호출, Then: 3축 float 반환, 실패율 `< 2%` |
-| **REQ-FUNC-002** | 3축 점수 기반 동월령 또래 대비 백분위(peer_percentile) 산출 | S1 | Given: 3축+월령, When: 계산, Then: 0~100 float, K-CDI/REVT 차용 |
+| **REQ-FUNC-002** | 3축 점수 기반 동월령 또래 대비 백분위(peer_percentile) 산출 | S1 | Given: 3축+월령, When: 계산, Then: 0~100 float, K-CDI/REVT 차용 (**V07.1 보강: 표준화 검사 절단점 정합 → REQ-FUNC-CL-03**) |
 | **REQ-FUNC-003** | AI Confidence Score(0~100) 산출, 70 미만 시 HITL 큐 자동 이관 트리거 | S1, S6 | Given: 분석완료, When: Confidence<70, Then: HITL 큐 자동 이관 |
 | **REQ-FUNC-004** | STT 처리 실패 시 백그라운드 자동 재시도 1회 수행 | S1-AC2 | Given: STT 오류, When: 최초 실패, Then: 재시도 1회, 성공률 `≥ 98%` |
 | **REQ-FUNC-005** | 음성 원본을 벡터 변환 후 `≤ 7일` 내 자동 폐기 | S5-AC4, CON-03 | Given: 수집완료, When: 7일 경과, Then: 원본 삭제+AES-256 벡터 저장 |
@@ -686,7 +686,7 @@ sequenceDiagram
 
 | REQ ID | 요구사항 | Source | AC |
 |:---|:---|:---:|:---|
-| **REQ-FUNC-021** | 3회 연속 실패 시 난이도 은밀히 하향, X표시/실패음 `0회` | S2-AC2 | 전환 지연 `< 0.5초` |
+| **REQ-FUNC-021** | 3회 연속 실패 시 난이도 은밀히 하향, X표시/실패음 `0회` | S2-AC2 | 전환 지연 `< 0.5초` (**V07.1 보강: 6단계 위계 + ABA 6변수 → REQ-FUNC-CL-05/06**) |
 | **REQ-FUNC-022** | `/v1/mission/curriculum` API로 세션 이력 기반 추천 미션 반환 | S2 | 난이도 레벨 + 미션 ID 반환 |
 | **REQ-FUNC-023** | 난이도 하향 후 세션 이탈률 `< 5%` | CJM-B | 이탈률 측정 |
 
@@ -699,6 +699,44 @@ sequenceDiagram
 | **REQ-FUNC-026** | 누적 보상 도감 UI 제공 | S2 | 별/나무/그림 현황 표시 |
 
 > **Phase 0 소계: REQ-FUNC-001 ~ REQ-FUNC-026 (26개)**
+
+### 임상 정밀도 요구사항 (CR-2026-006 — Phase 0/1 cross-cutting) ✅ admin 승인 (2026-05-29)
+
+> **배경**: wiki `clinical/concepts/*` 의 임상 정밀도 요건(정상 음운 변동 식별 · 발달 위계 · 표준화 검사 절단점 · 6단계 난이도 위계 · 4대 핵심기법)이 PRD V10 / SRS V06~V07 의 REQ 사슬로 전파되지 않은 **추적성 갭**(2026-05-29 방향성 검토에서 발견). 본 절은 해당 갭을 REQ 로 명문화한다.
+> **Tier 3 (Strategic)**: 진단 타당성(KSF#2 학습효과 검증)에 직결 + **ADR-17 후보**(임상 정밀도 채점 원칙). §8.1 에 따라 RACI 위원회(admin + clinical expert + IRB) 승인 대상.
+> **✅ 상태 = 요구사항 채택 (admin 승인 2026-05-29)**: 본 절 REQ 는 SRS 정식 요구사항으로 활성. **단 구현 게이트 분리**:
+> - **CL-05 / CL-06 / CL-07**(콘텐츠 6단계 위계 · ABA 변수 · 4대 기법): 채점 타당성 비직결 → Task 분해/구현 착수 가능.
+> - **CL-01 ~ CL-04**(진단 채점 로직 변경): 진단 타당성 직결 → 구현 전 **§10 임상 자문(KOPLAC 풀)으로 채점 규칙 검증** 필수. 임상 검증 없이 채점 로직 변경 금지.
+> **ID 규칙**: 기존 REQ-FUNC-NNN 과의 번호 충돌을 피하기 위해 `REQ-FUNC-CL-NN`(CL = Clinical precision) 네임스페이스 사용.
+
+#### A. 진단 채점 임상 타당성 (Phase 0 — MVP 필수, Epic F1-a / F2 확장)
+
+| REQ ID | 요구사항 | Source | AC |
+|:---|:---|:---:|:---|
+| **REQ-FUNC-CL-01** ⭐ | 진단 채점 시 **한국어 정상 음운 변동을 오류로 분류 금지**(false positive 방지). 예: 비음화 `국+물→궁물`(종성 ㄱ→ㅇ), 연음 등은 정상 변동 | wiki `clinical/concepts/조음장애` §C "정상 음운 변동 = 결함 X (false positive 회피)" | 정상 변동 케이스 세트(비음화/연음 등)에 대해 articulation 감점 `0건`. `lib/phonetic-similarity.ts` 표면형 비교에 변동 규칙 정규화 선행 |
+| **REQ-FUNC-CL-02** | 음소별 **발달 위계 기반 연령 보정** — 자세(3세)/5세/6세 완성 위계에 따라 연령대별 기대 기준 차등. 예: 마찰음(ㅅ)은 6세까지 발달 → 4~5세 오류는 발달적, 감점 약화 | wiki `clinical/concepts/조음장애` §L(자세/5세/6세 완성) · §M(발달적 오류 소실 시기) | 음소 × 연령(월령) 기대 매트릭스 반영. 발달적 오류(연구개 전방화 5세·마찰음 파열음화 6세·유음 활음화 최장)는 비발달적 오류와 가중치 분리 |
+| **REQ-FUNC-CL-03** | peer_percentile / 3축 점수를 **표준화 검사 절단점에 정합**. articulation→U-TAP PCC(80%+ 정상 / 65–80% 약간 / <65% 지연), linguistic→SELSI(-1SD 경계 / -2SD 지연)·PRES(-1.25SD 정상 / -2SD 심한 지체)·REVT(등가연령 6개월+ 지체) | wiki `clinical/concepts/학령전-언어평가-도구-비교` §임상 절단점 · §3축 매핑 | REQ-FUNC-002 보강. **단 SP3_2D(실 사용자 N≥50 후 실측 백분위) 와 정합 — Phase 0 명세 / 구현은 데이터 누적 후 단계화** |
+| **REQ-FUNC-CL-04** | **유음 활음화 등 단일 음운 변동을 단일 변동으로 분석**(복합 오류로 중복 감점 금지). 예: `호랑이→호양이`는 'ㄹ 탈락 + 모음 변동' 2건이 아닌 활음화(ㄹ→j) 1건 | wiki `clinical/concepts/조음장애` §N "활음화 ≠ 단순 유음 탈락 + 모음 변동, 단일 변동 분석 우선" | 활음화/탈락/비음화 등 변동 유형 분류 후 단일 변동 우선 매칭 |
+
+#### B. 적응형 난이도 임상 위계 (Phase 0 — Epic F3-b 확장)
+
+| REQ ID | 요구사항 | Source | AC |
+|:---|:---|:---:|:---|
+| **REQ-FUNC-CL-05** ⭐ | F3-b 적응형 난이도 엔진이 **6단계 임상 위계**(단독 음소 → 음절 → 단어 → 구 → 문장 → 대화)를 미션 콘텐츠 구조에 매핑. **현재 3단계(단어/빈칸/문장) → 6단계로 확장** | wiki `clinical/concepts/조음장애` §난이도 위계 "6단계 위계 = MVP-feature-spec §F3-b 적응형 난이도 엔진 임상 근거" | `lib/mocks/mission-content.ts`(향후 MissionCard DB)에 6단계 콘텐츠 타입 정의. REQ-FUNC-021/022 정합 |
+| **REQ-FUNC-CL-06** | 난이도 조절을 **ABA 6변수**(자극 형태 폐쇄형↔개방형 / 단위 단어↔문장 / 유사성 / 맥락 / 과제 구조화↔자연 / SNR)로 수행, 임계값 **정확도 80%+ → 상향 / 50% 미만 → 하향** | wiki `product/concepts/MVP-clinical-foundation` §3.1 (Tye-Murray Ch4) | REQ-FUNC-021(3연속 실패 하향) 의 임상 근거 보강. 6변수 중 최소 자극 단위/유사성/맥락 반영 |
+
+#### C. 개입 임상 기법 (Phase 1 — 미션 / 부모 코칭 / F15 챗봇)
+
+| REQ ID | 요구사항 | Source | AC |
+|:---|:---|:---:|:---|
+| **REQ-FUNC-CL-07** | 미션 · 부모 코칭(F6) · F15 챗봇이 **4대 핵심기법**(평행 발화 · 확장 · 기다리기 3~5초 · 반응적 상호작용)을 반영. **ADR-09 정합**: 일방향(동화/자장가)만 부모 음성 클로닝 허용, 확장/기다리기/반응적 상호작용은 실시간 영역 → 클로닝 금지 | wiki `clinical/concepts/아동언어치료-핵심기법` §4기법 · §ADR-09 매핑 | 기존 **REQ-FUNC-037**(부모 음성 역할 분리) 와 연결. F15 응답이 4기법 패턴 반영 + KOPLAC 자문(§10) 통과 |
+
+#### 구현 단계화 / RTM 영향
+
+- **승인 게이트**: 요구사항 채택 = admin 승인 완료(2026-05-29). 단 채점 로직 변경(CL-01~04) 구현은 clinical expert(이화여대 김영태 풀 등 §10.3) + IRB 검증 후. 콘텐츠/구조(CL-05~07) 는 즉시 Task 분해 가능.
+- **우선순위**: CL-05(6단계 위계, 콘텐츠 — 즉시 착수 가능) + CL-01(음운변동 false positive, 채점 — 임상 자문 후) 가 최우선.
+- **RTM 영향(≥5)**: REQ-FUNC-001/002(진단 엔진), REQ-FUNC-021/022(난이도), REQ-FUNC-037(음성 역할분리), SP3_2D(백분위 보정), §10 KOPLAC #3 난이도 위계 / #4 MLU·TTR.
+- **ADR-17 후보**: "임상 정밀도 채점 원칙(정상 변동 정규화 · 발달 위계 연령 보정 · 표준화 절단점)" — 승인 시 §6.8 에 정식 등재.
 
 ### Phase 1 — 리텐션/바이럴 (V06 23 + **신규 13** = 36 REQ-FUNC)
 
@@ -1693,6 +1731,20 @@ V07 의 RTM (§5 + Wiki RTM) 의 cross-link 변경 시 다음 자동 검증:
 | CR-2026-003 | Minor | 헤더 중복 fix (AuthHeader 삭제) |
 | CR-2026-004 | Minor | result 페이지 "진단" → "발음 확인" (CON-04 정합) |
 | CR-2026-005 | Major | external-crons GitHub Actions 이관 (6 cron) |
+
+### 8.6 CR-2026-006 — 임상 정밀도 추적성 갭 (2026-05-29 방향성 검토)
+
+| 항목 | 내용 |
+|---|---|
+| **Tier** | Strategic (Tier 3) |
+| **영향 범위** | REQ 7 신규(REQ-FUNC-CL-01~07) + RTM 5+ 영향(REQ-FUNC-001/002/021/022/037, SP3_2D, §10 #3/#4) + ADR-17 후보 |
+| **발의** | 사용자 — "wiki 자료 대비 개발 방향/누락 검토" (2026-05-29 대화) |
+| **변경 사유** | wiki `clinical/concepts/*`(조음장애 · 학령전-언어평가-도구-비교 · 아동언어치료-핵심기법 · MVP-clinical-foundation)의 임상 정밀도 요건이 PRD/SRS REQ 사슬로 전파되지 않은 추적성 갭. 코드(`lib/phonetic-similarity.ts` 표면형 비교 / `lib/peer-percentile.ts` 단순 선형 placeholder)에 정상 음운 변동·발달 위계·표준화 절단점 미반영 확인 |
+| **승인** | ✅ **admin 승인 (2026-05-29)** — 요구사항 SRS 채택. 채점 로직 변경(CL-01~04) 구현은 clinical expert + IRB(§10 자문) 검증 후 / 콘텐츠·구조(CL-05~07) 즉시 착수 가능 |
+| **구현 commit** | (승인 후) |
+| **위키 갱신** | (해당 없음 — wiki 가 source) |
+| **SRS 갱신** | §4.1 임상 정밀도 요구사항 절 신규 + REQ-FUNC-002/021 cross-ref note |
+| **출시 영향** | 없음(현 코드 동작 불변). 승인·구현 시 진단 채점 타당성 향상 — KSF#2 직결 |
 
 ---
 
