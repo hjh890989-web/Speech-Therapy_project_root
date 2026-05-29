@@ -23,6 +23,7 @@ import { MissionWordRepeat } from "@/components/missions/MissionWordRepeat";
 import { MissionPhrase } from "@/components/missions/MissionPhrase";
 import { MissionSentenceBuild } from "@/components/missions/MissionSentenceBuild";
 import { MissionConversation } from "@/components/missions/MissionConversation";
+import { ParentCoachingTip } from "@/components/missions/ParentCoachingTip";
 import { mockContinue } from "@/lib/mocks/curriculum";
 import { analyzeStreaks, decideRecommendation } from "@/lib/curriculum";
 import {
@@ -228,6 +229,8 @@ export default async function MissionsPage() {
             <MissionConversation phoneme={recContent.phoneme} conversations={recContent.conversations} />
           )}
         </MissionRunner>
+        {/* REQ-FUNC-CL-07 — 난이도별 4대 핵심기법 부모 코칭. */}
+        <ParentCoachingTip level={recommended.difficultyLevel} />
       </section>
 
       {/* 전체 카드 그리드 — 5 자모 × 3 난이도 = 15개 모두 노출.

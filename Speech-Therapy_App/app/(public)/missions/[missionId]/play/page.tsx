@@ -20,6 +20,7 @@ import { MissionWordRepeat } from "@/components/missions/MissionWordRepeat";
 import { MissionPhrase } from "@/components/missions/MissionPhrase";
 import { MissionSentenceBuild } from "@/components/missions/MissionSentenceBuild";
 import { MissionConversation } from "@/components/missions/MissionConversation";
+import { ParentCoachingTip } from "@/components/missions/ParentCoachingTip";
 
 interface PageProps {
   params: Promise<{ missionId: string }>;
@@ -117,6 +118,9 @@ export default async function MissionPlayPage({ params }: PageProps) {
           )}
         </MissionRunner>
       </section>
+
+      {/* REQ-FUNC-CL-07 — 난이도별 4대 핵심기법 부모 코칭. */}
+      <ParentCoachingTip level={mission.difficultyLevel} />
     </main>
   );
 }
