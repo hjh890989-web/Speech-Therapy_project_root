@@ -112,8 +112,12 @@ async function computeRecommendation(userId: string | undefined): Promise<Recomm
     const topPhonemeRaw = findMostFrequentPhoneme(phonemes);
     const preferredPhoneme: SupportedPhoneme = isSupportedPhoneme(topPhonemeRaw) ? topPhonemeRaw : "ㅅ";
 
+    // REQ-FUNC-CL-06 — 최근 평가 평균 정확도(articulationScore) → continue 분기 gentle nudge.
+    const meanAccuracy =
+      evaluated.reduce((sum, s) => sum + s.evaluationResult!.articulationScore, 0) /
+      evaluated.length;
     const streak = analyzeStreaks(sessions, 2, preferredPhoneme);
-    const decision = decideRecommendation(streak, 2, preferredPhoneme);
+    const decision = decideRecommendation(streak, 2, preferredPhoneme, meanAccuracy);
 
     const recommendation = pickRecommendedMission(decision, dailyMissionFixtures);
     if (recommendation) return { kind: "available", recommendation };

@@ -7,6 +7,7 @@
 // 멱등성: 동일 입력 → 동일 출력 (시드 기반 결정적 미션 선택).
 
 import { prisma } from "@/lib/db";
+import { classifyAccuracy } from "@/lib/curriculum-aba";
 import type {
   CurriculumInput,
   CurriculumOutput,
@@ -75,12 +76,17 @@ export function analyzeStreaks(
 /**
  * streak + 입력 정책 기반으로 다음 난이도/음소를 결정.
  *
- * 우선순위: phoneme_switch (5단계 마스터) > level_down (3연속 실패) > level_up (5연속 성공) > continue.
+ * 우선순위: phoneme_switch (마스터) > level_down (3연속 실패) > level_up (5연속 성공) >
+ *          [REQ-FUNC-CL-06] continue 시 정확도 nudge (≥80 상향 / <50 하향) > continue.
+ *
+ * @param accuracyPct (optional, REQ-FUNC-CL-06) 최근 정확도 0~100. 미제공 시 streak 만으로 결정
+ *        (기존 동작 100% 보존). 제공 시 streak 가 continue 일 때만 gentle nudge.
  */
 export function decideRecommendation(
   streak: StreakInfo,
   defaultDifficulty: number,
   preferredPhoneme: (typeof SUPPORTED_PHONEMES)[number],
+  accuracyPct?: number,
 ): {
   difficulty: number;
   phoneme: string;
@@ -118,6 +124,26 @@ export function decideRecommendation(
       phoneme: preferredPhoneme,
       reason: "level_up",
     };
+  }
+
+  // REQ-FUNC-CL-06 — streak 무결정(continue) 시 정확도 밴드로 gentle nudge.
+  // streak 신호(phoneme_switch/level_down/level_up)가 우선 — 위에서 이미 return 됨.
+  if (accuracyPct !== undefined) {
+    const band = classifyAccuracy(accuracyPct);
+    if (band === "advance") {
+      return {
+        difficulty: Math.min(MAX_DIFFICULTY, currentLevel + 1),
+        phoneme: preferredPhoneme,
+        reason: "level_up",
+      };
+    }
+    if (band === "reduce") {
+      return {
+        difficulty: Math.max(MIN_DIFFICULTY, currentLevel - 1),
+        phoneme: preferredPhoneme,
+        reason: "level_down",
+      };
+    }
   }
 
   return {

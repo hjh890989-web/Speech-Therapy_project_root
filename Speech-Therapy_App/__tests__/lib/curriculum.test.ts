@@ -92,6 +92,42 @@ describe("decideRecommendation", () => {
     expect(decision.difficulty).toBe(1);
     expect(decision.suggestedNextPhoneme).toBe("ㅈ");
   });
+
+  // REQ-FUNC-CL-06 — 정확도 nudge (continue 분기 한정, accuracyPct optional).
+  it("continue + 정확도 ≥80 → level_up (gentle 상향)", () => {
+    const streak = { ...baseStreak, trailingFailures: 1 };
+    const decision = decideRecommendation(streak, 1, "ㅅ", 90);
+    expect(decision.reason).toBe("level_up");
+    expect(decision.difficulty).toBe(4); // 3 + 1
+  });
+
+  it("continue + 정확도 <50 → level_down (gentle 하향)", () => {
+    const streak = { ...baseStreak, trailingFailures: 1 };
+    const decision = decideRecommendation(streak, 1, "ㅅ", 40);
+    expect(decision.reason).toBe("level_down");
+    expect(decision.difficulty).toBe(2); // 3 - 1
+  });
+
+  it("continue + 정확도 50~79 → continue 유지", () => {
+    const streak = { ...baseStreak, trailingFailures: 1 };
+    const decision = decideRecommendation(streak, 1, "ㅅ", 65);
+    expect(decision.reason).toBe("continue");
+    expect(decision.difficulty).toBe(3);
+  });
+
+  it("accuracyPct 미제공 → 기존 continue 동작 보존 (회귀 0)", () => {
+    const streak = { ...baseStreak, trailingFailures: 1 };
+    const decision = decideRecommendation(streak, 1, "ㅅ");
+    expect(decision.reason).toBe("continue");
+    expect(decision.difficulty).toBe(3);
+  });
+
+  it("streak 신호가 정확도보다 우선 — 3연속 실패 + 정확도 95 → level_down", () => {
+    const streak = { ...baseStreak, trailingFailures: 3 };
+    const decision = decideRecommendation(streak, 1, "ㅅ", 95);
+    expect(decision.reason).toBe("level_down");
+    expect(decision.difficulty).toBe(2);
+  });
 });
 
 describe("resolveMission", () => {
