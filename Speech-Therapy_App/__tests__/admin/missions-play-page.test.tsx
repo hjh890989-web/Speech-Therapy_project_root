@@ -95,6 +95,18 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+// FR-C-003 — play page 가 card-repo(getMissionCardById)로 카드 조회. DB 없이
+// fixtures 로 응답하도록 mock (async factory 로 hoist 안전하게 fixtures import).
+vi.mock("@/lib/missions/card-repo", async () => {
+  const { dailyMissionFixtures } = await import("@/lib/mocks/missions");
+  return {
+    getMissionCardById: vi.fn(
+      async (id: string) => dailyMissionFixtures.find((m) => m.id === id) ?? null,
+    ),
+    getMissionCards: vi.fn(async () => dailyMissionFixtures),
+  };
+});
+
 import MissionPlayPage from "@/app/(public)/missions/[missionId]/play/page";
 
 const FORBIDDEN = ["치료", "진단", "장애"];

@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { dailyMissionFixtures } from "@/lib/mocks/missions";
+import { getMissionCardById } from "@/lib/missions/card-repo";
 import { getMissionContent } from "@/lib/mocks/mission-content";
 import { MissionRunner } from "../../MissionRunner";
 import { MissionPhonemeIsolation } from "@/components/missions/MissionPhonemeIsolation";
@@ -36,12 +36,9 @@ export const dynamic = "force-dynamic";
 export default async function MissionPlayPage({ params }: PageProps) {
   const { missionId } = await params;
 
-  // 한국어 자음이 fixture id 에 포함됨 (예: `mock-ㅅ-2`). URL encoding/decoding 과정에서
-  // unicode normalization (NFC vs NFD) 차이 가능 → 양쪽 NFC normalize 후 비교.
-  const normalizedId = missionId.normalize("NFC");
-  const mission = dailyMissionFixtures.find(
-    (m) => m.id.normalize("NFC") === normalizedId,
-  );
+  // FR-C-003 — DB(MissionCard)에서 카드 조회, 미연결/미시드 시 fixtures 폴백.
+  // id 는 ASCII slug(mock-s-3) 라 NFC normalize 불필요.
+  const mission = await getMissionCardById(missionId);
   if (!mission) {
     notFound();
   }

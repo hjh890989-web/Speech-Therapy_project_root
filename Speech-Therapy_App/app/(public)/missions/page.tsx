@@ -14,7 +14,8 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { dailyMissionFixtures, type MissionFixture } from "@/lib/mocks/missions";
+import { type MissionFixture } from "@/lib/mocks/missions";
+import { getMissionCards } from "@/lib/missions/card-repo";
 import { MissionRunner } from "./MissionRunner";
 import { getMissionContent } from "@/lib/mocks/mission-content";
 import { MissionPhonemeIsolation } from "@/components/missions/MissionPhonemeIsolation";
@@ -62,14 +63,17 @@ type RecommendationState =
   | { kind: "available"; recommendation: MissionRecommendation }
   | { kind: "rest_needed"; alternativePhoneme?: string };
 
-async function computeRecommendation(userId: string | undefined): Promise<RecommendationState> {
+async function computeRecommendation(
+  userId: string | undefined,
+  cards: readonly MissionFixture[],
+): Promise<RecommendationState> {
   // 폴백: 익명 미사용자 → mockContinue 기반 (Sprint 1 단순화 흐름 유지).
   const fallbackRecommendation: MissionRecommendation =
     pickRecommendedMission(
       { difficulty: 2, phoneme: "ㅅ", reason: "continue" },
-      dailyMissionFixtures,
+      cards,
     ) ?? {
-      mission: dailyMissionFixtures[0],
+      mission: cards[0],
       reason: "continue" as const,
       copy: "오늘의 추천",
     };
@@ -119,7 +123,7 @@ async function computeRecommendation(userId: string | undefined): Promise<Recomm
     const streak = analyzeStreaks(sessions, 2, preferredPhoneme);
     const decision = decideRecommendation(streak, 2, preferredPhoneme, meanAccuracy);
 
-    const recommendation = pickRecommendedMission(decision, dailyMissionFixtures);
+    const recommendation = pickRecommendedMission(decision, cards);
     if (recommendation) return { kind: "available", recommendation };
     return fallback;
   } catch (err) {
@@ -144,13 +148,16 @@ async function resolveUserId(): Promise<string | undefined> {
 
 export default async function MissionsPage() {
   // FR-C-008: 인증/익명 사용자 cookie → SessionLog 분석 → 적응형 추천.
+  // FR-C-003: 카드는 DB(MissionCard)에서 조회, 미연결/미시드 시 fixtures 폴백.
   const userId = await resolveUserId();
-  const state = await computeRecommendation(userId);
+  const cards = await getMissionCards();
+  const state = await computeRecommendation(userId, cards);
 
-  // Sprint 1 호환: mockContinue 매칭 결과가 없을 때를 위한 안전망.
+  // Sprint 1 호환 안전망: mockContinue.recommendedMissionId 는 UUID(레거시 curriculum mock)라
+  // slug 카드 id(mock-*-*)와 결코 일치하지 않음 → 사실상 항상 cards[0] 로 폴백(의도된 안전 동작).
+  // cards 는 getMissionCards 가 항상 non-empty(DB rows 또는 fixtures 30) 보장 → cards[0] 안전.
   const mockRecommended =
-    dailyMissionFixtures.find((m) => m.id === mockContinue.recommendedMissionId) ??
-    dailyMissionFixtures[0];
+    cards.find((m) => m.id === mockContinue.recommendedMissionId) ?? cards[0];
 
   const headerSection = (
     <>
@@ -180,7 +187,7 @@ export default async function MissionsPage() {
     return (
       <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
         {headerSection}
-        <RestEmptyState alternativePhoneme={state.alternativePhoneme} />
+        <RestEmptyState alternativePhoneme={state.alternativePhoneme} cards={cards} />
       </main>
     );
   }
@@ -237,13 +244,13 @@ export default async function MissionsPage() {
         <ParentCoachingTip level={recommended.difficultyLevel} />
       </section>
 
-      {/* 전체 카드 그리드 — 5 자모 × 3 난이도 = 15개 모두 노출.
-          (2026-05-27 fix — recommended/mockRecommended filter 제거. 사용자가 "왜 ㄱ 따라하기 /
-          ㅅ 문장 만들기 안 보이지?" 혼란 회피. 추천 카드는 시각 강조 ring 으로 분리.) */}
+      {/* 전체 카드 그리드 — 5 자모 × 6 단계 = 30개 모두 노출 (REQ-FUNC-CL-05).
+          FR-C-003 — DB(MissionCard) 카드, 미연결/미시드 시 fixtures 폴백.
+          (추천 카드는 시각 강조 ring 으로 분리.) */}
       <section aria-label="미션 카드 그리드">
         <h2 className="mb-3 text-lg font-semibold">전체 미션 둘러보기</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {dailyMissionFixtures.map((mission) => {
+          {cards.map((mission) => {
             const isRecommended =
               mission.id === recommended.id || mission.id === mockRecommended.id;
             return (
@@ -297,9 +304,15 @@ export default async function MissionsPage() {
 }
 
 // FR-Q-003 Scenario 5 — 휴식 권유 EmptyState. CON-04 의료/실패 어휘 미사용.
-function RestEmptyState({ alternativePhoneme }: { alternativePhoneme?: string }) {
+function RestEmptyState({
+  alternativePhoneme,
+  cards,
+}: {
+  alternativePhoneme?: string;
+  cards: readonly MissionFixture[];
+}) {
   const altFixture = alternativePhoneme
-    ? dailyMissionFixtures.find(
+    ? cards.find(
         (m) => m.targetPhoneme === alternativePhoneme && m.difficultyLevel === 1,
       ) ?? null
     : null;
