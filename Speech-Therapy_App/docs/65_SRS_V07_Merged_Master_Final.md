@@ -1527,7 +1527,7 @@ EXP-2 결과 M3 리텐션 40% 미달 시 (V06 기본 시나리오):
 | **ADR-11** 🆕 | HITL 재학습 책임 분리 | 단순 누적 INSERT | 모델 편향 + 임상 안전 | 0.5% / 500건 / 0.3% 게이트 + 책임 RACI | Wiki 합성 1차 |
 | **ADR-12** 🆕 | 변경 관리 3-Tier | ad-hoc 변경 | 위키 / 코드 / SRS 정합성 + 추적성 | Tier 1 Minor / Tier 2 Major / Tier 3 Strategic + CR 워크플로 | Wiki 합성 1차 |
 | **ADR-13** 🆕🆕 | system_config 테이블 (env+DB 하이브리드) | env 단독 | 모든 ADR 임계값 동적 변경 + 추적 | system_config 스키마 + getCurrentPhase() + RACI | Wiki 합성 2차 |
-| **ADR-14** 🆕🆕 | F15 임상 안전 게이트 | F15 즉시 적용 | 임상 자문 미완 시 위험 | KOPLAC 13 항목 + 자문 4주 + 82만 + IRB 통과 후 활성 | Wiki 합성 2차 |
+| **ADR-14** 🆕🆕 | F15 임상 안전 게이트 | F15 즉시 적용 | 임상 자문 미완 시 위험 | KOPLAC 13 항목 + 자문 4주 + 82만 통과 후 활성 (IRB 는 #11 T4-c 외부협력 시 조건부·ADR-15 — 무조건 선행조건 아님, 2026-05-30 CR §10.1 본문 우선; 식약처는 #12 해당성 검토) | Wiki 합성 2차 |
 | **ADR-15** 🆕🆕 | IRB 자문위원회 운영 | 자체 임상 검증 | T4-c granular consent + 외부 임상 정합 | IRB 5단계 절차 + Phase 변경 권한 | Wiki 합성 2차 |
 | **ADR-16** 🆕🆕🆕 | **PIPA 5중 가드** | UI 가드 만 | UI 우회 / API 직접 호출 차단 + 컴플라이언스 binding | UI (ConsentRedirectGate) + Server Action × 4 (analyzeDiagnosis / updateChildProfile / generateCushion + 익명 가드) | **본 sub-session 신규** |
 

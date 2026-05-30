@@ -10,7 +10,9 @@
 //
 // Node 런타임(Prisma 7 Edge 비호환 — 프로젝트 전 route 일관) + force-dynamic.
 //
-// ⚠️ F15_CHAT_ENABLED 는 default 미설정(false). ADR-14 §10 KOPLAC 13항목(IRB·식약처 포함) 통과 전 비활성.
+// ⚠️ F15_CHAT_ENABLED 는 default 미설정(false). ADR-14 §10 KOPLAC 13항목(자문 4주+82만) 통과 전 비활성.
+//    13항목은 #11 IRB(소관 ADR-15 — T4-c 외부협력 시 조건부)·#12 식약처 해당성 검토를 포함하나, IRB·식약처
+//    '통과' 자체는 F15 활성 무조건 선행조건이 아님(2026-05-30 CR: 본문 우선/IRB 조건부 확정 — docs/f15-t4c-irb-analysis §CR).
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
