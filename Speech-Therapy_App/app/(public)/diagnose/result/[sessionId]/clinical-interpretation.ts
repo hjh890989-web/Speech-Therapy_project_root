@@ -15,6 +15,7 @@ import {
   mapArticulationBand,
   applyDevelopmentalAdjustment,
   type ClinicalBand,
+  type ErrorClassification,
 } from "@/lib/diagnose/clinical";
 
 export interface ArticulationInterpretation {
@@ -24,20 +25,31 @@ export interface ArticulationInterpretation {
 }
 
 /// CL-02 발달 보정용 표시 맥락 — 밴드 완화 판정에만 사용(점수 숫자 무변경).
+/// errorClassification/onTargetSlot 은 CL-04 변동 탐지 결과(있을 때만 완화 게이팅; 없으면 기존 동작).
 export interface DevelopmentalDisplayContext {
   phoneme: string;
   ageMonths: number;
+  /// CL-02 잔여#1 — 탐지된 오류의 분류. 'atypical'(비발달적)이면 완화 skip.
+  errorClassification?: ErrorClassification;
+  /// CL-02 잔여#2 — 변동이 targetPhoneme 슬롯에서 일어났는가. false 면 무관 자모 → 완화 skip.
+  onTargetSlot?: boolean;
 }
 
 /// articulation 점수(0~100, PCC-like) → 임상 밴드 + ADR-04 치환 안내 카피.
 /// ctx 제공 시 CL-02 발달 위계로 *밴드 산정 점수만* 완화(raw 숫자 표시는 호출 측 ScoreCard 가 유지).
+/// CL-04 게이트: errorClassification/onTargetSlot 이 *제공된 경우에만* 추가 판정 — 미제공 시 기존 완화 보존.
 export function articulationInterpretation(
   articulationScore: number,
   ctx?: DevelopmentalDisplayContext,
 ): ArticulationInterpretation {
-  const bandScore = ctx
-    ? applyDevelopmentalAdjustment(articulationScore, ctx.phoneme, ctx.ageMonths)
-    : articulationScore;
+  // 완화 억제 조건(둘 다 '제공됐고 부정'일 때만): atypical 오류 또는 비-타깃 슬롯 변동.
+  const softeningSuppressed =
+    ctx !== undefined &&
+    (ctx.errorClassification === "atypical" || ctx.onTargetSlot === false);
+  const bandScore =
+    ctx && !softeningSuppressed
+      ? applyDevelopmentalAdjustment(articulationScore, ctx.phoneme, ctx.ageMonths)
+      : articulationScore;
   const band = mapArticulationBand(bandScore);
   switch (band) {
     case "normal":

@@ -55,3 +55,45 @@ describe("articulationInterpretation — CL-02 발달 위계 밴드 완화 (disp
     expect(articulationInterpretation(100, { phoneme: "ㅅ", ageMonths: 48 }).band).toBe("normal");
   });
 });
+
+describe("articulationInterpretation — CL-04 게이팅 (atypical skip + 음소 scoping)", () => {
+  const BASE = { phoneme: "ㅅ", ageMonths: 48 }; // ㅅ 완성 72 → 발달적, raw 40 → 완화 시 watch
+
+  it("errorClassification 미제공(기존 호출) → 완화 보존 (회귀 가드)", () => {
+    // 잔여 게이트는 *제공된 경우에만* 작동 — 기존 2-인자 호출 동작 불변.
+    expect(articulationInterpretation(40, BASE).band).toBe("watch");
+  });
+
+  it("errorClassification='developmental' + onTargetSlot=true → 완화 적용 (watch)", () => {
+    expect(
+      articulationInterpretation(40, { ...BASE, errorClassification: "developmental", onTargetSlot: true })
+        .band,
+    ).toBe("watch");
+  });
+
+  it("errorClassification='atypical' → 완화 skip (raw delayed)", () => {
+    // 비발달적 오류는 발달 완화 미부여 — 과escalation 아닌 과완화 차단.
+    expect(
+      articulationInterpretation(40, { ...BASE, errorClassification: "atypical", onTargetSlot: true })
+        .band,
+    ).toBe("delayed");
+  });
+
+  it("onTargetSlot=false → 완화 skip (raw delayed)", () => {
+    // 변동이 targetPhoneme 과 무관한 슬롯 → 발달 완화 미부여.
+    expect(
+      articulationInterpretation(40, { ...BASE, errorClassification: "developmental", onTargetSlot: false })
+        .band,
+    ).toBe("delayed");
+  });
+
+  it("developmental_delayed(소실 시기 초과)도 완화 적용 (atypical 만 skip)", () => {
+    expect(
+      articulationInterpretation(40, {
+        ...BASE,
+        errorClassification: "developmental_delayed",
+        onTargetSlot: true,
+      }).band,
+    ).toBe("watch");
+  });
+});

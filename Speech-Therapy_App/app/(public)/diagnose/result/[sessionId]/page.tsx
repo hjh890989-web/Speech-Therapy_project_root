@@ -13,7 +13,11 @@ import { RewardOnMount } from "./RewardOnMount";
 import { CushionAsync } from "./CushionAsync";
 import { ResultViewedBeacon, TrackedCTALink } from "./ResultAnalytics";
 // CL-03 (KOPLAC 검증 완료) — articulation 임상 밴드 해석 (가산, 점수 무변경, ADR-04 치환).
-import { articulationInterpretation } from "./clinical-interpretation";
+import {
+  articulationInterpretation,
+  type DevelopmentalDisplayContext,
+} from "./clinical-interpretation";
+import { detectVariation, classifyError } from "@/lib/diagnose/clinical";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -124,10 +128,22 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
   const band = getBandStyles(result.peerPercentile);
   // CL-03 — articulation(조음) 임상 밴드 해석 (검증된 U-TAP PCC 절단점 기반).
   // CL-02(display-only) — clinicalContext 있으면 발달 위계로 밴드/카피만 완화(숫자는 raw 유지).
-  const articulationCopy = articulationInterpretation(
-    result.articulationScore,
-    fetched.clinicalContext ?? undefined,
-  );
+  // CL-04 — intendedWord/transcript(searchParams) 둘 다 있으면 단일 변동 탐지 → 발달 보정 게이팅:
+  //   atypical(비발달적) 또는 비-타깃 슬롯 변동이면 완화 skip. 입력 부재(새로고침/공유 transcript 유실)
+  //   또는 변동 미탐지 시 → 기존 phoneme×age 완화 폴백(회귀 아님). errorPattern durable 저장은 별도 CR.
+  let articulationCtx: DevelopmentalDisplayContext | undefined =
+    fetched.clinicalContext ?? undefined;
+  if (articulationCtx && intendedWord && transcript) {
+    const variation = detectVariation(intendedWord, transcript);
+    if (variation) {
+      articulationCtx = {
+        ...articulationCtx,
+        errorClassification: classifyError(variation.pattern, articulationCtx.ageMonths),
+        onTargetSlot: variation.intendedJamo === articulationCtx.phoneme,
+      };
+    }
+  }
+  const articulationCopy = articulationInterpretation(result.articulationScore, articulationCtx);
   const heardWord = result.heardWord ?? transcript;
   const displayIntended = result.intendedWord ?? intendedWord;
   const isPerfectMatch =
