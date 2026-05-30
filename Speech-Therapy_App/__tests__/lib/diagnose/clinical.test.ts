@@ -10,6 +10,7 @@ import {
   PHONEME_DEVELOPMENT,
   isDevelopmentalForAge,
   classifyError,
+  applyDevelopmentalAdjustment,
   NORMAL_VARIATION_RULES,
   VARIATION_TYPES,
   singleVariationOrder,
@@ -58,6 +59,17 @@ describe("CL-02 발달 위계 연령 보정", () => {
     expect(classifyError("fricative_stopping", 84)).toBe("developmental_delayed"); // >72
     expect(classifyError("liquid_gliding", 84)).toBe("developmental"); // 최장(null)
     expect(classifyError("labialization", 36)).toBe("atypical"); // 비발달적
+  });
+
+  it("applyDevelopmentalAdjustment: 발달 기대 연령 내 오류 감점 약화 (credit 0.5)", () => {
+    // ㅅ(완성 72) 48개월 → raw 40 → 40 + (100-40)*0.5 = 70.
+    expect(applyDevelopmentalAdjustment(40, "ㅅ", 48)).toBe(70);
+    // ㄴ(완성 36) 48개월 → 보정 없음(완성 기대 연령 이후).
+    expect(applyDevelopmentalAdjustment(40, "ㄴ", 48)).toBe(40);
+    // 완벽 점수는 불변.
+    expect(applyDevelopmentalAdjustment(100, "ㅅ", 48)).toBe(100);
+    // 미지원 음소 → 보정 없음.
+    expect(applyDevelopmentalAdjustment(40, "ㅎ", 48)).toBe(40);
   });
 });
 

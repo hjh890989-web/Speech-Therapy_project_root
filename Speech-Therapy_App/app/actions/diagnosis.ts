@@ -24,6 +24,7 @@ import { prisma } from "@/lib/db";
 import { withActor } from "@/lib/db/with-actor";
 import { compositeScore, computePeerPercentile } from "@/lib/peer-percentile";
 import { computePhoneticSimilarity } from "@/lib/phonetic-similarity";
+import { applyDevelopmentalAdjustment } from "@/lib/diagnose/clinical";
 import { computeLinguisticScore } from "@/lib/linguistic-score";
 import { computeAcousticScore } from "@/lib/acoustic-score";
 import { computeDiagnosisConfidence } from "@/lib/diagnose/confidence";
@@ -161,7 +162,14 @@ export async function analyzeDiagnosis(
   // - articulation: 자모 단위 정확도 (phonetic similarity).
   // - linguistic: 음절 단위 어휘 완성도 (의도 단어를 끝까지 발화했는가).
   // - acoustic: input.acousticFeatures (Web Audio API 신호) 우선, 없으면 텍스트 프록시 폴백.
-  const articulationScore = computePhoneticSimilarity(input.intendedWord, input.transcript);
+  // CL-02 (KOPLAC 검증) — 음소×연령 발달 보정: 발달 기대 연령 내 오류는 감점 약화.
+  // raw phonetic similarity → 발달 보정된 articulationScore (peer-percentile/HITL 게이트 입력).
+  const rawArticulationScore = computePhoneticSimilarity(input.intendedWord, input.transcript);
+  const articulationScore = applyDevelopmentalAdjustment(
+    rawArticulationScore,
+    input.targetPhoneme,
+    input.childAgeMonths,
+  );
   const linguisticScore = computeLinguisticScore(
     input.intendedWord,
     input.transcript,

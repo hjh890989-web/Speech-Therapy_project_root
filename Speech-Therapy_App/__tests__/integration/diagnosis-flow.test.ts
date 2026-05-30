@@ -134,11 +134,24 @@ describe("TEST-001 — Sprint 1 P0 3축 스코어링 통합 (FR-C-001)", () => {
     it("[시나리오 2] 불일치 (자모 거의 다름) → articulationScore < 50 + requiresHITL=true", async () => {
       const result = await analyzeDiagnosis({
         ...BASE_INPUT,
+        // CL-02: ㅅ 완성(72개월) 이후 연령 → 발달 보정 미적용 → 큰 오류 점수 유지 → HITL.
+        childAgeMonths: 84,
         intendedWord: "사과",
         transcript: "타파", // ㅅ→ㅌ, ㄱ→ㅍ (자모 거의 다름)
       });
       expect(result.articulationScore).toBeLessThan(50);
       expect(result.requiresHITL).toBe(true);
+    });
+
+    it("[시나리오 2-B] CL-02 — 발달 연령(36개월) 큰 오류 → 발달 보정으로 ≥50 (similarity-HITL 미발동)", async () => {
+      const result = await analyzeDiagnosis({
+        ...BASE_INPUT, // childAgeMonths 36, ㅅ (완성 72) → 발달 보정 적용
+        intendedWord: "사과",
+        transcript: "타파",
+      });
+      // 발달 기대 연령의 ㅅ 오류 → 감점 약화 → ≥50 (과escalation 회피).
+      expect(result.articulationScore).toBeGreaterThanOrEqual(50);
+      expect(result.requiresHITL).toBe(false);
     });
 
     it("[시나리오 3] 부분 일치 → articulationScore 중간값 (50~99)", async () => {

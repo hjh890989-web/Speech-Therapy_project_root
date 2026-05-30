@@ -1,6 +1,7 @@
-// CL-02 — 음소별 발달 위계 연령 보정 (DRAFT).
+// CL-02 — 음소별 발달 위계 연령 보정.
 //
-// ⚠️ DRAFT — KOPLAC 임상 자문(CR-2026-006) 검증 대기. 활성 채점 미연결. 검증 후 wiring.
+// ✅ KOPLAC 임상 자문 검증 완료(2026-05-30, "문제 없음"). applyDevelopmentalAdjustment 가
+//    활성 채점(app/actions/diagnosis.ts)에 wiring 됨.
 //
 // 근거: wiki clinical/concepts/조음장애 §L(자음 발달 자세/5세/6세 완성) · §M(발달적 오류 소실 시기).
 // 핵심: 발달적(연령상 정상) 오류는 감점 약화, 비발달적(특이) 오류는 분리.
@@ -50,4 +51,28 @@ export function classifyError(pattern: ErrorPattern, ageMonths: number): ErrorCl
   if (!p.developmental) return "atypical";
   if (p.disappearsByMonths === null) return "developmental"; // 최장(유음) — 6세+도 정상 가능
   return ageMonths <= p.disappearsByMonths ? "developmental" : "developmental_delayed";
+}
+
+/// 발달적 기대 음소의 오류 감점 약화 계수 (검증된 원칙; 정확한 값은 운영 조정 가능).
+/// 0.5 = 발달 연령 내 오류의 "100 과의 격차"를 절반 메움(감점 절반).
+export const DEVELOPMENTAL_CREDIT = 0.5;
+
+/**
+ * CL-02 — articulation 점수에 음소×연령 발달 보정.
+ *
+ * 해당 음소가 아동 연령에서 **아직 발달적으로 기대되는(미완성 정상)** 음소면, 오류(낮은 점수)의
+ * 감점을 약화 — 100 과의 격차를 DEVELOPMENTAL_CREDIT 만큼 메움. 발달 완성 연령 이후(오류 유의미)
+ * 또는 미지원 음소는 raw 그대로.
+ *
+ * 예: ㅅ(완성 72개월), 48개월 아동, raw 40 → 40 + (100-40)*0.5 = 70 (발달적 오류 → 관대).
+ *     ㄴ(완성 36개월), 48개월 아동 → 보정 없음(이미 완성 기대 연령).
+ */
+export function applyDevelopmentalAdjustment(
+  rawScore: number,
+  phoneme: string,
+  ageMonths: number,
+): number {
+  if (!isDevelopmentalForAge(phoneme, ageMonths)) return rawScore;
+  const adjusted = rawScore + (100 - rawScore) * DEVELOPMENTAL_CREDIT;
+  return Math.round(Math.max(0, Math.min(100, adjusted)));
 }
