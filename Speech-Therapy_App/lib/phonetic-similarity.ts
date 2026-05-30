@@ -92,6 +92,52 @@ export function decomposeHangul(text: string): string[] {
   return jamos;
 }
 
+/**
+ * 음절 단위 슬롯(초성/중성/종성) 보존 분해. (CL-04 — 슬롯 정렬 기반 음운 변동 탐지용.)
+ *
+ * decomposeHangul 의 평탄 출력은 종성 유무에 따라 인덱스가 밀려 슬롯 의미가 깨지고,
+ * null onset 'ㅇ'(초성)과 종성 'ㅇ'을 구분하지 못한다. 본 함수는 음절을 {cho,jung,jong} 슬롯으로
+ * 보존해 변동 탐지(예: 활음화 = 초성 ㄹ소실 + 중성 활음화)를 신뢰성 있게 한다.
+ *
+ * - 완성형 한글(가–힣)만 슬롯을 채운다(isHangul=true). jong="" = 받침 없음.
+ * - 영문/숫자 등 비한글은 raw 만 채운 sentinel(isHangul=false) — 슬롯 비교 대상 아님.
+ * - 공백/구두점은 제외(decomposeHangul 과 동일 노이즈 정책).
+ *
+ * 점수 경로(computePhoneticSimilarity/weightedLevenshtein)는 본 함수를 쓰지 않는다(불변).
+ */
+export interface Syllable {
+  cho: string;
+  jung: string;
+  jong: string;
+  raw: string;
+  isHangul: boolean;
+}
+
+export function decomposeSyllables(text: string): Syllable[] {
+  const syllables: Syllable[] = [];
+  for (const ch of text) {
+    const code = ch.codePointAt(0);
+    if (code === undefined) continue;
+    if (code < HANGUL_BASE || code > HANGUL_END) {
+      if (/\s|[.,!?·]/.test(ch)) continue;
+      syllables.push({ cho: "", jung: "", jong: "", raw: ch, isHangul: false });
+      continue;
+    }
+    const offset = code - HANGUL_BASE;
+    const cho = Math.floor(offset / (JUNG_COUNT * JONG_COUNT));
+    const jung = Math.floor((offset % (JUNG_COUNT * JONG_COUNT)) / JONG_COUNT);
+    const jong = offset % JONG_COUNT;
+    syllables.push({
+      cho: CHO_LIST[cho],
+      jung: JUNG_LIST[jung],
+      jong: JONG_LIST[jong], // idx0 = "" (받침 없음)
+      raw: ch,
+      isHangul: true,
+    });
+  }
+  return syllables;
+}
+
 function weightedLevenshtein(a: ReadonlyArray<string>, b: ReadonlyArray<string>): number {
   const m = a.length;
   const n = b.length;

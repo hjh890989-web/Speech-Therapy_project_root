@@ -5,8 +5,43 @@ import { describe, it, expect } from "vitest";
 import {
   computePhoneticSimilarity,
   decomposeHangul,
+  decomposeSyllables,
   analyzePhoneticDiff,
 } from "@/lib/phonetic-similarity";
+
+describe("decomposeSyllables (CL-04 슬롯 보존)", () => {
+  it("초/중/종 슬롯 보존 — 종성 'ㅇ' vs null onset 'ㅇ' 구분", () => {
+    expect(decomposeSyllables("강")).toEqual([
+      { cho: "ㄱ", jung: "ㅏ", jong: "ㅇ", raw: "강", isHangul: true },
+    ]);
+    // '아' = null onset 'ㅇ'(초성) + 받침 없음('').
+    expect(decomposeSyllables("아")).toEqual([
+      { cho: "ㅇ", jung: "ㅏ", jong: "", raw: "아", isHangul: true },
+    ]);
+  });
+
+  it("받침 없는 음절은 jong='' (idx0 보존)", () => {
+    expect(decomposeSyllables("가")).toEqual([
+      { cho: "ㄱ", jung: "ㅏ", jong: "", raw: "가", isHangul: true },
+    ]);
+  });
+
+  it("다음절 단어 — 음절 단위 배열", () => {
+    expect(decomposeSyllables("호랑이")).toEqual([
+      { cho: "ㅎ", jung: "ㅗ", jong: "", raw: "호", isHangul: true },
+      { cho: "ㄹ", jung: "ㅏ", jong: "ㅇ", raw: "랑", isHangul: true },
+      { cho: "ㅇ", jung: "ㅣ", jong: "", raw: "이", isHangul: true },
+    ]);
+  });
+
+  it("비한글은 raw 만(isHangul=false), 공백/구두점 제외", () => {
+    expect(decomposeSyllables("a")).toEqual([
+      { cho: "", jung: "", jong: "", raw: "a", isHangul: false },
+    ]);
+    expect(decomposeSyllables("가 나").every((s) => s.isHangul)).toBe(true);
+    expect(decomposeSyllables("가 나")).toHaveLength(2); // 공백 제외
+  });
+});
 
 describe("decomposeHangul", () => {
   it("기본 음절 분해 (초성+중성)", () => {
