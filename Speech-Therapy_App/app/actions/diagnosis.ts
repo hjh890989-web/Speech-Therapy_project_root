@@ -232,6 +232,10 @@ export async function analyzeDiagnosis(
             aiCushionText: null,
             targetPhoneme: input.targetPhoneme,
             childAgeMonths: input.childAgeMonths,
+            // CL-04 durable(errorPattern CR) — 결과 페이지가 새로고침/공유 시에도 단어 표시 + 발달 변동
+            //   게이팅을 DB 에서 재구성(searchParams 독립). 단일 대상 단어/STT — 자녀 식별 정보 아님.
+            intendedWord: input.intendedWord,
+            heardWord: input.transcript,
             // Sprint 3 §2 B — Web Audio API features 영구 저장 (미지원/미측정 시 undefined → DB NULL).
             acousticFeatures: input.acousticFeatures ?? undefined,
           },

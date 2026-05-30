@@ -271,4 +271,20 @@ describe("TEST-001 — Sprint 1 P0 3축 스코어링 통합 (FR-C-001)", () => {
       ).rejects.toThrow();
     });
   });
+
+  describe("CL-04 durable — 진단 입력 영구 저장 (errorPattern CR)", () => {
+    it("intendedWord/heardWord 를 EvaluationResult 에 저장 (새로고침/공유 시 표시+게이팅 재구성)", async () => {
+      await analyzeDiagnosis({
+        ...BASE_INPUT,
+        intendedWord: "사과",
+        transcript: "타파",
+      });
+      const createArg = sessionLogCreateMock.mock.calls[0]?.[0] as {
+        data: { evaluationResult: { create: { intendedWord?: string; heardWord?: string } } };
+      };
+      const persisted = createArg.data.evaluationResult.create;
+      expect(persisted.intendedWord).toBe("사과");
+      expect(persisted.heardWord).toBe("타파");
+    });
+  });
 });

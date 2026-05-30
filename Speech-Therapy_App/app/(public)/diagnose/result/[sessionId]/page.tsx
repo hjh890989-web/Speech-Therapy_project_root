@@ -62,6 +62,9 @@ async function fetchEvaluationResult(sessionId: string): Promise<FetchedResult |
         aiCushionText: row.aiCushionText ?? "",
         requiresHITL: !row.hitlReviewed && row.confidence < 70,
         disclaimerRequired: true,
+        // CL-04 durable — 단어 표시 + 발달 게이팅 재구성용(레거시 row 는 null → searchParams 폴백).
+        intendedWord: row.intendedWord ?? undefined,
+        heardWord: row.heardWord ?? undefined,
       },
       userId: row.userId,
       cushionFromDb: row.aiCushionText,
@@ -128,13 +131,15 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
   const band = getBandStyles(result.peerPercentile);
   // CL-03 — articulation(조음) 임상 밴드 해석 (검증된 U-TAP PCC 절단점 기반).
   // CL-02(display-only) — clinicalContext 있으면 발달 위계로 밴드/카피만 완화(숫자는 raw 유지).
-  // CL-04 — intendedWord/transcript(searchParams) 둘 다 있으면 단일 변동 탐지 → 발달 보정 게이팅:
-  //   atypical(비발달적) 또는 비-타깃 슬롯 변동이면 완화 skip. 입력 부재(새로고침/공유 transcript 유실)
-  //   또는 변동 미탐지 시 → 기존 phoneme×age 완화 폴백(회귀 아님). errorPattern durable 저장은 별도 CR.
+  // CL-04 — 단일 변동 탐지 → 발달 보정 게이팅(atypical/비-타깃 슬롯이면 완화 skip).
+  //   durable: DB 저장(intendedWord/heardWord) 우선 → 새로고침/공유에도 안정. 레거시 row(null)는
+  //   searchParams 폴백. 둘 다 없거나 변동 미탐지 시 → 기존 phoneme×age 완화 폴백(회귀 아님).
+  const effectiveIntended = result.intendedWord ?? intendedWord;
+  const effectiveTranscript = result.heardWord ?? transcript;
   let articulationCtx: DevelopmentalDisplayContext | undefined =
     fetched.clinicalContext ?? undefined;
-  if (articulationCtx && intendedWord && transcript) {
-    articulationCtx = buildDevelopmentalContext(articulationCtx, intendedWord, transcript);
+  if (articulationCtx && effectiveIntended && effectiveTranscript) {
+    articulationCtx = buildDevelopmentalContext(articulationCtx, effectiveIntended, effectiveTranscript);
   }
   const articulationCopy = articulationInterpretation(result.articulationScore, articulationCtx);
   const heardWord = result.heardWord ?? transcript;
