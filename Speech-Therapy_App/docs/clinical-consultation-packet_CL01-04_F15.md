@@ -158,3 +158,27 @@
        → 다자모 단어(예: 사과)에서 타깃과 무관한 자모 오류(ㄱ→ㅍ)까지 완화 (CL-04 "복합 중복 감점 금지" 원칙과 충돌).
   - 두 잔여 모두 **자모 diff → ErrorPattern 추론 알고리즘**(CL-01/04 핵심)이 선행돼야 해결 가능 → **C단계에 통합**.
     현재는 display-only 라 **안전 영향 없음**(atypical/큰 오류도 raw 기준으로 정상 escalation → 전문가가 raw 확인).
+
+## 6.2 CL-04 활성화 + CL-02 잔여 해결 (C단계, 2026-05-30)
+
+설계 workflow(조사 4축 → 설계안 3 → 판정 패널 → 적대적 비평; 만장일치 minimal-incremental base) 기반으로
+**전부 display-only**(채점 raw 0줄 수정) 인라인 구현:
+
+- **CL-04 (단일 변동 우선)** — ✅ 활성. `decomposeSyllables`(음절 슬롯 보존) 위 `detectVariation` 가 priority
+  그리디로 단일 변동 1건 탐지. 활음화(ㄹ소실+중성 활음화)를 **단일 1건으로 흡수**(복합 중복 감점 차단, §O).
+  치환형(전방화/파열음화)은 **의도·실현 슬롯 양방향 검증**(적대적 비평 high — 의도만 보면 ㄱ→ㅎ 오분류).
+  단일 매칭 실패(다중 음절·음절수 불일치·비한글) → `null`(보수적 완화 보류).
+- **CL-02 잔여 해결** — `detectVariation` 결과를 `classifyError`(연령 정책)에 통과시켜 부모 표시 게이팅:
+  ① **atypical 분리** — 비발달적 분류면 발달 완화 skip. ② **음소 scoping** — 변동 슬롯 의도 자모 == `targetPhoneme`
+  일 때만 완화('사과' 타깃 ㅅ 의 무관한 ㄱ→ㅍ 과완화 차단). 둘 다 **표시 밴드/카피에만** 작용(채점 raw 불변).
+- **taxonomy 단일화** — 9키 `ErrorPattern` 단일 키원. `classifyError('liquid_deletion')` 런타임 throw **라이브 버그 수정**
+  (VARIATION_TYPES 엔 있었으나 정책표 누락이던 키 추가).
+- **CL-01 (정상 변동 정규화)** — ⏸ 단일 단어 MVP **dormant**(비음화/연음은 단어경계 의존 → 시드 단어 미트리거).
+  `NORMAL_VARIATION_RULES` 데이터 보존; 점수 정규화는 구/문장 미션 확장 시 별도 Tier-3 CR.
+
+**잔여(별도 CR — 결정 C/D/A):**
+- (C) `liquid_deletion` 의 소실 시기 임상 미확정 → 유음 계열 잠정(developmental, null=최장), **KOPLAC 재확인 대상**.
+- (D) `labialization`/`regressive_assimilation` 자모 탐지 규칙 KOPLAC 미확정(역행화 방향 등) → **MVP 미탐지**
+  (taxonomy/게이팅 코드는 완비 — 규칙 확정 시 데이터만 추가하면 작동).
+- (A) `errorPattern` durable DB 저장(EvaluationResult 스키마 확장) → 무마이그레이션 출하 위해 **분리**. 현재는
+  결과 페이지 searchParams(intendedWord/transcript) 의존 — 부재 시(새로고침/공유) 완화 스킵=raw 밴드(회귀 아님).
