@@ -9,6 +9,7 @@ import {
   mapStandardScoreBand,
   mapRevtBand,
   PHONEME_DEVELOPMENT,
+  DEVELOPMENTAL_ERROR_PATTERNS,
   isDevelopmentalForAge,
   classifyError,
   applyDevelopmentalAdjustment,
@@ -60,6 +61,20 @@ describe("CL-02 발달 위계 연령 보정", () => {
     expect(classifyError("fricative_stopping", 84)).toBe("developmental_delayed"); // >72
     expect(classifyError("liquid_gliding", 84)).toBe("developmental"); // 최장(null)
     expect(classifyError("labialization", 36)).toBe("atypical"); // 비발달적
+  });
+
+  it("classifyError: liquid_deletion 런타임 throw 버그 회귀 가드 (전 키 no-throw)", () => {
+    // liquid_deletion 이 DEVELOPMENTAL_ERROR_PATTERNS 누락 → classifyError throw 였던 라이브 버그.
+    expect(() => classifyError("liquid_deletion", 48)).not.toThrow();
+    expect(classifyError("liquid_deletion", 84)).toBe("developmental"); // 유음 최장(null) 잠정
+    // taxonomy 단일화 — 전 ErrorPattern 키가 throw 없이 유효 분류 반환.
+    for (const key of Object.keys(DEVELOPMENTAL_ERROR_PATTERNS) as Array<
+      keyof typeof DEVELOPMENTAL_ERROR_PATTERNS
+    >) {
+      expect(["developmental", "developmental_delayed", "atypical"]).toContain(
+        classifyError(key, 48),
+      );
+    }
   });
 
   it("applyDevelopmentalAdjustment: 발달 기대 연령 내 오류 감점 약화 (credit 0.5)", () => {

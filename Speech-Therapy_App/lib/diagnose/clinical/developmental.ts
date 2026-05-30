@@ -42,6 +42,10 @@ export const DEVELOPMENTAL_ERROR_PATTERNS = {
   fricative_stopping: { label: "마찰음 파열음화", disappearsByMonths: 72, developmental: true },
   liquid_gliding: { label: "유음 활음화", disappearsByMonths: null, developmental: true },
   liquid_nasalization: { label: "유음 비음화", disappearsByMonths: 60, developmental: true },
+  // ⚠️ KOPLAC 재확인 대상(잠정): 유음 계열 → liquid_gliding 동급(developmental, null=최장)으로 잠정.
+  //    소실 시기 임상 미확정 — 자문 확정 시 disappearsByMonths 갱신. (VARIATION_TYPES 에는 존재했으나
+  //    본 테이블 누락 → classifyError('liquid_deletion') 런타임 throw 였던 라이브 버그 수정.)
+  liquid_deletion: { label: "유음 탈락", disappearsByMonths: null, developmental: true },
   final_consonant_deletion: { label: "종성 탈락", disappearsByMonths: 36, developmental: true },
   labialization: { label: "양순음화", disappearsByMonths: null, developmental: false },
   regressive_assimilation: { label: "역행화", disappearsByMonths: null, developmental: false },
