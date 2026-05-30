@@ -16,6 +16,14 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
+const assertConsentMock = vi.fn();
+vi.mock("@/lib/policy/consent-guard", () => ({
+  assertConsentedIfAuthenticated: () => assertConsentMock(),
+  ConsentRequiredError: class ConsentRequiredError extends Error {
+    code = "PIPA_CONSENT_REQUIRED";
+  },
+}));
+
 function authed(id = "u1") {
   getUserMock.mockResolvedValue({ data: { user: { id } }, error: null });
 }
@@ -34,6 +42,8 @@ function req(messages: unknown): Request {
 beforeEach(() => {
   __resetRateLimitForTest();
   getUserMock.mockReset();
+  assertConsentMock.mockReset();
+  assertConsentMock.mockResolvedValue(undefined); // 기본: 동의 완료
   vi.stubEnv("F15_CHAT_ENABLED", "true");
 });
 afterEach(() => {
@@ -55,6 +65,15 @@ describe("POST /api/chat/stream — 가드 (enabled)", () => {
     anon();
     const res = await POST(req([{ role: "user", content: "안녕" }]));
     expect(res.status).toBe(401);
+  });
+
+  it("PIPA 미동의 → 403 CONSENT_REQUIRED (Gemini 국외이전 전 차단)", async () => {
+    authed();
+    const { ConsentRequiredError } = await import("@/lib/policy/consent-guard");
+    assertConsentMock.mockRejectedValue(new ConsentRequiredError());
+    const res = await POST(req([{ role: "user", content: "안녕" }]));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe("CONSENT_REQUIRED");
   });
 
   it("빈 messages → 400", async () => {

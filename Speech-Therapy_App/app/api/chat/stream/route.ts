@@ -19,6 +19,11 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { checkRateLimit, recordCall } from "@/lib/ratelimit";
 import { streamChatReply, type ChatTurn } from "@/lib/ai/chat-stream";
 import { containsForbidden, SAFE_FALLBACK_MESSAGE } from "@/lib/ai/profanity-filter";
+import {
+  assertConsentedIfAuthenticated,
+  ConsentRequiredError,
+} from "@/lib/policy/consent-guard";
+import { maskPii } from "@/lib/ai/pii-mask";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +86,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
 
+  // 1.5) PIPA 가드 — 자녀 발화 처리 + Gemini 국외 이전(§17) 전 §22-6/§17 동의 확인(진단/F11 동등 Tier).
+  try {
+    await assertConsentedIfAuthenticated();
+  } catch (err) {
+    if (err instanceof ConsentRequiredError) {
+      return NextResponse.json({ error: "CONSENT_REQUIRED" }, { status: 403 });
+    }
+    return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
+  }
+
   // 2) body Zod.
   let parsed: z.infer<typeof BodySchema>;
   try {
@@ -113,8 +128,9 @@ export async function POST(request: Request) {
     );
   }
 
-  // 5) stream.
-  const stream = streamChatReply(parsed.messages as ChatTurn[]);
+  // 5) stream — R4: Gemini 국외 이전 전 user/assistant 메시지 PII 마스킹.
+  const maskedMessages = parsed.messages.map((m) => ({ ...m, content: maskPii(m.content) }));
+  const stream = streamChatReply(maskedMessages as ChatTurn[]);
   recordCall(user.id);
   return streamResponse(stream, "streaming");
 }

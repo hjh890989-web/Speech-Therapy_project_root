@@ -60,11 +60,14 @@ on:
     # expiresAt < now AND deletedAt IS NULL → ElevenLabs DELETE + soft delete.
     # daily 4AM UTC (hitl-retraining-gate 와 분리).
     - cron: "0 4 * * *"
+    # chat-cleanup — FR-C-NEW-F15 F15 챗봇 발화 7일 폐기 (ADR-03).
+    # ChatMessage.expiresAt < now → hard-delete. daily 5AM UTC (voice-model-cleanup 와 분리).
+    - cron: "0 5 * * *"
   # 수동 trigger — Actions 탭 Run workflow 에서 특정 cron 만 호출 가능.
   workflow_dispatch:
     inputs:
       target:
-        description: "수동 실행할 cron path (예: audio-cleanup). 'all' 시 8개 모두."
+        description: "수동 실행할 cron path (예: audio-cleanup). 'all' 시 9개 모두."
         required: true
         default: "all"
         type: choice
@@ -78,6 +81,7 @@ on:
           - audio-cleanup
           - hitl-retraining-gate
           - voice-model-cleanup
+          - chat-cleanup
 
 jobs:
   fire-cron:
@@ -110,11 +114,12 @@ jobs:
             ["0 3 * * 0"]="audio-cleanup"
             ["30 3 * * *"]="hitl-retraining-gate"
             ["0 4 * * *"]="voice-model-cleanup"
+            ["0 5 * * *"]="chat-cleanup"
           )
           if [ -n "$SCHEDULE" ]; then
             paths="${SCHED_MAP[$SCHEDULE]:-}"
           elif [ "$MANUAL" = "all" ] || [ -z "$MANUAL" ]; then
-            paths="error-monitor hitl-escalation funnel-alert consent-reminder consent-expire audio-cleanup hitl-retraining-gate voice-model-cleanup"
+            paths="error-monitor hitl-escalation funnel-alert consent-reminder consent-expire audio-cleanup hitl-retraining-gate voice-model-cleanup chat-cleanup"
           else
             paths="$MANUAL"
           fi
