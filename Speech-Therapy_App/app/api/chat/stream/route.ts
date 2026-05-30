@@ -4,7 +4,7 @@
 //   0) ADR-14 게이트 — F15_CHAT_ENABLED !== 'true' 시 스트림 진입 전 403 (UI 우회/직접 호출 차단).
 //   1) Supabase auth.getUser() — 익명 시 401 (인증 전용 슬라이스).
 //   2) Zod messages 검증 — 400.
-//   3) 입력 금칙어 — 마지막 user 발화에 의료/단정 표현 시 Gemini 미호출, 안전 멘트로 화제 전환(graceful 200).
+//   3) 입력 금칙어 — 전 메시지에 의료/단정 표현 시 Gemini 미호출, 안전 멘트로 화제 전환(graceful 200).
 //   4) rate-limit(SEC-004) — Gemini 무료 RPM 보호. 차단 시 429.
 //   5) streamChatReply → text/plain stream (cushion 패턴: TextEncoder TransformStream).
 //
@@ -23,6 +23,7 @@ import {
   assertConsentedIfAuthenticated,
   ConsentRequiredError,
 } from "@/lib/policy/consent-guard";
+import { reportPipaViolation } from "@/lib/monitoring/pipa-violation";
 import { maskPii } from "@/lib/ai/pii-mask";
 
 export const dynamic = "force-dynamic";
@@ -87,10 +88,14 @@ export async function POST(request: Request) {
   }
 
   // 1.5) PIPA 가드 — 자녀 발화 처리 + Gemini 국외 이전(§17) 전 §22-6/§17 동의 확인(진단/F11 동등 Tier).
+  //      Gemini 국외 이전 직전 binding 경로 → DB 장애 시 fail-closed(미동의 데이터 외부 전송 차단).
   try {
-    await assertConsentedIfAuthenticated();
+    await assertConsentedIfAuthenticated({ failClosedOnDbError: true });
   } catch (err) {
     if (err instanceof ConsentRequiredError) {
+      void reportPipaViolation({
+        ctx: { layer: "2_analyze_authenticated", serverAction: "chatStream" },
+      });
       return NextResponse.json({ error: "CONSENT_REQUIRED" }, { status: 403 });
     }
     return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
@@ -108,8 +113,9 @@ export async function POST(request: Request) {
   }
 
   // 3) 입력 금칙어 — 의료/단정 화제는 Gemini 미호출 + 안전 멘트로 graceful 전환(아이 발화를 막지 않음).
-  const lastUser = [...parsed.messages].reverse().find((m) => m.role === "user");
-  if (lastUser && containsForbidden(lastUser.content)) {
+  //     마지막 user 발화만이 아니라 *전 메시지*(과거 turn·assistant·재전송 포함)를 검사 —
+  //     클라이언트 조작으로 과거 turn 에 금칙어를 심어 우회하지 못하도록(적대적 검증 low).
+  if (parsed.messages.some((m) => containsForbidden(m.content))) {
     const safe = new ReadableStream<string>({
       start(controller) {
         controller.enqueue(SAFE_FALLBACK_MESSAGE);

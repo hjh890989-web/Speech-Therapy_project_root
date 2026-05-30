@@ -95,10 +95,26 @@ describe("assertConsentedIfAuthenticated", () => {
     );
   });
 
-  it("DB 일시 장애 (findUnique throw) → 통과 (graceful)", async () => {
+  it("DB 일시 장애 (findUnique throw) → 통과 (graceful, default)", async () => {
     getCachedUserMock.mockResolvedValueOnce(USER);
     findUniqueMock.mockRejectedValueOnce(new Error("connection_refused"));
     await expect(assertConsentedIfAuthenticated()).resolves.toBeUndefined();
+  });
+
+  it("DB 일시 장애 + failClosedOnDbError → ConsentRequiredError (binding 경로)", async () => {
+    getCachedUserMock.mockResolvedValueOnce(USER);
+    findUniqueMock.mockRejectedValueOnce(new Error("connection_refused"));
+    await expect(
+      assertConsentedIfAuthenticated({ failClosedOnDbError: true }),
+    ).rejects.toBeInstanceOf(ConsentRequiredError);
+  });
+
+  it("익명 user 는 failClosedOnDbError 와 무관하게 통과 (DB 미조회)", async () => {
+    getCachedUserMock.mockResolvedValueOnce(null);
+    await expect(
+      assertConsentedIfAuthenticated({ failClosedOnDbError: true }),
+    ).resolves.toBeUndefined();
+    expect(findUniqueMock).not.toHaveBeenCalled();
   });
 });
 

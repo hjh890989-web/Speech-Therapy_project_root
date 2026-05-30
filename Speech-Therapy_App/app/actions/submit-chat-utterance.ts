@@ -50,9 +50,9 @@ export async function submitChatUtterance(
     return { success: false, reason: "unauthorized" };
   }
 
-  // (2) PIPA 가드 + MON-005.
+  // (2) PIPA 가드 + MON-005. 국외이전 binding 경로 → DB 장애 시 fail-closed(미동의 데이터 차단).
   try {
-    await assertConsentedIfAuthenticated();
+    await assertConsentedIfAuthenticated({ failClosedOnDbError: true });
   } catch (err) {
     if (err instanceof ConsentRequiredError) {
       void reportPipaViolation({
@@ -69,13 +69,15 @@ export async function submitChatUtterance(
     return { success: false, reason: "invalid_input", message: parsed.error.issues[0]?.message };
   }
 
-  // (4) R4 마스킹 — 저장 전 자녀 식별 정보 제거.
-  const masked = maskPii(parsed.data.content);
-
-  // (5) 금칙어 검열 — 의료/단정 발화는 저장 거부(미저장).
-  if (containsForbidden(masked)) {
+  // (4) 금칙어 검열 — **RAW 입력 기준**. 마스킹 후 검사하면 [주소] 패턴이 금칙어('치료로 12' 등)를
+  //     삼켜 검열이 무력화됨(적대적 검증 medium). stream route(RAW 검열→마스킹)와 순서 일치.
+  if (containsForbidden(parsed.data.content)) {
     return { success: false, reason: "forbidden_content" };
   }
+
+  // (5) R4 마스킹 — 저장 직전 디지털 PII(전화/이메일/RRN/주소/IP/URL/카드) 제거.
+  //     ⚠️ 이름/학교/시설 등 자유텍스트 식별정보는 미커버(maskPii 한계) — F15 13항목 #6 자문 대상.
+  const masked = maskPii(parsed.data.content);
 
   // (6) INSERT — expiresAt = now + 7일.
   const expiresAt = new Date(Date.now() + CHAT_TTL_MS);

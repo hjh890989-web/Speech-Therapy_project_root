@@ -76,6 +76,14 @@ describe("submitChatUtterance — PIPA 가드 배선", () => {
     expect(chatCreateMock).not.toHaveBeenCalled();
   });
 
+  it("주소 패턴이 금칙어를 삼키는 입력 → RAW 검열로 forbidden_content (순서 버그 회귀)", async () => {
+    // maskPii 의 [주소] 정규식은 '강남구 치료동 5번지' 를 통째로 '[주소]' 로 치환 →
+    // 마스킹 후 검사하면 '치료' 가 사라져 검열 우회. RAW 우선 검열로 차단되어야 함.
+    const r = await submitChatUtterance({ role: "user", content: "강남구 치료동 5번지에 살아" });
+    expect(r.reason).toBe("forbidden_content");
+    expect(chatCreateMock).not.toHaveBeenCalled();
+  });
+
   it("빈 내용 → invalid_input", async () => {
     const r = await submitChatUtterance({ role: "user", content: "" });
     expect(r.reason).toBe("invalid_input");

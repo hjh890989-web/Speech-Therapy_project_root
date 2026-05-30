@@ -18,10 +18,15 @@ vi.mock("@/lib/supabase/server", () => ({
 
 const assertConsentMock = vi.fn();
 vi.mock("@/lib/policy/consent-guard", () => ({
-  assertConsentedIfAuthenticated: () => assertConsentMock(),
+  assertConsentedIfAuthenticated: (...a: unknown[]) => assertConsentMock(...a),
   ConsentRequiredError: class ConsentRequiredError extends Error {
     code = "PIPA_CONSENT_REQUIRED";
   },
+}));
+
+const reportPipaMock = vi.fn();
+vi.mock("@/lib/monitoring/pipa-violation", () => ({
+  reportPipaViolation: (...a: unknown[]) => reportPipaMock(...a),
 }));
 
 function authed(id = "u1") {
@@ -43,6 +48,7 @@ beforeEach(() => {
   __resetRateLimitForTest();
   getUserMock.mockReset();
   assertConsentMock.mockReset();
+  reportPipaMock.mockReset();
   assertConsentMock.mockResolvedValue(undefined); // 기본: 동의 완료
   vi.stubEnv("F15_CHAT_ENABLED", "true");
 });
@@ -67,13 +73,20 @@ describe("POST /api/chat/stream — 가드 (enabled)", () => {
     expect(res.status).toBe(401);
   });
 
-  it("PIPA 미동의 → 403 CONSENT_REQUIRED (Gemini 국외이전 전 차단)", async () => {
+  it("PIPA 미동의 → 403 CONSENT_REQUIRED + reportPipaViolation (Gemini 국외이전 전 차단)", async () => {
     authed();
     const { ConsentRequiredError } = await import("@/lib/policy/consent-guard");
     assertConsentMock.mockRejectedValue(new ConsentRequiredError());
     const res = await POST(req([{ role: "user", content: "안녕" }]));
     expect(res.status).toBe(403);
     expect((await res.json()).error).toBe("CONSENT_REQUIRED");
+    expect(reportPipaMock).toHaveBeenCalled();
+  });
+
+  it("consent-guard 호출 시 failClosedOnDbError 옵션 전달 (binding 경로)", async () => {
+    authed();
+    await POST(req([{ role: "user", content: "안녕" }]));
+    expect(assertConsentMock).toHaveBeenCalledWith({ failClosedOnDbError: true });
   });
 
   it("빈 messages → 400", async () => {
@@ -99,6 +112,20 @@ describe("POST /api/chat/stream — 가드 (enabled)", () => {
     const body = await res.text();
     expect(body).toBe(SAFE_FALLBACK_MESSAGE);
     expect(body).not.toContain("병원");
+  });
+
+  it("금칙어가 마지막 user 가 아닌 과거 turn 에 있어도 차단 (전-메시지 검열 회귀)", async () => {
+    authed();
+    // 마지막 user 발화('안녕')는 깨끗하지만 과거 turn 에 '병원' 포함 → some() 으로 차단.
+    const res = await POST(
+      req([
+        { role: "user", content: "병원 가야 해?" },
+        { role: "assistant", content: "오늘은 무슨 놀이 했어?" },
+        { role: "user", content: "안녕" },
+      ]),
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("X-Chat-Source")).toBe("input-guard");
   });
 
   it("rate-limit 초과 → 429 (SEC-004)", async () => {

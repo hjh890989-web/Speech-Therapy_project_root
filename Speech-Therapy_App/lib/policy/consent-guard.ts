@@ -45,7 +45,15 @@ export class ConsentRequiredError extends Error {
  *     매 호출 새 request 라 cache 효과 미미).
  *   - 가드 통과 시 returns void, 가드 실패 시 throw — caller graceful 분기.
  */
-export async function assertConsentedIfAuthenticated(): Promise<void> {
+/// 가드 옵션. failClosedOnDbError: 국외이전(§17) 직전 관문처럼 컴플라이언스가 binding 인 경로는
+/// DB 일시 장애 시에도 *차단*(throw)해 미동의 데이터의 외부 전송을 막는다. 기본 false(graceful — 진단/F11).
+export interface ConsentGuardOptions {
+  failClosedOnDbError?: boolean;
+}
+
+export async function assertConsentedIfAuthenticated(
+  options: ConsentGuardOptions = {},
+): Promise<void> {
   // 1) 인증 user 확인 — getCachedUser 는 React cache() 기반이지만 Server Action 호출당
   //    request 가 새로 시작되므로 cache miss 가 정상.
   const user = await getCachedUser();
@@ -64,8 +72,9 @@ export async function assertConsentedIfAuthenticated(): Promise<void> {
       },
     });
   } catch {
-    // DB 일시 장애 — graceful 통과 (사용자 흐름 보존 vs 컴플라이언스 trade-off).
-    // 운영에서 DB 장애가 곧 진단 차단보다는 일시적 통과가 안전. 장기 장애는 별도 monitoring.
+    // DB 일시 장애. 기본은 graceful 통과(사용자 흐름 보존 — 진단/F11). 단 binding 경로(국외이전 직전)는
+    // fail-closed: 동의 확인 불가 상태에서 미동의 데이터가 외부로 나가지 않도록 차단(적대적 검증 high).
+    if (options.failClosedOnDbError) throw new ConsentRequiredError();
     return;
   }
   if (!row) {
