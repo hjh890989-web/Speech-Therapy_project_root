@@ -106,4 +106,17 @@ describe("CL-01/CL-04 음운 변동", () => {
     const priorities = VARIATION_TYPES.map((v) => v.priority);
     expect(new Set(priorities).size).toBe(priorities.length);
   });
+
+  it("taxonomy 9키 단일화 — VARIATION_TYPES 키 ⊆ DEVELOPMENTAL_ERROR_PATTERNS 정책표", () => {
+    const policyKeys = new Set(Object.keys(DEVELOPMENTAL_ERROR_PATTERNS));
+    for (const v of VARIATION_TYPES) {
+      expect(policyKeys.has(v.key), `${v.key} 정책표 누락`).toBe(true);
+    }
+    expect(VARIATION_TYPES).toHaveLength(9);
+    // atypical(비발달적) 2종은 isNormal=false.
+    const atypical = VARIATION_TYPES.filter((v) => !v.isNormal)
+      .map((v) => v.key)
+      .sort();
+    expect(atypical).toEqual(["labialization", "regressive_assimilation"]);
+  });
 });
