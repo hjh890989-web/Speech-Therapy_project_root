@@ -6,6 +6,11 @@ labels: 'phase:p1, mode:active, domain:fr-q, epic:f4'
 assignees: ''
 ---
 
+> ✅ **완료 (2026-05-30 검증).** Acceptance Criteria 6개 전부 `/reports` RSC 페이지에 구현·테스트(TEST-010 통과):
+> 차트(WeeklyReportChart) · WoW delta · 예측(PredictionCard) · 데이터부족 분기(ReportEmptyState) · Disclaimer ≥2.
+> **단순화 모드** 채택 — `aggregateWeeklyScores` 라이브 집계(Cron `/api/cron/weekly-reports` 는 vercel.json 스케줄).
+> 폐기된 `getWeeklyReport()` Server Action stub(아무도 호출 안 함, DB-007 stored 접근 방식)은 제거함.
+
 ## 🎯 Summary
 - **Task ID**: FR-Q-005
 - **Epic / Story**: F4 주간 발달 추이 리포트 / S3
