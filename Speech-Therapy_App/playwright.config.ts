@@ -14,6 +14,19 @@ import { defineConfig, devices } from "@playwright/test";
 
 const usingExternalBaseUrl = Boolean(process.env.PLAYWRIGHT_BASE_URL);
 
+// 인증 fixture 산출물 (e2e/auth.setup.ts 가 저장). 세션 쿠키 — .gitignore 처리.
+const AUTH_STATE = "e2e/.auth/parent.json";
+// 인증 사용자용 미디어 권한 자동 허용 + 가짜 마이크 스트림 (F11 녹음 E2E).
+const FAKE_MEDIA_ARGS = [
+  "--use-fake-ui-for-media-stream",
+  "--use-fake-device-for-media-stream",
+];
+// 인증 E2E 는 service-role + Supabase env 필요. 미설정 시 setup/authenticated project
+// 자체를 제외 → 공개 spec 만 실행 (storageState 부재로 인한 에러 회피).
+const e2eAuthEnabled = Boolean(
+  process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL,
+);
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -26,8 +39,15 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
+    // 인증 fixture 준비 — service-role magic link → storageState (auth.setup.ts).
+    // env 있을 때만 포함.
+    ...(e2eAuthEnabled
+      ? [{ name: "setup", testMatch: /auth\.setup\.ts/ }]
+      : []),
     {
       name: "chromium-desktop",
+      // 공개(무인증) spec 만 — setup / 인증 spec 제외.
+      testIgnore: [/auth\.setup\.ts/, /\.auth\.spec\.ts$/],
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -36,8 +56,25 @@ export default defineConfig({
       // 테스트 가능. 모바일 사용자 경험 검증의 본질은 viewport / touch / breakpoint 이므로
       // 엔진 차이는 무시 가능 (별도 사용자 측 webkit 검증 필요 시 install).
       name: "chromium-mobile",
+      testIgnore: [/auth\.setup\.ts/, /\.auth\.spec\.ts$/],
       use: { ...devices["Pixel 5"] },
     },
+    // 인증 사용자 spec (*.auth.spec.ts) — storageState 재사용 + fake media stream.
+    // setup 의존 → 인증 fixture 가 storageState 를 먼저 생성. env 있을 때만 포함.
+    ...(e2eAuthEnabled
+      ? [
+          {
+            name: "authenticated",
+            testMatch: /\.auth\.spec\.ts$/,
+            dependencies: ["setup"],
+            use: {
+              ...devices["Desktop Chrome"],
+              storageState: AUTH_STATE,
+              launchOptions: { args: FAKE_MEDIA_ARGS },
+            },
+          },
+        ]
+      : []),
   ],
   // PLAYWRIGHT_BASE_URL 미설정 시만 webServer 자동 부팅. prod 외부 URL 테스트 시 skip.
   webServer: usingExternalBaseUrl

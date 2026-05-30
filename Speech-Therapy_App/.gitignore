@@ -13,6 +13,13 @@
 # testing
 /coverage
 
+# playwright E2E
+/test-results/
+/playwright-report/
+/playwright/.cache/
+# 인증 fixture storageState — 라이브 세션 토큰(secret). 절대 commit 금지.
+/e2e/.auth/
+
 # next.js
 /.next/
 /out/
