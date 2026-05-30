@@ -733,7 +733,7 @@ sequenceDiagram
 
 #### 구현 단계화 / RTM 영향
 
-- **승인 게이트**: 요구사항 채택 = admin 승인 완료(2026-05-29). 단 채점 로직 변경(CL-01~04) 구현은 clinical expert(이화여대 김영태 풀 등 §10.3) + IRB 검증 후. 콘텐츠/구조(CL-05~07) 는 즉시 Task 분해 가능.
+- **승인 게이트**: 요구사항 채택 = admin 승인 완료(2026-05-29). 채점 로직 변경(CL-01~04) = **✅ KOPLAC 임상 자문 검증 완료(2026-05-30, "문제 없음" — 수정 0)** → wiring 활성화 진행 가능. 콘텐츠/구조(CL-05~07) 는 완료. 구현 초안: `lib/diagnose/clinical/*`.
 - **우선순위**: CL-05(6단계 위계, 콘텐츠 — 즉시 착수 가능) + CL-01(음운변동 false positive, 채점 — 임상 자문 후) 가 최우선.
 - **RTM 영향(≥5)**: REQ-FUNC-001/002(진단 엔진), REQ-FUNC-021/022(난이도), REQ-FUNC-037(음성 역할분리), SP3_2D(백분위 보정), §10 KOPLAC #3 난이도 위계 / #4 MLU·TTR.
 - **ADR-17 후보**: "임상 정밀도 채점 원칙(정상 변동 정규화 · 발달 위계 연령 보정 · 표준화 절단점)" — 승인 시 §6.8 에 정식 등재.
@@ -1740,7 +1740,7 @@ V07 의 RTM (§5 + Wiki RTM) 의 cross-link 변경 시 다음 자동 검증:
 | **영향 범위** | REQ 7 신규(REQ-FUNC-CL-01~07) + RTM 5+ 영향(REQ-FUNC-001/002/021/022/037, SP3_2D, §10 #3/#4) + ADR-17 후보 |
 | **발의** | 사용자 — "wiki 자료 대비 개발 방향/누락 검토" (2026-05-29 대화) |
 | **변경 사유** | wiki `clinical/concepts/*`(조음장애 · 학령전-언어평가-도구-비교 · 아동언어치료-핵심기법 · MVP-clinical-foundation)의 임상 정밀도 요건이 PRD/SRS REQ 사슬로 전파되지 않은 추적성 갭. 코드(`lib/phonetic-similarity.ts` 표면형 비교 / `lib/peer-percentile.ts` 단순 선형 placeholder)에 정상 음운 변동·발달 위계·표준화 절단점 미반영 확인 |
-| **승인** | ✅ **admin 승인 (2026-05-29)** — 요구사항 SRS 채택. 채점 로직 변경(CL-01~04) 구현은 clinical expert + IRB(§10 자문) 검증 후 / 콘텐츠·구조(CL-05~07) 즉시 착수 가능 |
+| **승인** | ✅ **admin 승인(2026-05-29) + KOPLAC 임상 자문 검증 완료(2026-05-30, "문제 없음")** — CL-01~04 채점 로직 wiring 활성화 가능. CL-05~07 완료. 자문 패킷: `docs/clinical-consultation-packet_CL01-04_F15.md` |
 | **구현 commit** | (승인 후) |
 | **위키 갱신** | (해당 없음 — wiki 가 source) |
 | **SRS 갱신** | §4.1 임상 정밀도 요구사항 절 신규 + REQ-FUNC-002/021 cross-ref note |
