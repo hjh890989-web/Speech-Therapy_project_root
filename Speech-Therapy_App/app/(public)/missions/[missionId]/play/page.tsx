@@ -95,6 +95,15 @@ export default async function MissionPlayPage({ params }: PageProps) {
           targetPhoneme={mission.targetPhoneme}
           difficultyLevel={mission.difficultyLevel}
         >
+          {/* 방어적 폴백 — 비표준 카드(예: 미정리 레거시) 로 콘텐츠 미스 시 빈 렌더 방지. */}
+          {!content && (
+            <p
+              data-testid="mission-content-missing"
+              className="rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+            >
+              이 미션은 아직 준비 중이에요. 미션 목록에서 다른 활동을 골라 주세요.
+            </p>
+          )}
           {content?.difficultyLevel === 1 && (
             <MissionPhonemeIsolation phoneme={content.phoneme} isolation={content.isolation} />
           )}

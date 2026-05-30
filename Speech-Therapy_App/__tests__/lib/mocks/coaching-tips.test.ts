@@ -51,6 +51,12 @@ describe("coaching-tips: 4대 핵심기법 (REQ-FUNC-CL-07)", () => {
     ]);
   });
 
+  it("범위 밖 레벨(<1 / >6) → 빈 배열 (방어적 가드)", () => {
+    expect(getCoachingTips(0)).toEqual([]);
+    expect(getCoachingTips(-1)).toEqual([]);
+    expect(getCoachingTips(7)).toEqual([]);
+  });
+
   it("CON-04 금칙어 0건 (4대 기법 전수)", () => {
     for (const t of COACHING_TECHNIQUES) {
       const text = collect(t);

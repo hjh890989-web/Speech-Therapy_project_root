@@ -16,6 +16,8 @@
 //
 // CON-04: 모든 콘텐츠는 자녀 친화 (만 2~7세 발달 적합) + 의료/진단/장애 금칙어 0건.
 
+import { MISSION_PHONEMES } from "./mission-config";
+
 // === 단계별 타입 ===
 
 /// L1 — 단독 음소. `phoneme` 대상 자음, `mouthHint` 입모양/발성 가이드.
@@ -303,8 +305,6 @@ const CONVERSATIONS_RIEUL: MissionConversation[] = [
 // Map: `${phoneme}-${level}` → MissionContentSet (5 자모 × 6 단계 = 30 sets).
 // =============================================================================
 
-const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
-
 const WORDS_SIMPLE_BY_PHONEME: Record<string, MissionWordSimple[]> = {
   ㄱ: WORDS_SIMPLE_GIYEOK,
   ㄴ: WORDS_SIMPLE_NIEUN,
@@ -337,7 +337,7 @@ const CONVERSATIONS_BY_PHONEME: Record<string, MissionConversation[]> = {
   ㄹ: CONVERSATIONS_RIEUL,
 };
 
-const CONTENT_SETS: MissionContentSet[] = PHONEMES.flatMap((phoneme) => [
+const CONTENT_SETS: MissionContentSet[] = MISSION_PHONEMES.flatMap((phoneme) => [
   { phoneme, difficultyLevel: 1, isolation: ISOLATION[phoneme] },
   { phoneme, difficultyLevel: 2, syllables: SYLLABLES[phoneme] },
   { phoneme, difficultyLevel: 3, words: WORDS_SIMPLE_BY_PHONEME[phoneme] },

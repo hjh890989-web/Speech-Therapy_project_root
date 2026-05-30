@@ -14,6 +14,7 @@ import {
   getWordFillVariant,
   type MissionContentSet,
 } from "@/lib/mocks/mission-content";
+import { dailyMissionFixtures } from "@/lib/mocks/missions";
 
 const SUPPORTED_PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
 const SUPPORTED_LEVELS = [1, 2, 3, 4, 5, 6] as const;
@@ -165,5 +166,14 @@ describe("mission-content: 6단계 데이터 무결성 (REQ-FUNC-CL-05)", () => 
     const set = getMissionContent("ㅅ", 4);
     expect(set?.phoneme).toBe("ㅅ");
     expect(set?.difficultyLevel).toBe(4);
+  });
+
+  // 불변성 (감사 w07imwxde) — 모든 fixture 카드가 콘텐츠 보유 → /play 빈 렌더 방지.
+  it("모든 dailyMissionFixtures 카드가 콘텐츠 보유 (fixtures↔content 정합)", () => {
+    expect(dailyMissionFixtures).toHaveLength(30);
+    for (const card of dailyMissionFixtures) {
+      const content = getMissionContent(card.targetPhoneme, card.difficultyLevel);
+      expect(content, `${card.id} (${card.targetPhoneme}-${card.difficultyLevel}) 콘텐츠 누락`).toBeDefined();
+    }
   });
 });

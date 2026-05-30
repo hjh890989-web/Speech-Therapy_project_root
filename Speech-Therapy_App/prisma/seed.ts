@@ -7,6 +7,13 @@
 import "dotenv/config";
 import { PrismaClient } from "../app/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+// 음소/slug/타이틀/id — 단일 소스(fixtures 와 공용) → 3자 divergence 차단.
+import {
+  MISSION_PHONEMES,
+  MISSION_LEVELS,
+  TITLE_BY_LEVEL,
+  missionCardId,
+} from "../lib/mocks/mission-config";
 
 // seed 는 일회성 batch 이므로 DIRECT_URL 우선 (pgBouncer 우회).
 // 런타임 Server Action 은 lib/db.ts 가 DATABASE_URL pooler 사용.
@@ -86,33 +93,13 @@ async function seedInstitutions() {
 
 async function seedMissionCards() {
   // DB-006 + REQ-FUNC-CL-05: 5음소 × 6단계 임상 위계 = 30 카드.
-  // 한국어 음운론 위계: 파열음(ㄱ) → 비음(ㄴ) → 마찰음(ㅅ) → 파찰음(ㅈ) → 유음(ㄹ).
-  const phonemes = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
+  // 음소 위계/slug/타이틀/id 는 mission-config.ts(fixtures 공용) — 3자 정합 보장.
+  // 결정적 id (mock-${slug}-${level}) → 라우팅/FK 안정 + fixtures 정합.
   const rewardTypes = ["star", "tree", "drawing"] as const;
 
-  // FR-C-003-0 — fixtures(lib/mocks/missions.ts) 와 동일한 ASCII slug id 매핑.
-  // 결정적 id (mock-${slug}-${level}) → 라우팅/FK 안정 + fixtures 정합.
-  const phonemeSlug: Record<(typeof phonemes)[number], string> = {
-    "ㄱ": "g",
-    "ㄴ": "n",
-    "ㅅ": "s",
-    "ㅈ": "j",
-    "ㄹ": "l",
-  };
-
-  // REQ-FUNC-CL-05 6단계 임상 위계 (CL-05-0 매핑).
-  const titleByLevel: Record<number, string> = {
-    1: "소리 내기",
-    2: "음절 따라하기",
-    3: "단어 따라하기",
-    4: "구 만들기",
-    5: "짧은 문장 만들기",
-    6: "대화 나누기",
-  };
-
-  for (const phoneme of phonemes) {
-    for (let level = 1; level <= 6; level++) {
-      const id = `mock-${phonemeSlug[phoneme]}-${level}`;
+  for (const phoneme of MISSION_PHONEMES) {
+    for (const level of MISSION_LEVELS) {
+      const id = missionCardId(phoneme, level);
       const existing = await prisma.missionCard.findFirst({ where: { id } });
       if (existing) continue;
 
@@ -126,8 +113,8 @@ async function seedMissionCards() {
           targetPhoneme: phoneme,
           difficultyLevel: level,
           rewardType: rewardTypes[level % rewardTypes.length],
-          title: `${phoneme} 소리 ${titleByLevel[level]}`,
-          instructionText: `${phoneme} 소리로 ${titleByLevel[level]} 활동을 해보세요.`,
+          title: `${phoneme} 소리 ${TITLE_BY_LEVEL[level]}`,
+          instructionText: `${phoneme} 소리로 ${TITLE_BY_LEVEL[level]} 활동을 해보세요.`,
           ageRangeMin,
           ageRangeMax,
         },

@@ -4,6 +4,14 @@
 // (REQ-FUNC-CL-05 — 난이도 1~3 → 6단계 임상 위계로 확장.
 //  1 단독음소 → 2 음절 → 3 단어 → 4 구 → 5 문장 → 6 대화. CL-05-0 매핑.)
 
+// 음소/slug/타이틀/id 는 mission-config.ts(단일 소스)에서 — seed.ts 와 구조적 정합.
+import {
+  MISSION_PHONEMES,
+  MISSION_LEVELS,
+  TITLE_BY_LEVEL,
+  missionCardId,
+} from "./mission-config";
+
 export type MissionFixture = {
   id: string;
   targetPhoneme: string;
@@ -15,35 +23,11 @@ export type MissionFixture = {
   ageRangeMax: number;
 };
 
-// 한국어 음운론 위계 순서 (seed.ts 와 일치): 파열음(ㄱ) → 비음(ㄴ) → 마찰음(ㅅ) → 파찰음(ㅈ) → 유음(ㄹ).
-const PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
-
-// 2026-05-27 fix — fixture id 의 한국어 자음 (예: `mock-ㅅ-2`) 이 URL path segment
-// 로 들어갈 때 인코딩/디코딩 + unicode normalization 차이로 prod 의 dynamic route
-// 매칭이 실패하는 회귀 발견. ASCII slug 로 변경하면 URL 호환성 + 라우팅 안정성 보장.
-const PHONEME_SLUG: Record<(typeof PHONEMES)[number], string> = {
-  "ㄱ": "g",
-  "ㄴ": "n",
-  "ㅅ": "s",
-  "ㅈ": "j",
-  "ㄹ": "l",
-};
 const REWARDS = ["star", "tree", "drawing"] as const;
 
-// REQ-FUNC-CL-05 — 6단계 임상 위계 (CL-05-0 D2 매핑).
-const TITLE_BY_LEVEL: Record<number, string> = {
-  1: "소리 내기",
-  2: "음절 따라하기",
-  3: "단어 따라하기",
-  4: "구 만들기",
-  5: "짧은 문장 만들기",
-  6: "대화 나누기",
-};
-
-export const dailyMissionFixtures: MissionFixture[] = PHONEMES.flatMap((phoneme) =>
-  [1, 2, 3, 4, 5, 6].map((level) => ({
-    // ASCII slug 사용 — URL path segment 안전 (2026-05-27 fix).
-    id: `mock-${PHONEME_SLUG[phoneme]}-${level}`,
+export const dailyMissionFixtures: MissionFixture[] = MISSION_PHONEMES.flatMap((phoneme) =>
+  MISSION_LEVELS.map((level) => ({
+    id: missionCardId(phoneme, level),
     targetPhoneme: phoneme,
     difficultyLevel: level,
     title: `${phoneme} 소리 ${TITLE_BY_LEVEL[level]}`,

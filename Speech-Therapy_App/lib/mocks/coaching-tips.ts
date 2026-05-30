@@ -56,7 +56,9 @@ export const COACHING_TECHNIQUES: readonly CoachingTip[] = [
  *   5~6 문장/대화     → 기다리기 + 확장 + 반응적 상호작용
  */
 export function getCoachingTips(level: number): CoachingTip[] {
+  // 범위 밖(< 1 또는 > 6) → 빈 배열 (ParentCoachingTip 가 null 렌더). 방어적 가드.
+  if (level < 1 || level > 6) return [];
   if (level <= 2) return [WAITING, RESPONSIVE];
   if (level <= 4) return [WAITING, PARALLEL_TALK, EXPANSION];
-  return [WAITING, EXPANSION, RESPONSIVE];
+  return [WAITING, EXPANSION, RESPONSIVE]; // 5~6
 }
