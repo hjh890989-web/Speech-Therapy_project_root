@@ -556,6 +556,38 @@ model VoiceModel {
 }
 
 // ============================================================================
+// DB-NEW-F15-1 (V07 신규) — F15 LLM 발화 유도 챗봇 메시지 (Phase 1+)
+//
+// Refs: V07 §4.1 Epic F15, REQ-FUNC-038/039, ADR-03 (7일 폐기), ADR-04 (금칙어 0건),
+//       ADR-14 (임상 안전 게이트 — KOPLAC 13항목 + F15_CHAT_ENABLED).
+//
+// 책임:
+//   - 자녀 자유 발화 유도 대화 메시지. R4: INSERT 전 pii-mask + 금칙어 검열 통과분만 저장.
+//   - 7일 자동 폐기(ADR-03): expiresAt < now 를 chat-cleanup Cron 이 hard-DELETE (텍스트는 외부 의존 0).
+//   - userId 는 부모 user.id (자녀 식별 아님). 단일턴(D6) — 멀티턴 pgvector 는 Phase 2.
+//
+// ⚠️ 활성: F15_CHAT_ENABLED flag (default false). ADR-14 §10 KOPLAC 13항목(IRB·식약처 포함) 통과 전 비활성.
+//          2026-05-30 KOPLAC 검증은 CL-01~04(진단 채점) 한정 — F15 활성 전제 아님.
+// ============================================================================
+
+model ChatMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  /// 부모 user.id (application-level FK — VoiceModel 패턴). 자녀 식별 아님.
+  userId    String
+  /// 메시지 역할 — 'user'(발화) | 'assistant'(챗봇 응답).
+  role      String
+  /// 메시지 본문. R4 sanitize(pii-mask) + 금칙어 검열 통과분만 저장. 자녀 발화는 7일 폐기로 이중 보호.
+  content   String
+  /// 생성 시각.
+  createdAt DateTime @default(now())
+  /// 만료 시각 (createdAt + 7일, ADR-03). chat-cleanup Cron 이 sweep.
+  expiresAt DateTime
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+// ============================================================================
 // DB-016 (V07 신규) — HITL 재학습 데이터 적재 테이블
 //
 // Refs: V07 §5.3 (재학습 파이프라인), REQ-FUNC-HITL-005, ADR-11.
