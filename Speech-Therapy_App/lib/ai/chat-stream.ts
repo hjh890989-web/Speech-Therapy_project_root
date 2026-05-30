@@ -76,6 +76,7 @@ export function streamChatReply(messages: ChatTurn[]): ReadableStream<string> {
           accumulated += chunk;
           controller.enqueue(chunk);
         }
+        if (timedOut) return; // 정상 종료가 timeout close 와 동시 발생 시 double-close 방지.
         clearTimeout(timer);
         if (!accumulated.trim()) controller.enqueue(CHAT_FALLBACK_REPLY);
         controller.close();

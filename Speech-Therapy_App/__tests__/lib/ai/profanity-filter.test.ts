@@ -52,6 +52,12 @@ describe("containsForbidden — TEST-020 금칙어 매트릭스", () => {
     expect(containsForbidden("지체가 의심돼요")).toBe(true);
   });
 
+  it("불안 표현 과탐 회피 — '지연'(이름)/'지체'(높임) 정상 발화 통과 (적대적 검증 low fix)", () => {
+    expect(containsForbidden("지연이랑 놀았어")).toBe(false); // 아이 이름
+    expect(containsForbidden("지체 높은 어른을 만났어")).toBe(false); // 높임말
+    expect(containsForbidden("발달 지연이 있어요")).toBe(true); // 발달 맥락 동반 → 탐지 유지
+  });
+
   it("정상 대화는 통과(false)", () => {
     expect(containsForbidden("안녕! 오늘 뭐 하고 놀았어?")).toBe(false);
     expect(containsForbidden("우리 같이 사과 이야기 해볼까?")).toBe(false);
@@ -88,5 +94,20 @@ describe("filterStream — 문장 경계 검열 + swap", () => {
       `${CHAT_SWAP_MARKER}${SAFE_FALLBACK_MESSAGE}`,
     );
     expect(await collect(filterStream(streamOf(["오늘 즐거웠어"])))).toBe("오늘 즐거웠어");
+  });
+
+  it("경계 split 우회 차단 — 금칙어가 경계 char 로 쪼개져도 탐지 (적대적 검증 high fix)", async () => {
+    // 청크 분리: '치' | '.' | '료' — 경계 '.' 가 금칙어 한가운데. carry 로 합쳐 탐지 → 노출 0.
+    const out1 = await collect(filterStream(streamOf(["오늘 치", ".", "료 받자"])));
+    expect(out1).not.toContain("치료");
+    expect(out1).toContain(CHAT_SWAP_MARKER);
+    // 줄바꿈 경계.
+    const out2 = await collect(filterStream(streamOf(["치", "\n", "료 가자"])));
+    expect(out2).not.toContain("치료");
+    expect(out2).toContain(SAFE_FALLBACK_MESSAGE);
+    // 한 chunk 내부 부호 삽입 '치.료'.
+    const out3 = await collect(filterStream(streamOf(["오늘 치.료 받자"])));
+    expect(out3).not.toContain("치료");
+    expect(out3).toContain(CHAT_SWAP_MARKER);
   });
 });
