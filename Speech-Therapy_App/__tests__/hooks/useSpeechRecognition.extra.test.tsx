@@ -240,6 +240,18 @@ describe("useSpeechRecognition — 에러 분류 (REQ-NF-021)", () => {
 // ---------------------------------------------------------------------------
 // 6) 성공률 시뮬레이션 (REQ-NF-014 — ≥ 98%)
 // ---------------------------------------------------------------------------
+// 결정적 PRNG (mulberry32) — Math.random 비결정성 제거(flake 0, CI 재현). mission-retention.test.ts 패턴.
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 describe("useSpeechRecognition — 성공률 시뮬 (REQ-NF-014)", () => {
   it("100회 시뮬 / 10% 첫 호출 실패 → 재시도 1회로 최종 성공 ≥ 98건", async () => {
     const { useSpeechRecognition } = await import("@/lib/hooks/useSpeechRecognition");
@@ -248,13 +260,14 @@ describe("useSpeechRecognition — 성공률 시뮬 (REQ-NF-014)", () => {
     const RETRY_FAIL_RATE = 0.05; // 5% — 재시도도 실패 (독립 가정)
 
     let successCount = 0;
+    const rand = mulberry32(0x5eed); // 고정 seed → 결정적 시퀀스(동일 입력 동일 결과).
 
     for (let i = 0; i < TRIALS; i++) {
       const { result, unmount } = renderHook(() => useSpeechRecognition());
       act(() => result.current.start());
       const instance = capturedInstances[capturedInstances.length - 1];
 
-      const firstFails = Math.random() < FIRST_FAIL_RATE;
+      const firstFails = rand() < FIRST_FAIL_RATE;
       if (!firstFails) {
         // 첫 호출 즉시 성공.
         act(() =>
@@ -266,7 +279,7 @@ describe("useSpeechRecognition — 성공률 시뮬 (REQ-NF-014)", () => {
       } else {
         act(() => instance.onerror?.({ error: "network" }));
         act(() => vi.advanceTimersByTime(200));
-        const retryFails = Math.random() < RETRY_FAIL_RATE;
+        const retryFails = rand() < RETRY_FAIL_RATE;
         if (retryFails) {
           act(() => instance.onerror?.({ error: "network" }));
         } else {
