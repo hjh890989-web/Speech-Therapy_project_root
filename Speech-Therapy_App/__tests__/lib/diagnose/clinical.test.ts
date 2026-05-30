@@ -141,10 +141,11 @@ describe("CL-04 detectVariation — 슬롯 정렬 단일 변동 탐지", () => {
     expect(detectVariation("라면", "나면")?.pattern).toBe("liquid_nasalization");
   });
 
-  it("velar_fronting — 토끼→토띠 (ㄲ→ㄸ, 양방향)", () => {
+  it("velar_fronting — 토끼→토띠 (ㄲ→ㄸ, 양방향). intendedJamo 는 평음 대표 ㄱ (scoping 정합)", () => {
     const r = detectVariation("토끼", "토띠");
     expect(r?.pattern).toBe("velar_fronting");
-    expect(r?.intendedJamo).toBe("ㄲ");
+    // 경음 ㄲ 변이형이어도 평음 대표 ㄱ 반환 → targetPhoneme(ㄱ)과 onTargetSlot 정합(적대적 검증 high#1).
+    expect(r?.intendedJamo).toBe("ㄱ");
   });
 
   it("fricative_stopping — 사자→타자 (ㅅ→ㅌ), affricate_stopping — 자동차→다동차 (ㅈ→ㄷ)", () => {

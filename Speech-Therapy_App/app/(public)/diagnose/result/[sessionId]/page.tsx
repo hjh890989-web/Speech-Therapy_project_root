@@ -15,9 +15,9 @@ import { ResultViewedBeacon, TrackedCTALink } from "./ResultAnalytics";
 // CL-03 (KOPLAC 검증 완료) — articulation 임상 밴드 해석 (가산, 점수 무변경, ADR-04 치환).
 import {
   articulationInterpretation,
+  buildDevelopmentalContext,
   type DevelopmentalDisplayContext,
 } from "./clinical-interpretation";
-import { detectVariation, classifyError } from "@/lib/diagnose/clinical";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -134,14 +134,7 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
   let articulationCtx: DevelopmentalDisplayContext | undefined =
     fetched.clinicalContext ?? undefined;
   if (articulationCtx && intendedWord && transcript) {
-    const variation = detectVariation(intendedWord, transcript);
-    if (variation) {
-      articulationCtx = {
-        ...articulationCtx,
-        errorClassification: classifyError(variation.pattern, articulationCtx.ageMonths),
-        onTargetSlot: variation.intendedJamo === articulationCtx.phoneme,
-      };
-    }
+    articulationCtx = buildDevelopmentalContext(articulationCtx, intendedWord, transcript);
   }
   const articulationCopy = articulationInterpretation(result.articulationScore, articulationCtx);
   const heardWord = result.heardWord ?? transcript;

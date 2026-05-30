@@ -14,6 +14,8 @@
 import {
   mapArticulationBand,
   applyDevelopmentalAdjustment,
+  detectVariation,
+  classifyError,
   type ClinicalBand,
   type ErrorClassification,
 } from "@/lib/diagnose/clinical";
@@ -59,4 +61,30 @@ export function articulationInterpretation(
     case "delayed":
       return { band, label: "미션으로 꾸준히 함께 연습하면 도움이 돼요.", emoji: "🌱" };
   }
+}
+
+/**
+ * CL-04 — intended/transcript 로 단일 변동 탐지 → 발달 보정 게이팅 컨텍스트 보강.
+ *
+ * 변동 미탐지 또는 입력 부재 시 base ctx 그대로(기존 phoneme×age 완화 폴백 — 회귀 아님).
+ * onTargetSlot 은 **초성 변동에서만** 의미: 변동 슬롯의 의도 자모(평음 대표) == targetPhoneme.
+ * 종성 변동(final_consonant_deletion, slot='jong')은 초성 targetPhoneme 과 비교 불가 →
+ * onTargetSlot 미설정(undefined)으로 두어 발달 분류 게이트에만 맡긴다(종성탈락도 발달적이면 완화).
+ * (적대적 검증: 경음/격음 변이형 scoping 오판정 high#1 + 종성 변동 영구 suppress medium 수정.)
+ *
+ * 결정적 순수 함수 — 테스트 가능. page.tsx(RSC)가 이 결과를 articulationInterpretation 에 전달.
+ */
+export function buildDevelopmentalContext(
+  base: DevelopmentalDisplayContext,
+  intendedWord: string,
+  transcribedWord: string,
+): DevelopmentalDisplayContext {
+  const variation = detectVariation(intendedWord, transcribedWord);
+  if (!variation) return base;
+  return {
+    ...base,
+    errorClassification: classifyError(variation.pattern, base.ageMonths),
+    onTargetSlot:
+      variation.slot === "cho" ? variation.intendedJamo === base.phoneme : undefined,
+  };
 }

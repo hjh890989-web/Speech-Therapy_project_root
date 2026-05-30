@@ -107,7 +107,9 @@ export interface DetectedVariation {
   pattern: ErrorPattern;
   syllableIndex: number;
   slot: "cho" | "jung" | "jong";
-  /// 변동이 일어난 슬롯의 *의도* 자모(임상 관련 음소). targetPhoneme 과 비교해 onTargetSlot 산출.
+  /// 변동이 일어난 슬롯의 임상 관련 음소. 초성 치환형은 **평음 클래스 대표**(ㄱ/ㅈ/ㅅ — targetPhoneme
+  /// enum·PHONEME_DEVELOPMENT 키와 정합; 경음/격음 변이형은 대표로 정규화). 종성 변동은 종성 자모.
+  /// 음소 scoping(onTargetSlot)은 초성 변동에서만 의미 — 종성 변동(slot='jong')은 비교 생략(발달 게이트만).
   intendedJamo: string;
 }
 
@@ -163,16 +165,17 @@ export function detectVariation(
     return { pattern: "liquid_deletion", syllableIndex: i, slot: "cho", intendedJamo: "ㄹ" };
   }
   // 5) velar_fronting: 초성 연구개음→치조 파열음(양방향), 중성·종성 동일.
+  //    intendedJamo = 평음 대표 "ㄱ"(ㄲ/ㅋ 변이형도 ㄱ-타깃에 scoping 정합 — 적대적 검증 high #1).
   if (VELAR_ONSETS.has(s.cho) && STOP_ONSETS.has(t.cho) && sameJung && sameJong) {
-    return { pattern: "velar_fronting", syllableIndex: i, slot: "cho", intendedJamo: s.cho };
+    return { pattern: "velar_fronting", syllableIndex: i, slot: "cho", intendedJamo: "ㄱ" };
   }
-  // 6) affricate_stopping: 초성 파찰음→파열음(양방향).
+  // 6) affricate_stopping: 초성 파찰음→파열음(양방향). intendedJamo = 평음 대표 "ㅈ"(ㅉ/ㅊ 변이형 정규화).
   if (AFFRICATE_ONSETS.has(s.cho) && STOP_ONSETS.has(t.cho) && sameJung && sameJong) {
-    return { pattern: "affricate_stopping", syllableIndex: i, slot: "cho", intendedJamo: s.cho };
+    return { pattern: "affricate_stopping", syllableIndex: i, slot: "cho", intendedJamo: "ㅈ" };
   }
-  // 7) fricative_stopping: 초성 마찰음→파열음(양방향).
+  // 7) fricative_stopping: 초성 마찰음→파열음(양방향). intendedJamo = 평음 대표 "ㅅ"(ㅆ 변이형 정규화).
   if (FRICATIVE_ONSETS.has(s.cho) && STOP_ONSETS.has(t.cho) && sameJung && sameJong) {
-    return { pattern: "fricative_stopping", syllableIndex: i, slot: "cho", intendedJamo: s.cho };
+    return { pattern: "fricative_stopping", syllableIndex: i, slot: "cho", intendedJamo: "ㅅ" };
   }
   // 4) final_consonant_deletion: 종성 소실(초성·중성 동일).
   if (sameCho && sameJung && s.jong !== "" && t.jong === "") {
