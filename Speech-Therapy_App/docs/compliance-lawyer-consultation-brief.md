@@ -234,6 +234,18 @@
 
 ## §6. Action Items (자문 의뢰 → 결과 반영 후)
 
+### ✅ 자문 결과 (2026-05-30)
+
+- **변호사 단발 자문 완료 — 의견 "문제 없음"** (§4.1~4.7 + privacy/terms 초안 수정 요청 0). *(사용자 보고)*
+- **반영 완료**:
+  - `docs/privacy-policy-draft.md` / `docs/terms-of-service-draft.md` 승인본을 라이브 페이지에 반영.
+  - `/privacy`(PIPA §30) / `/terms`(약관규제법) placeholder → **정식본 교체** (`app/(public)/privacy·terms/page.tsx`).
+  - 상호·개인정보 보호책임자·시행일 = **미확정** → `lib/company-info.ts`(COMPANY_INFO) 단일 출처로 파라미터화.
+    확정 후 그 상수 갱신 + `COMPANY_INFO_FINALIZED=true` 로 정식 시행(페이지의 "확정 후 시행" 안내 제거).
+- **잔여(후순위)**: 식약처 사전 검토 신청(§4.3, 변호사 권고에 따라) — 별도 진행.
+
+---
+
 자문 결과 받은 후 본 doc 의 §6 에 결과 요약 + 다음 코드 / 정책 교체 작업 list 작성.
 
 ### 자문 의뢰 전 사용자 측 준비
@@ -245,10 +257,11 @@
 
 ### 자문 결과 받은 후 코드 / 정책 작업
 
-- [ ] §3.3 의 `/privacy` placeholder → 정식 처리방침 교체
-- [ ] §3.3 의 `/terms` placeholder → 정식 이용약관 교체
-- [ ] PIPA 동의 체크박스 / 안내 문구 권고 반영 (필요 시)
-- [ ] 식약처 사전 검토 신청 (권고 시)
+- [x] §3.3 의 `/privacy` placeholder → 정식 처리방침 교체 (2026-05-30)
+- [x] §3.3 의 `/terms` placeholder → 정식 이용약관 교체 (2026-05-30)
+- [ ] PIPA 동의 체크박스 / 안내 문구 권고 반영 ("문제 없음" → 변경 불요)
+- [ ] 식약처 사전 검토 신청 (권고 시 — 후순위)
+- [ ] 상호·책임자 확정 → `lib/company-info.ts` 갱신 + `COMPANY_INFO_FINALIZED=true` (정식 시행)
 - [ ] 출시 직전 체크리스트 통과 검증
 
 ---
