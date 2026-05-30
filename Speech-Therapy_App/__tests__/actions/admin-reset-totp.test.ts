@@ -69,7 +69,8 @@ vi.mock("@/lib/db/with-actor", () => ({
   },
 }));
 
-const alertIfCriticalMock = vi.fn(async () => undefined);
+// 인자 타입을 rest 파라미터로 명시 — alertIfCritical(action, actorId, diff) spread/구조분해 tsc 정합.
+const alertIfCriticalMock = vi.fn(async (..._args: unknown[]) => undefined);
 vi.mock("@/lib/audit/critical-alert", () => ({
   alertIfCritical: (...args: unknown[]) => alertIfCriticalMock(...args),
 }));
