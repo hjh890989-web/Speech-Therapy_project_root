@@ -180,10 +180,16 @@ export default async function ReportsPage() {
         <WeeklyReportChart scoreTrend={weekAgg.scoreTrend} />
       </section>
 
-      <section className="mb-6 grid grid-cols-3 gap-3" aria-label="3축 평균">
-        <Card label="조음 평균" value={Math.round(weekAgg.articulationAvg)} />
-        <Card label="언어 평균" value={Math.round(weekAgg.linguisticAvg)} />
-        <Card label="음향 평균" value={Math.round(weekAgg.acousticAvg)} />
+      <section className="mb-6" aria-label="3축 평균">
+        <div className="grid grid-cols-3 gap-3">
+          <Card label="조음 평균" value={Math.round(weekAgg.articulationAvg)} outOf={100} />
+          <Card label="언어 평균" value={Math.round(weekAgg.linguisticAvg)} outOf={100} />
+          <Card label="음향 평균" value={Math.round(weekAgg.acousticAvg)} outOf={100} />
+        </div>
+        {/* result 페이지와 동일한 척도 안내 — 부모 명료성(점수 100점 만점). */}
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          각 항목은 100점 만점이에요.
+        </p>
       </section>
 
       {/* FR-Q-NEW-F17-UI (V07) — 부모 본인 케어로그 (인증 user 만 노출) */}
@@ -313,10 +319,13 @@ function PageShell({
 function Card({
   label,
   value,
+  outOf,
   "data-testid": dataTestId,
 }: {
   label: string;
   value: number;
+  /// 점수 카드(100점 만점)는 outOf=100 → '/100' 척도 표기. 카운트 카드는 미전달(맨 숫자).
+  outOf?: number;
   "data-testid"?: string;
 }) {
   return (
@@ -325,7 +334,14 @@ function Card({
       data-testid={dataTestId}
     >
       <p className="text-xs text-gray-600 dark:text-gray-400">{label}</p>
-      <p className="text-2xl font-bold tabular-nums">{value}</p>
+      <p className="text-2xl font-bold tabular-nums">
+        {value}
+        {outOf != null && (
+          <span className="ml-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
+            /{outOf}
+          </span>
+        )}
+      </p>
     </article>
   );
 }
