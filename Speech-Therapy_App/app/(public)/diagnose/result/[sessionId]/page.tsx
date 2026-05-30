@@ -174,14 +174,26 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
               </p>
             </div>
           </div>
+          {/* 미일치 — CON-04 격려 톤 (불안 완화 + 미션 유도). "틀림" 인상 회피. */}
+          {!isPerfectMatch && (
+            <p className="mt-3 text-xs text-amber-800 dark:text-amber-200">
+              비슷하게 말했어요. 미션으로 또박또박 함께 연습해 봐요.
+            </p>
+          )}
         </section>
       )}
 
       {/* 3축 점수 카드 (Sprint 3 에서 분리 재설계 예정 — 현재 모두 articulation 동값) */}
-      <section className="mb-6 grid grid-cols-3 gap-3" aria-label="3축 점수">
-        <ScoreCard label="조음" value={result.articulationScore} />
-        <ScoreCard label="언어" value={result.linguisticScore} />
-        <ScoreCard label="음향" value={result.acousticScore} />
+      <section className="mb-6" aria-label="3축 점수">
+        <div className="grid grid-cols-3 gap-3">
+          <ScoreCard label="조음" value={result.articulationScore} />
+          <ScoreCard label="언어" value={result.linguisticScore} />
+          <ScoreCard label="음향" value={result.acousticScore} />
+        </div>
+        {/* 부모 명료성 — 점수 척도 안내 (불안형 페르소나 이해도). */}
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          각 항목은 100점 만점이에요.
+        </p>
       </section>
 
       {/* 또래 백분위 + 시각 바 + Disclaimer #2 (차트 옆) */}
@@ -275,7 +287,12 @@ function ScoreCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg border border-gray-200 p-3 text-center dark:border-gray-700">
       <p className="text-xs text-gray-600 dark:text-gray-400">{label}</p>
-      <p className="text-2xl font-bold tabular-nums">{Math.round(value)}</p>
+      <p className="text-2xl font-bold tabular-nums">
+        {Math.round(value)}
+        <span className="ml-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
+          /100
+        </span>
+      </p>
     </div>
   );
 }
