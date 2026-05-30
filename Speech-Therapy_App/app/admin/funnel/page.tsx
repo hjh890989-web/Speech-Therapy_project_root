@@ -202,8 +202,8 @@ export default async function FunnelDashboardPage({ searchParams }: PageProps) {
       >
         <p className="mb-1 font-semibold text-slate-800">데이터 소스 정책</p>
         <ul className="ml-4 list-disc space-y-1">
-          <li>현재 trackEvent 는 console.debug stub — 실 저장 store 부재.</li>
-          <li>본 dashboard 는 기존 도메인 테이블 (EvaluationResult / SessionLog / RewardLog) 역산.</li>
+          <li>client trackEvent → Vercel Analytics, 서버 이벤트 → AnalyticsEvent 테이블(trackServerEvent).</li>
+          <li>본 dashboard 는 그와 별개로 기존 도메인 테이블 (EvaluationResult / SessionLog / RewardLog) 역산.</li>
           <li>자녀 식별 정보 0건 — 모든 표시값은 집계 카운트 + 비율.</li>
           <li>오늘 데이터는 진행중이라 기본 range 에서 제외됩니다.</li>
         </ul>

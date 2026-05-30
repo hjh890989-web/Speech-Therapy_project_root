@@ -31,7 +31,7 @@ import { enqueueForReview } from "@/lib/hitl";
 import { maybeEnqueueHitl, HITL_CONFIDENCE_THRESHOLD } from "@/lib/hitl/enqueue";
 import { notifyHITLBySlack } from "@/lib/notifications/slack";
 import { getDiagnosisMock } from "@/lib/mocks/diagnosis";
-import { trackEvent } from "@/lib/analytics";
+import { trackServerEvent } from "@/lib/analytics-server";
 // SEC-COMP-PIPA (Grill #3A) — 인증 user 의 PIPA 동의 hard 가드 (UI 가드 보완).
 // + 익명 user 가드 — 본 PR 에서 input.pipaUnderageConsent + input.overseasTransferConsent 검증.
 import { assertConsentedIfAuthenticated, ConsentRequiredError } from "@/lib/policy/consent-guard";
@@ -285,16 +285,14 @@ export async function analyzeDiagnosis(
 
   // ── FR-C-002 텔레메트리 — confidence < 70 분기 (Gemini vs fallback 분기 추적) ──
   // 본 이벤트는 dormant 해제 비율 측정용. R4 보호: 자녀 식별 정보 미포함.
-  // trackEvent 는 dev console.debug / prod no-op (server-side) — 흐름 차단 X.
+  // 서버 측 — Vercel Analytics(브라우저 SDK) 호출 불가 → AnalyticsEvent DB sink(query-able).
+  //   fire-and-forget + graceful(절대 throw X, NODE_ENV=test skip) — 흐름 차단 0.
   if (confidence < HITL_CONFIDENCE_THRESHOLD) {
-    try {
-      trackEvent("diagnose_confidence_low", {
-        confidence,
-        source: confidenceResult.source,
-      });
-    } catch (err) {
-      console.error("[FR-C-002] diagnose_confidence_low trackEvent 예외:", err);
-    }
+    void trackServerEvent(
+      "diagnose_confidence_low",
+      { confidence, source: confidenceResult.source },
+      userId,
+    );
   }
 
   const output: DiagnosisOutput = {

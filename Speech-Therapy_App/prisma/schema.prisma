@@ -636,3 +636,33 @@ model ModelRetrainingData {
   @@index([expertId, createdAt(sort: Desc)])
   @@index([diffPct])
 }
+
+// ============================================================================
+// INFRA-005 후속 — 서버 측 분석 이벤트 query-able sink (Phase 1)
+//
+// Refs: MON-001(funnel.ts 가 '옵션 B'로 보류했던 store), AGENTS.md §2.2(PII), R4.
+//
+// 배경:
+//   - client trackEvent(lib/analytics.ts)는 @vercel/analytics 로 전송(작동). funnel KPI 는 도메인
+//     테이블 역산(lib/analytics/funnel.ts)으로 측정(작동). 그러나 **서버 측 trackEvent 는 Vercel
+//     Analytics(브라우저 SDK) 호출 불가 → prod no-op 으로 유실**. 본 테이블이 그 갭을 채운다.
+//   - trackServerEvent(lib/analytics-server.ts)가 fire-and-forget + graceful 로 INSERT.
+//
+// PII/R4: properties 에 자녀 식별 정보(email/name/raw transcript) 절대 금지(호출 측 책임 + 카탈로그
+//   shape 강제). userId 는 부모 user.id(선택) — 내부 분석 join 용. 본 테이블은 service-role 전용
+//   (RLS 기본 deny — 클라이언트 직접 접근 0; deploy 시 RLS 정책 적용).
+// ============================================================================
+
+model AnalyticsEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  /// 이벤트명 (lib/events.ts 카탈로그, snake_case).
+  name       String
+  /// 이벤트 properties (카탈로그 shape — 자녀 식별 정보 0건).
+  properties Json?
+  /// 부모 user.id (선택, 자녀 식별 아님). 내부 분석 join 용.
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  @@index([name, createdAt])
+  @@index([createdAt])
+}
