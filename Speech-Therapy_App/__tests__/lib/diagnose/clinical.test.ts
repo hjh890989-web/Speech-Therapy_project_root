@@ -17,6 +17,7 @@ import {
   VARIATION_TYPES,
   singleVariationOrder,
   getVariationType,
+  detectVariation,
 } from "@/lib/diagnose/clinical";
 
 describe("CL-03 절단점 매핑", () => {
@@ -118,5 +119,58 @@ describe("CL-01/CL-04 음운 변동", () => {
       .map((v) => v.key)
       .sort();
     expect(atypical).toEqual(["labialization", "regressive_assimilation"]);
+  });
+});
+
+describe("CL-04 detectVariation — 슬롯 정렬 단일 변동 탐지", () => {
+  it("liquid_gliding — 호랑이→호양이 (ㄹ소실+활음화를 단일 1건 흡수)", () => {
+    expect(detectVariation("호랑이", "호양이")).toEqual({
+      pattern: "liquid_gliding",
+      syllableIndex: 1,
+      slot: "cho",
+      intendedJamo: "ㄹ",
+    });
+  });
+
+  it("liquid_deletion — 호랑이→호앙이 (활음 첨가 없음 → gliding 과 구분)", () => {
+    expect(detectVariation("호랑이", "호앙이")?.pattern).toBe("liquid_deletion");
+    expect(detectVariation("다리", "다이")?.pattern).toBe("liquid_deletion");
+  });
+
+  it("liquid_nasalization — 라면→나면 (ㄹ→ㄴ)", () => {
+    expect(detectVariation("라면", "나면")?.pattern).toBe("liquid_nasalization");
+  });
+
+  it("velar_fronting — 토끼→토띠 (ㄲ→ㄸ, 양방향)", () => {
+    const r = detectVariation("토끼", "토띠");
+    expect(r?.pattern).toBe("velar_fronting");
+    expect(r?.intendedJamo).toBe("ㄲ");
+  });
+
+  it("fricative_stopping — 사자→타자 (ㅅ→ㅌ), affricate_stopping — 자동차→다동차 (ㅈ→ㄷ)", () => {
+    expect(detectVariation("사자", "타자")?.pattern).toBe("fricative_stopping");
+    expect(detectVariation("자동차", "다동차")?.pattern).toBe("affricate_stopping");
+  });
+
+  it("final_consonant_deletion — 가방→가바 (종성 ㅇ 탈락, slot=jong)", () => {
+    const r = detectVariation("가방", "가바");
+    expect(r?.pattern).toBe("final_consonant_deletion");
+    expect(r?.slot).toBe("jong");
+  });
+
+  it("양방향 검증 — ㄱ→ㅎ(가→하)는 velar_fronting 아님 → null (적대적 비평 high #1)", () => {
+    // 의도만 보면 ㄱ(velar)이지만 실현 ㅎ 은 치조 파열음 아님 → 무관 오류, 완화 부여 금지.
+    expect(detectVariation("가", "하")).toBeNull();
+  });
+
+  it("보수적 null — 다중 음절 변동 / 완전 일치 / 음절수 불일치 / 비한글", () => {
+    expect(detectVariation("사과", "타파")).toBeNull(); // ㅅ→ㅌ + ㄱ→ㅍ (2음절 변동)
+    expect(detectVariation("사과", "사과")).toBeNull(); // 일치
+    expect(detectVariation("사과", "사")).toBeNull(); // 음절수 불일치
+    expect(detectVariation("apple", "사과")).toBeNull(); // 비한글
+  });
+
+  it("순수 결정성 — 동일 입력 동일 결과", () => {
+    expect(detectVariation("호랑이", "호양이")).toEqual(detectVariation("호랑이", "호양이"));
   });
 });
