@@ -12,6 +12,8 @@ import type { DiagnosisOutput } from "@/lib/schemas/diagnosis";
 import { RewardOnMount } from "./RewardOnMount";
 import { CushionAsync } from "./CushionAsync";
 import { ResultViewedBeacon, TrackedCTALink } from "./ResultAnalytics";
+// CL-03 (KOPLAC 검증 완료) — articulation 임상 밴드 해석 (가산, 점수 무변경, ADR-04 치환).
+import { articulationInterpretation } from "./clinical-interpretation";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -116,6 +118,8 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
 
   const nudgeCopy = getNudgeCopy(result.peerPercentile);
   const band = getBandStyles(result.peerPercentile);
+  // CL-03 — articulation(조음) 임상 밴드 해석 (검증된 U-TAP PCC 절단점 기반).
+  const articulationCopy = articulationInterpretation(result.articulationScore);
   const heardWord = result.heardWord ?? transcript;
   const displayIntended = result.intendedWord ?? intendedWord;
   const isPerfectMatch =
@@ -193,6 +197,16 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
         {/* 부모 명료성 — 점수 척도 안내 (불안형 페르소나 이해도). */}
         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
           각 항목은 100점 만점이에요.
+        </p>
+        {/* CL-03 (KOPLAC 검증) — 조음 임상 밴드 해석. ADR-04 치환 톤(금칙어 0). */}
+        <p
+          data-testid="articulation-interpretation"
+          className="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+        >
+          <span className="mr-1" aria-hidden>
+            {articulationCopy.emoji}
+          </span>
+          {articulationCopy.label}
         </p>
       </section>
 
