@@ -1,5 +1,6 @@
-// CL-01~04 임상 정밀도 구현 초안(DRAFT) 단위 테스트 — 인코딩된 임상 규칙/데이터 무결성 검증.
-// (활성 채점 미연결 — 본 테스트는 검증 대상 규칙이 정확히 인코딩됐는지 확인.)
+// CL-01~04 임상 정밀도 단위 테스트 — 인코딩된 임상 규칙/데이터 무결성 검증.
+// wiring: CL-03 활성(결과 페이지 밴드), CL-02 활성(display-only 밴드 완화 — applyDevelopmentalAdjustment),
+//         CL-01/04 C단계 대기. 본 테스트는 wiring 과 무관하게 규칙이 정확히 인코딩됐는지 확인.
 
 import { describe, it, expect } from "vitest";
 import {

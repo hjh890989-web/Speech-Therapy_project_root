@@ -1,8 +1,12 @@
-// CL-01~04 진단 채점 정밀도 — 임상 구현 초안 (DRAFT).
+// CL-01~04 진단 채점 정밀도 — 임상 구현. KOPLAC 자문 검증 완료(2026-05-30, CR-2026-006,
+// docs/clinical-consultation-packet_CL01-04_F15.md).
 //
-// ⚠️ DRAFT — KOPLAC 임상 자문(CR-2026-006, docs/clinical-consultation-packet_CL01-04_F15.md)
-//    검증 대기. 활성 진단 채점(lib/phonetic-similarity.ts / lib/peer-percentile.ts /
-//    lib/diagnose/confidence.ts)에 **미연결**. 검증 서명 후 wiring (SRS §8.1 Tier 3).
+// wiring 상태(부분 활성):
+//   - CL-03 (cutoffs)        ✅ 활성 — 결과 페이지 밴드 해석(clinical-interpretation.ts).
+//   - CL-02 (developmental)  ✅ 활성(**display-only**) — 부모 표시 밴드/카피 완화. 채점·HITL·저장은
+//                               raw 기준(적대적 검증 2026-05-30: floor 의 escalation 회귀 회피).
+//   - CL-01/04 (phonological-variation) ⏳ C단계 대기 — ErrorPattern 추론 알고리즘 + atypical 분리
+//                               (classifyError) wiring 필요. 현재 활성 채점 미연결.
 //
 // 구성:
 //   - cutoffs.ts             (CL-03) 표준화 검사 절단점 → 밴드 매핑.

@@ -31,15 +31,18 @@ interface FetchedResult {
   userId: string | null;
   /// DB 의 aiCushionText 원본 (null = 아직 생성 안 됨 → CushionAsync 가 후속 호출).
   cushionFromDb: string | null;
+  /// CL-02 발달 위계 — articulation 밴드 *표시* 완화용 음소·연령(점수 숫자 무변경).
+  /// mock 데이터엔 null → 밴드 완화 미적용(raw 기준).
+  clinicalContext: { phoneme: string; ageMonths: number } | null;
 }
 
 // FR-C-001 통합: MOCK sessionId 는 우선 매핑, 그 외엔 evaluation_results 조회.
 async function fetchEvaluationResult(sessionId: string): Promise<FetchedResult | null> {
   if (sessionId === mockSuccessHigh.sessionId) {
-    return { output: mockSuccessHigh, userId: null, cushionFromDb: mockSuccessHigh.aiCushionText };
+    return { output: mockSuccessHigh, userId: null, cushionFromDb: mockSuccessHigh.aiCushionText, clinicalContext: null };
   }
   if (sessionId === mockSuccessLow.sessionId) {
-    return { output: mockSuccessLow, userId: null, cushionFromDb: mockSuccessLow.aiCushionText };
+    return { output: mockSuccessLow, userId: null, cushionFromDb: mockSuccessLow.aiCushionText, clinicalContext: null };
   }
   try {
     const row = await prisma.evaluationResult.findUnique({ where: { sessionId } });
@@ -58,6 +61,7 @@ async function fetchEvaluationResult(sessionId: string): Promise<FetchedResult |
       },
       userId: row.userId,
       cushionFromDb: row.aiCushionText,
+      clinicalContext: { phoneme: row.targetPhoneme, ageMonths: row.childAgeMonths },
     };
   } catch (err) {
     // DB 일시 장애 시 사용자에게는 404 가 자연스러움. 로깅만.
@@ -119,7 +123,11 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
   const nudgeCopy = getNudgeCopy(result.peerPercentile);
   const band = getBandStyles(result.peerPercentile);
   // CL-03 — articulation(조음) 임상 밴드 해석 (검증된 U-TAP PCC 절단점 기반).
-  const articulationCopy = articulationInterpretation(result.articulationScore);
+  // CL-02(display-only) — clinicalContext 있으면 발달 위계로 밴드/카피만 완화(숫자는 raw 유지).
+  const articulationCopy = articulationInterpretation(
+    result.articulationScore,
+    fetched.clinicalContext ?? undefined,
+  );
   const heardWord = result.heardWord ?? transcript;
   const displayIntended = result.intendedWord ?? intendedWord;
   const isPerfectMatch =

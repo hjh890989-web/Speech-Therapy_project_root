@@ -86,9 +86,8 @@ const VALID_INPUT_HIGH_MATCH = {
 const VALID_INPUT_LOW_MATCH = {
   intendedWord: "사과",
   transcript: "타파", // 거의 다름 (ㅅ→ㅌ, ㄱ→ㅍ) → articulationScore < 50
-  // CL-02: ㅅ 완성(72개월) 이후 연령 → 발달 보정 미적용 → 큰 오류가 점수에 유지 → similarity-HITL 발동.
-  // (발달 연령(예: 36개월)이면 보정으로 ≥50 floor → similarity-HITL 미발동 — 의도된 과escalation 회피.)
-  childAgeMonths: 84,
+  // CL-02 발달 보정은 display-only(채점 미적용) → 발달 연령(36mo)이어도 raw<50 으로 similarity-HITL 발동.
+  childAgeMonths: 36,
   targetPhoneme: "ㅅ" as const,
   pipaUnderageConsent: true,
   overseasTransferConsent: true,

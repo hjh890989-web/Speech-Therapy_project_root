@@ -1,7 +1,13 @@
 // CL-02 — 음소별 발달 위계 연령 보정.
 //
-// ✅ KOPLAC 임상 자문 검증 완료(2026-05-30, "문제 없음"). applyDevelopmentalAdjustment 가
-//    활성 채점(app/actions/diagnosis.ts)에 wiring 됨.
+// ✅ KOPLAC 임상 자문 검증 완료(2026-05-30, "문제 없음"). 임상 *개념*(발달 위계/절단점) 검증됨.
+//
+// ⚠️ 적용 위치 = **부모 표시 레이어만**(app/(public)/diagnose/result/.../clinical-interpretation.ts
+//    의 밴드/카피 완화). 채점·HITL·confidence·composite·peer·저장은 raw 기준이다.
+//    이유: applyDevelopmentalAdjustment 의 floor(0.5·raw+50)를 채점에 넣으면 발달 연령 음소가
+//    항상 ≥50 → similarity-HITL(<50)·enqueueForReview 가 큰 오류에도 발화 못 하는 escalation 회귀
+//    (적대적 검증 2026-05-30 confirmed). 그래서 display-only.
+//    오류유형 인식(atypical 분리, classifyError wiring)·음소 단위 scoping 은 C단계(CL-01/04) 작업.
 //
 // 근거: wiki clinical/concepts/조음장애 §L(자음 발달 자세/5세/6세 완성) · §M(발달적 오류 소실 시기).
 // 핵심: 발달적(연령상 정상) 오류는 감점 약화, 비발달적(특이) 오류는 분리.

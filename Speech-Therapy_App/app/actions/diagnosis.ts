@@ -24,7 +24,6 @@ import { prisma } from "@/lib/db";
 import { withActor } from "@/lib/db/with-actor";
 import { compositeScore, computePeerPercentile } from "@/lib/peer-percentile";
 import { computePhoneticSimilarity } from "@/lib/phonetic-similarity";
-import { applyDevelopmentalAdjustment } from "@/lib/diagnose/clinical";
 import { computeLinguisticScore } from "@/lib/linguistic-score";
 import { computeAcousticScore } from "@/lib/acoustic-score";
 import { computeDiagnosisConfidence } from "@/lib/diagnose/confidence";
@@ -162,14 +161,15 @@ export async function analyzeDiagnosis(
   // - articulation: 자모 단위 정확도 (phonetic similarity).
   // - linguistic: 음절 단위 어휘 완성도 (의도 단어를 끝까지 발화했는가).
   // - acoustic: input.acousticFeatures (Web Audio API 신호) 우선, 없으면 텍스트 프록시 폴백.
-  // CL-02 (KOPLAC 검증) — 음소×연령 발달 보정: 발달 기대 연령 내 오류는 감점 약화.
-  // raw phonetic similarity → 발달 보정된 articulationScore (peer-percentile/HITL 게이트 입력).
-  const rawArticulationScore = computePhoneticSimilarity(input.intendedWord, input.transcript);
-  const articulationScore = applyDevelopmentalAdjustment(
-    rawArticulationScore,
-    input.targetPhoneme,
-    input.childAgeMonths,
-  );
+  // articulation: 자모 단위 정확도 (raw phonetic similarity).
+  // CL-02 발달 보정은 *채점/escalation 레이어에 적용하지 않는다* — raw 점수가 HITL·confidence·
+  //   composite·peer·저장의 정직한 신호다. 발달 위계 완화(부모를 발달적 오류로 과하게 놀라게 하지
+  //   않기)는 **부모 표시 밴드/카피(clinical-interpretation.ts)에서만** 적용한다.
+  //   근거: 적대적 검증(2026-05-30) — floor(0.5·raw+50)를 채점에 넣으면 발달 연령 음소가 항상
+  //   ≥50 → similarity-HITL(<50)·enqueueForReview 가 큰 오류에도 발화 못 하는 escalation 회귀.
+  //   따라서 display-only 로 이동(CL-03 의 'additive 표시 전용' 원칙과 동일). 오류유형 인식(atypical
+  //   분리)·음소 단위 scoping 은 C단계(CL-01/04, ErrorPattern 추론) 작업으로 분리.
+  const articulationScore = computePhoneticSimilarity(input.intendedWord, input.transcript);
   const linguisticScore = computeLinguisticScore(
     input.intendedWord,
     input.transcript,

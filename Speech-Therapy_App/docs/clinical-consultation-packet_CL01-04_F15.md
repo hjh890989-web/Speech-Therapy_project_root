@@ -135,3 +135,26 @@
 - 검증 답변 수령 → **CR-2026-006**(Tier 3) 반영 → 채점 로직(CL-01~04) **활성화** (wiring).
 - 구현 초안: `lib/diagnose/clinical/*` (DRAFT → 검증 후 활성). 본 패킷 규칙안 = 그 초안의 임상 근거.
 - (검증 전 변경 금지 원칙은 본 검증으로 해제됨.)
+
+## 6.1 단계적 활성화 기록 + 적대적 검증 (2026-05-30)
+
+검증 통과 후, 안전성 적대적 검증(3 렌즈 × 발견별 반증 workflow)을 거쳐 단계적으로 활성화:
+
+- **CL-03 (절단점)** — ✅ 활성. 결과 페이지 밴드 해석(`clinical-interpretation.ts`).
+- **CL-02 (발달 위계)** — ✅ 활성 **(display-only)**. 부모 표시 밴드/카피 완화에만 적용.
+  - ⚠️ **적대적 검증 — 채점 레이어 wiring 회귀 confirmed (critical 1 + high 3).** 최초 `applyDevelopmentalAdjustment`
+    를 채점(articulationScore)에 적용했으나, floor(`0.5·raw+50`)가 발달 연령 음소를 항상 ≥50 으로 올려
+    similarity-HITL(`<50`)·`enqueueForReview`·confidence·composite·peer 를 동시 오염 → **큰 발음 오류가
+    전문가 검토로 escalation 되지 못하는 안전 회귀**.
+  - **해결**: 발달 보정을 **display(밴드/카피)로만 한정**, 채점·escalation·저장은 raw 기준
+    (`diagnosis.ts` 의 articulationScore = raw). 검증된 것은 발달 위계 *개념*이며, floor×HITL 게이트
+    상호작용은 구현 산물(자문 범위 밖) — 개념은 살리고 적용 위치만 표시 레이어로 이동.
+- **CL-01/04 (정상 음운 변동 + 단일 변동 우선)** — ⏳ **C단계 대기.**
+  - 적대적 검증 **잔여 2건(C단계에서 해결)**:
+    1. **오류유형 인식 결손** — `applyDevelopmentalAdjustment` 는 phoneme×age 만 보고 오류 *패턴*을 안 봄
+       → atypical(양순음화·역행화 등 비발달적, §2 Q5 "우선 관심") 오류도 발달적 오류와 동일하게 완화.
+       `classifyError`/`DEVELOPMENTAL_ERROR_PATTERNS`(atypical 분리)가 production 미연결.
+    2. **음소 단위 scoping 불일치** — raw 는 전체 단어 유사도인데 보정은 단일 `targetPhoneme` 기준
+       → 다자모 단어(예: 사과)에서 타깃과 무관한 자모 오류(ㄱ→ㅍ)까지 완화 (CL-04 "복합 중복 감점 금지" 원칙과 충돌).
+  - 두 잔여 모두 **자모 diff → ErrorPattern 추론 알고리즘**(CL-01/04 핵심)이 선행돼야 해결 가능 → **C단계에 통합**.
+    현재는 display-only 라 **안전 영향 없음**(atypical/큰 오류도 raw 기준으로 정상 escalation → 전문가가 raw 확인).
