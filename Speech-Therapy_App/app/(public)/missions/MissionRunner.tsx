@@ -359,6 +359,18 @@ function MissionRunnerInner({
   return (
     <div className="space-y-3" data-testid="mission-runner-completed">
       {splToast}
+      {/* FR-C-MISSION-COMPLETE-CELEBRATION — 별 적립 시 즉각 만족 연출(장식 — 헤드라인이 의미 전달). */}
+      {earnedStar && (
+        <div
+          className="flex items-end justify-center gap-1 pt-1"
+          data-testid="mission-celebration"
+          aria-hidden="true"
+        >
+          <span className="animate-star-pop text-2xl" style={{ animationDelay: "0ms" }}>⭐</span>
+          <span className="animate-star-pop text-4xl" style={{ animationDelay: "80ms" }}>⭐</span>
+          <span className="animate-star-pop text-2xl" style={{ animationDelay: "160ms" }}>⭐</span>
+        </div>
+      )}
       <div className="rounded-md bg-emerald-100 px-4 py-3 text-sm text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
         <p className="mb-1 font-medium" data-testid="mission-completed-headline">
           {earnedStar ? "연습 완료! ⭐ 별 +1을 받았어요." : "연습 완료! 잘 따라했어요."}

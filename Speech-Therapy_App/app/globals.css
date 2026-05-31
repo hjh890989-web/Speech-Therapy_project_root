@@ -24,3 +24,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* FR-C-MISSION-COMPLETE-CELEBRATION — 미션 완료 별 적립 pop 연출 (1회 재생). */
+@keyframes star-pop {
+  0% { transform: scale(0) rotate(-18deg); opacity: 0; }
+  60% { transform: scale(1.25) rotate(8deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.animate-star-pop {
+  animation: star-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* 모션 민감 사용자 배려 — 애니메이션 무효화(즉시 표시). */
+@media (prefers-reduced-motion: reduce) {
+  .animate-star-pop {
+    animation: none;
+  }
+}
