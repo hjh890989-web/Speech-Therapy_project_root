@@ -22,6 +22,45 @@
 
 ---
 
+## 0-AUDIT. Phase 1 완료도 Audit 동기화 (2026-05-31) ⭐ 권위
+
+> 본 섹션은 2026-05-31 **Phase 1 완료도 audit**(workflow `wf_404a22c6-50f`, 8 에픽 × 감사+적대적검증
+> +종합+완전성비평 = 18 agent, 실제 코드 대조) 결과다. **아래 status 가 §2~§3 의 인라인 🟡 표기를
+> supersede 한다** — 인라인 표는 audit 이전 보수적/stale 값이므로 본 표를 우선한다.
+> (audit 발견: tracker 가 _양방향_ 으로 부정확 — HITL 재학습은 과소평가, F15 일부는 과대평가.)
+
+| Task | audit 정정 status | 근거 (실제 코드) |
+|:---|:---|:---|
+| **DB-016** | 🟢 done | model_retraining_data 테이블+TRIGGER+Prisma 모델+helper 정합 (migrate deploy 만 수동) |
+| **FR-C-HITL-005** | 🟢 done | sync_retraining_data TRIGGER + R4 sanitize + F10 T4-a/b/c 실 tier 게이팅 + DDL 정적 4 PASS |
+| **FR-C-HITL-006** | 🟢 done | 3게이트 cron + SystemConfig DB 멱등성(2026-05-31) + 9 시나리오 PASS |
+| **TEST-022** | 🟢 done | 8조합 단위 + 회귀 sentinel + cron 통합 PASS |
+| **MON-005** | 🟢 done | ConsentRequiredError→Slack lib + 6개 production 배선 + 8 시나리오 PASS |
+| **DB-017** | ✅ done | voice_models schema+migration+3 인덱스+soft-delete (게이트 없음) |
+| **API-018** | ✅ 코드 done | submit_voice_clone + render API + 7일 cron + 18 통합테스트. 게이트=`ELEVENLABS_API_KEY` |
+| **TEST-019** | ✅ 코드 done | 윤리 화이트리스트 단위 + render 403 통합 + 7일 만료 cron, 45 PASS |
+| **DB-018** | ✅ done | push_subscriptions 테이블 + migration `20260531150000` (본 세션) |
+| **API-020** | ✅ 코드 done | subscribe/unsubscribe/dispatch/dismiss + web-push wrapper(본 세션). 잔여=cron `external-crons.yml` 미등록 |
+| **FR-C-029** | ✅ done | SW push/click/close + usePushSubscription hook + 토글 UI(본 세션). 게이트=D5 부활 |
+| **TEST-021** | ✅ 코드 done | config/send/actions/routes/static 50건(본 세션). 잔여=dispatch 자동스케줄 |
+| **FR-Q-022** | ✅ 코드 done | 스트리밍 UI + disclaimer(전역 footer 이미 done) + consent redirect + STT 마이크 + `?next` 보존(본 audit 후속) |
+| **TEST-020** | 🔶 partial | 금칙어/7일폐기/단일턴 단위 42 PASS. 잔여=`/chat` e2e + 재생성-1회 폴백(spec↔코드 충돌, 설계 확정 선행) |
+| **FR-C-030** | ✅ done | submit_care_log + Zod + PIPA + withActor audit + OfflineEntry 모델/RLS + weekly summary, 11 PASS (duration/therapistName 미반영=설계 단순화) |
+| **TEST-024** | 🔶 partial | submit+weekly-summary 22 PASS. 잔여=통합 view/F4 시각화/Form 테스트 (분단위 집계는 OfflineEntry duration 필드 부재로 모델 확장 선행) |
+| **FR-C-HITL-007** | 🔶 partial | Phase1 Top-3 게이트+독립 cron 핸들러+멱등성(본 세션)+22 테스트 done. 잔여=cron 스케줄 미등록 + Phase2 위반대응 3종 + admin 시각화 |
+| **TEST-023** | 🔶 partial | Phase1+HHI/Gini+alerting 22 PASS. 잔여=Phase2 remediation 시나리오 3종(코드 부재로 구조적 차단) |
+| **MON-006** | 🔶 partial | 계산+route+Slack 코드 done. 잔여=cron 스케줄 미등록 + 전용 채널 분리 (Phase2 진입 게이트) |
+| **TEST-017** | 🔶 partial | R4 sanitize 단위/정적 85 PASS. 잔여=실 SQL TRIGGER 발화 통합 테스트(shadow branch 인프라) |
+| **API-015** | 🔶 partial | consent-sign/signOut **LIVE**, bulk-import/offline-entry는 B2B Phase2 게이트. 잔여=Server Action 단위 테스트 2 + 부하 테스트 |
+| **FR-C-031** | 🔶 partial(보류) | 검증 helper 3종 + `prediction_cta_clicked` 계측 실배선. 나머지(모델/Cron/Amplitude)는 **결제 PG 미도입 게이트** |
+| **TEST-025** | 🔶 partial(보류) | 단위(exp2-cohort) PASS. 통합/e2e는 결제 PG 게이트 |
+
+**게이트 대기(코드 done, 활성만)**: F11 3종(`ELEVENLABS_API_KEY`) · F15 2종(`F15_CHAT_ENABLED`, **임상 13항목 통과**).
+**보류(외부 게이트)**: EXP-2(결제 PG) · HITL 다양성 Phase2(MAU 1,000+).
+**경계선 갭(게이트 무관, 지금 배선 가능)**: `external-crons.yml` 에 dispatch(F16) + expert-diversity cron 2줄 미등록.
+
+---
+
 ## 0. V06 88 Task 보존 + V07 sub-task 14 정합성
 
 본 §10 의 신규 65 task 는 V06 88 task + V07 §6.5 Sprint sub-task 14 (이미 [`03_Tasks_Breakdown_SRS_reinforce.md`](03_Tasks_Breakdown_SRS_reinforce.md) §10 정의) 위에 누적.
