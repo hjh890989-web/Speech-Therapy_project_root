@@ -47,6 +47,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 const withActorMock = vi.fn();
+const chatMessageDeleteManyMock = vi.fn();
 vi.mock("@/lib/db/with-actor", () => ({
   withActor: async <T,>(
     actorId: string | null | undefined,
@@ -56,6 +57,10 @@ vi.mock("@/lib/db/with-actor", () => ({
     const tx = {
       user: {
         delete: (...args: unknown[]) => userDeleteMock(...args),
+      },
+      // F15 격리 — ChatMessage 는 application-level FK(DB cascade 미작동) → 명시 deleteMany.
+      chatMessage: {
+        deleteMany: (...args: unknown[]) => chatMessageDeleteManyMock(...args),
       },
     };
     return fn(tx);
@@ -83,6 +88,8 @@ beforeEach(() => {
   userFindUniqueMock.mockReset();
   userDeleteMock.mockReset();
   withActorMock.mockReset();
+  chatMessageDeleteManyMock.mockReset();
+  chatMessageDeleteManyMock.mockResolvedValue({ count: 0 });
   // default — Supabase admin SDK 정상 동작.
   getSupabaseAdminMock.mockReturnValue({
     auth: {
@@ -158,6 +165,12 @@ describe("deleteAccount — FR-C-ACCOUNT 계정 삭제 Server Action", () => {
       where: { id: string };
     };
     expect(deleteCall.where.id).toBe(USER_ID);
+    // F15 격리/GDPR 즉시성 — ChatMessage 도 본인 userId 로 즉시 폐기 (cron 7일 대기 X).
+    expect(chatMessageDeleteManyMock).toHaveBeenCalledTimes(1);
+    const chatDeleteCall = chatMessageDeleteManyMock.mock.calls[0]![0] as {
+      where: { userId: string };
+    };
+    expect(chatDeleteCall.where.userId).toBe(USER_ID);
     // Supabase admin 도 본인 id 로 호출.
     expect(deleteUserMock).toHaveBeenCalledWith(USER_ID);
   });

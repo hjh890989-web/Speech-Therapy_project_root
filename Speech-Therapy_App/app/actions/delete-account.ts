@@ -130,8 +130,11 @@ export async function deleteAccount(
   // 4) DB delete — withActor (audit_trigger_fn actor_id 캡처 후 본인 row 삭제).
   //    Prisma onDelete: Cascade 가 자식 row 들 자동 삭제 (SessionLog / EvaluationResult /
   //    WeeklyReport / RewardLog / RewardProgress / HITLQueue subject / OfflineEntry subject).
+  //    ChatMessage(F15) 는 application-level FK(DB cascade 미작동, VoiceModel 패턴) → 명시적
+  //    deleteMany 로 계정 삭제 시점에 즉시 폐기 (GDPR/PIPA 삭제권 즉시성 — cron 7일 만료 대기 X).
   try {
     await withActor(userId, async (tx) => {
+      await tx.chatMessage.deleteMany({ where: { userId } });
       await tx.user.delete({ where: { id: userId } });
     });
   } catch (err) {

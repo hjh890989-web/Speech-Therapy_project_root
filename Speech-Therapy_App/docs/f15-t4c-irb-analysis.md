@@ -15,6 +15,21 @@ F15 발화 유도 챗봇(자녀 자유 발화 저장)이 **F10 동의 Tier "T4-c
 
 ---
 
+## ✅ 격리 감사 종결 (2026-05-31) — §4-③ ChatMessage↔재학습/HITL 환류 0 **확정**
+
+> **판정: ISOLATED — CONFIRMED.** 적대 감사 workflow(4축 추적→종합→gap 적대 검증→가드)에서 ChatMessage.content 가 재학습/HITL/외부로 환류되는 경로가 **코드·스키마 수준 0** 으로 확정.
+> - **reachability**: 전 코드 `prisma.chatMessage` 접근자 = `create`(submit) + `deleteMany`(cron·계정삭제) 뿐, read-back(findMany/aggregate 등) 0.
+> - **retraining writer**: `ModelRetrainingData` 유일 writer = `sync_retraining_data` TRIGGER(HITLQueue.groundTruthScore UPDATE 시), 페이로드는 EvaluationResult+HITLQueue 컬럼만 — ChatMessage 참조 0. app 측 `modelRetrainingData.create` 0(적재는 TRIGGER 전용).
+> - **join 키**: 재학습 그래프는 `sessionId` 키체인인데 ChatMessage 는 sessionId·@relation·FK 0 → 구조적 고립섬.
+> - **enqueue/egress**: chat 경로는 HITLQueue enqueue 안 함. stream 은 요청 body 만 maskPii 후 Gemini 추론(저장본 재read X, persist 0).
+>
+> **영속 가드**(본 종결 커밋): `__tests__/security/chat-isolation.test.ts`(정적분석 7단언)로 위 불변식 CI 동결 + `schema.prisma` ChatMessage 격리 불변식 주석. 향후 PR 이 sessionId/relation/read-back/enqueue 를 끼워넣으면 빌드 차단.
+>
+> **확정 gap 처리**: ① **erasure 즉시성**(low) — 계정 삭제 시 ChatMessage 가 cron(7일)에만 의존 잔존 → `delete-account.ts` 트랜잭션에 `chatMessage.deleteMany({where:{userId}})` 추가로 즉시 폐기(GDPR/PIPA 삭제권). ② **GDPR 접근권 결정** — ChatMessage 는 `export-user-data` 에서 **의도적 제외 유지**(7일 휘발·환류 차단 격리 우선; 외부 반출 0 이 오히려 안전). F15 13항목 #6 자문에 명문 기록 권고.
+> **별개 트랙(비차단)**: GAP-CONSENT-TIER-HARDCODE(재학습 TRIGGER consentTier 'T4-c' 하드코딩 — ChatMessage 무관, F10 PR 에서 동의 Tier 분기 + 회귀 sentinel).
+
+---
+
 ## ✅ CR 종결 (2026-05-30) — §4-④ ADR-14 모순 확정: **본문 우선 (IRB 조건부)**
 
 > **결정**: 제품 오너(System Admin) 서면 판단으로 **§4.1 L788 / §10.1 본문**을 구속력 있는 정본으로 확정.
@@ -81,7 +96,7 @@ F15 발화 유도 챗봇(자녀 자유 발화 저장)이 **F10 동의 Tier "T4-c
 |---|---|---|---|
 | **1** | **F15 전용 13항목 임상 자문** 수행(자유발화 안전성 #5/#7~9 포함) | **무조건 차단 게이트**(본문) | ❌ 미수행 — 2026-05-30 자문은 **CL-01~04 진단 한정**(schema L575 박제), F15 미커버 |
 | **2** | chat 경로 **PIPA 가드 배선** — `assertConsentedIfAuthenticated`(§17 국외이전) + `pii-mask`(R4) + INSERT 가드 | 활성 **절대 선결**(진단/F11 은 적용 중) | ❌ 미배선 — route.ts 에 persist·pii-mask·consent-guard 없음 |
-| **3** | F15 발화데이터 **활용영역 설계 확정** — ChatMessage 를 model_retraining/HITL 파이프라인과 **코드·스키마 수준 격리**(환류 차단) | T4 진입 방지(13항목 #6) | ❌ 미확정(위키 L104 미결) |
+| **3** | F15 발화데이터 **활용영역 설계 확정** — ChatMessage 를 model_retraining/HITL 파이프라인과 **코드·스키마 수준 격리**(환류 차단) | T4 진입 방지(13항목 #6) | ✅ **완료(2026-05-31 격리 감사 — overallIsolated 확정)** — 아래 ✅ 블록 |
 | **4** | **ADR-14 모순 확정** — IRB 무조건(표) vs 조건부(본문) 중 구속력을 **서면 CR** 로 기록 | 거버넌스 | ✅ **완료(2026-05-30 CR — 본문 우선/IRB 조건부)** — 상단 ✅ 블록 |
 | (5) | 변호사 재확인 — 기존 "문제 없음"(식약처/의료기기 한정)이 **F15 자유발화 국외이전(위탁 vs 제공)** 까지 cover 하는지 | 법률 | ❌ 미확인 |
 

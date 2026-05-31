@@ -575,6 +575,12 @@ model VoiceModel {
 //          13항목 #11 IRB(ADR-15 — T4-c 외부협력 시 조건부)·#12 식약처는 해당성 검토 항목이지 무조건 선행조건 아님
 //          (2026-05-30 CR: 본문 우선/IRB 조건부 — docs/f15-t4c-irb-analysis §CR).
 //          2026-05-30 KOPLAC 검증은 CL-01~04(진단 채점) 한정 — F15 활성 전제 아님.
+//
+// ※ 격리 불변식 (no-regret #3, __tests__/security/chat-isolation.test.ts 가 CI 강제):
+//   본 모델에 sessionId 컬럼이나 EvaluationResult/HITLQueue/ModelRetrainingData 와의 @relation 을
+//   추가하면 재학습 그래프(sessionId 키체인)와 join 가능해져 자녀 발화의 환류(→재학습/HITL) 위험 발생.
+//   content 는 write(create)+7일 hard-DELETE(+계정삭제 시 deleteMany) 외 read-back 0 을 유지할 것.
+//   추가 필요 시 ADR-03(7일 폐기)·R4(자녀 보호)·F15 활성 게이트 재검토 필수.
 // ============================================================================
 
 model ChatMessage {
