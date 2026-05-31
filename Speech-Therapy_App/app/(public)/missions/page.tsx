@@ -17,6 +17,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { type MissionFixture } from "@/lib/mocks/missions";
 import { getMissionCards } from "@/lib/missions/card-repo";
 import { getMissionStreak } from "@/lib/missions/streak";
+import { getWeeklyMissionGoal } from "@/lib/missions/weekly-goal";
 import { MissionRunner } from "./MissionRunner";
 import { getMissionContent } from "@/lib/mocks/mission-content";
 import { MissionPhonemeIsolation } from "@/components/missions/MissionPhonemeIsolation";
@@ -157,6 +158,8 @@ export default async function MissionsPage() {
   const streak = userId
     ? await getMissionStreak(userId)
     : { current: 0, activeToday: false };
+  // FR-C-WEEKLY-MISSION-GOAL — 이번 주 미션 목표 진행도(W-AUR 라이브). 빈 userId 도 0/goal graceful.
+  const weeklyGoal = await getWeeklyMissionGoal(userId ?? "");
 
   // Sprint 1 호환 안전망: mockContinue.recommendedMissionId 는 UUID(레거시 curriculum mock)라
   // slug 카드 id(mock-*-*)와 결코 일치하지 않음 → 사실상 항상 cards[0] 로 폴백(의도된 안전 동작).
@@ -173,6 +176,38 @@ export default async function MissionsPage() {
       >
         본 미션은 부모님께 발달 확인 정보를 안내하는 보조 도구입니다. 의료적 평가가 아닙니다.
       </p>
+      {/* FR-C-WEEKLY-MISSION-GOAL — 이번 주 미션 목표 게이지(W-AUR 라이브). 목표 지향 주간 재방문. */}
+      <div
+        data-testid="weekly-mission-goal"
+        className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/20"
+      >
+        <div className="mb-1.5 flex items-baseline justify-between">
+          <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">이번 주 미션</p>
+          <p className="text-sm font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
+            {weeklyGoal.completed}/{weeklyGoal.goal}
+          </p>
+        </div>
+        <div
+          className="h-2.5 w-full overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-900/50"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={weeklyGoal.goal}
+          aria-valuenow={Math.min(weeklyGoal.completed, weeklyGoal.goal)}
+          aria-label="이번 주 미션 진행도"
+        >
+          <div
+            className="h-full rounded-full bg-emerald-500 transition-all"
+            style={{ width: `${Math.min(100, Math.round((weeklyGoal.completed / weeklyGoal.goal) * 100))}%` }}
+          />
+        </div>
+        <p className="mt-1.5 text-xs text-emerald-700 dark:text-emerald-300">
+          {weeklyGoal.achieved
+            ? "이번 주 목표를 달성했어요! 🎉 계속 이어가면 더 좋아요."
+            : weeklyGoal.completed === 0
+              ? "이번 주 첫 미션을 함께 시작해 볼까요?"
+              : `${weeklyGoal.remaining}회 더 하면 이번 주 목표 달성이에요.`}
+        </p>
+      </div>
       {/* FR-C-DAILY-STREAK — 연속 활동 streak 배너 (1일+ 일 때만). 일일 재방문 동기. */}
       {streak.current >= 1 && (
         <p
