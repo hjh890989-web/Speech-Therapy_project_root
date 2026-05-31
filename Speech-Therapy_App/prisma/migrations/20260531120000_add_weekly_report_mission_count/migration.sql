@@ -13,4 +13,5 @@
 --   2. npx prisma migrate status   # drift 점검
 --   3. npx prisma migrate deploy
 
-ALTER TABLE "WeeklyReport" ADD COLUMN "missionCompletedCount" INTEGER NOT NULL DEFAULT 0;
+-- 상수 DEFAULT(0) → Postgres 11+ 메타데이터 변경(테이블 rewrite 없음, 최소 lock). IF NOT EXISTS=재실행 안전.
+ALTER TABLE "WeeklyReport" ADD COLUMN IF NOT EXISTS "missionCompletedCount" INTEGER NOT NULL DEFAULT 0;
