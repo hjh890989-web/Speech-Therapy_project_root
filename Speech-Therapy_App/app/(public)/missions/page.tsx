@@ -16,6 +16,7 @@ import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { type MissionFixture } from "@/lib/mocks/missions";
 import { getMissionCards } from "@/lib/missions/card-repo";
+import { getMissionStreak } from "@/lib/missions/streak";
 import { MissionRunner } from "./MissionRunner";
 import { getMissionContent } from "@/lib/mocks/mission-content";
 import { MissionPhonemeIsolation } from "@/components/missions/MissionPhonemeIsolation";
@@ -152,6 +153,10 @@ export default async function MissionsPage() {
   const userId = await resolveUserId();
   const cards = await getMissionCards();
   const state = await computeRecommendation(userId, cards);
+  // FR-C-DAILY-STREAK — 연속 활동 streak (display 파생, graceful). 익명/신규는 0.
+  const streak = userId
+    ? await getMissionStreak(userId)
+    : { current: 0, activeToday: false };
 
   // Sprint 1 호환 안전망: mockContinue.recommendedMissionId 는 UUID(레거시 curriculum mock)라
   // slug 카드 id(mock-*-*)와 결코 일치하지 않음 → 사실상 항상 cards[0] 로 폴백(의도된 안전 동작).
@@ -168,6 +173,18 @@ export default async function MissionsPage() {
       >
         본 미션은 부모님께 발달 확인 정보를 안내하는 보조 도구입니다. 의료적 평가가 아닙니다.
       </p>
+      {/* FR-C-DAILY-STREAK — 연속 활동 streak 배너 (1일+ 일 때만). 일일 재방문 동기. */}
+      {streak.current >= 1 && (
+        <p
+          data-testid="mission-streak"
+          className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-sm font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+        >
+          <span aria-hidden="true">🔥</span>
+          {streak.activeToday
+            ? `${streak.current}일 연속 — 오늘도 함께했어요! 잘하고 있어요.`
+            : `${streak.current}일 연속 중이에요! 오늘 미션으로 이어가 볼까요?`}
+        </p>
+      )}
       <header className="mb-8 space-y-2">
         <h1 className="text-2xl font-bold sm:text-3xl">오늘의 미션</h1>
         <p className="text-sm text-gray-600 dark:text-gray-400">
