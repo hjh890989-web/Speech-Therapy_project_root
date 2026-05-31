@@ -97,7 +97,7 @@
 | **FR-C-028** | F15 chat 안전 | `submit_chat_utterance` + Middleware 금칙어 검열 (ADR-04) + 7일 폐기 Cron + 단일턴 컨텍스트 (pgvector 미사용) | §4.1 F15, REQ-FUNC-039, ADR-14 | API-019 | M | 🟡 P1+ |
 | **FR-C-029** | F16 PWA 푸시 | Service Worker push subscription 등록 + iOS Safari 지원 (D5 부활 트리거) | §4.1 F16, REQ-FUNC-040, ADR-10 | API-020, INFRA-003 | M | 🟡 P1+ (D5 부활 + 일 활성 1,000명+ 이후) |
 | **FR-C-030** | F17 케어로그 | `submit_care_log` Server Action — 부모 직접 입력 (자유놀이 시간 · 외부 센터 세션 메모) → DB-004 INSERT | §4.1 F17, REQ-FUNC-041~043 | DB-004 | L | 🟡 P1 |
-| **FR-C-031** | F18 EXP-2 | EXP-2 검증 Amplitude 코호트 분석 자동화 — 시뮬레이션 클릭 vs 비클릭 익월 결제 유지율 차이 ≥ 20%p | §4.1 F18, REQ-FUNC-044/045 | FR-C-011, INFRA-005 | L | 🟡 P1 |
+| **FR-C-031** | F18 EXP-2 | EXP-2 검증 Amplitude 코호트 분석 자동화 — 시뮬레이션 클릭 vs 비클릭 익월 결제 유지율 차이 ≥ 20%p | §4.1 F18, REQ-FUNC-044/045 | FR-C-011, INFRA-005 | L | ❌ **보류 (2026-05-31)** — 결제 시스템 미도입 → "결제 유지율" 지표 자체 부재. **monetization 도입 시점까지 보류.** (대안: W-AUR/재방문 유지율로 재정의 시 자체 AnalyticsEvent sink 로 Amplitude 없이 측정 가능 — 제품 결정 필요) |
 
 ### 2-C. HITL Write / Command Task (V07 신규 3건)
 
@@ -123,7 +123,7 @@
 | **TEST-022** | HITL 재학습 3 게이트 | `model_retraining_data` 3 게이트 통과 시뮬레이션 단위 테스트 — 0.5% + 500 + HHI ≤ 0.3 | §5.3.3, REQ-FUNC-HITL-006 | FR-C-HITL-006 | M | 🟡 P1+ |
 | **TEST-023** | HHI / Gini 다양성 | expertId 다양성 — Phase 1 Top-3 + Phase 2 HHI + Gini 계산 단위 테스트 + 위반 대응 3종 시나리오 통합 테스트 | §5.5, REQ-FUNC-HITL-007 | FR-C-HITL-007 | M | 🟡 P1 → P2 |
 | **TEST-024** | F17 통합 | F17 통합 케어로그 + F4 주간 리포트 시각화 단위 테스트 — 부모 직접 입력 + 외부 센터 기록 통합 | §4.1 F17, REQ-FUNC-042 | FR-C-030, FR-Q-005 | L | 🟡 P1 |
-| **TEST-025** | F18 EXP-2 | F18 EXP-2 검증 — Amplitude 코호트 시뮬레이션 클릭 vs 비클릭 익월 결제 유지율 차이 ≥ 20%p | §4.1 F18, REQ-FUNC-045 | FR-C-031 | L | 🟡 P1 |
+| **TEST-025** | F18 EXP-2 | F18 EXP-2 검증 — Amplitude 코호트 시뮬레이션 클릭 vs 비클릭 익월 결제 유지율 차이 ≥ 20%p | §4.1 F18, REQ-FUNC-045 | FR-C-031 | L | ❌ **보류 (2026-05-31)** — FR-C-031 종속(결제 미도입). monetization 도입 시점까지 보류 |
 
 ---
 
