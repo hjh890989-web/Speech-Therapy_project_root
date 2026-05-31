@@ -108,7 +108,7 @@ export function PwaInstallPrompt() {
       <button
         type="button"
         onClick={handleInstall}
-        className="min-h-[40px] rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+        className="min-h-[44px] rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
       >
         추가
       </button>
@@ -116,7 +116,7 @@ export function PwaInstallPrompt() {
         type="button"
         onClick={handleDismiss}
         aria-label="닫기"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
       >
         ×
       </button>

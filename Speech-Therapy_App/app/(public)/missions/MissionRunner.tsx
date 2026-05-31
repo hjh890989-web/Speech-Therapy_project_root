@@ -191,16 +191,24 @@ function MissionRunnerInner({
         elapsedSec,
         completedReason: reason,
       });
-      // FR-C-MISSION-COMPLETION — 서버 영속화(fire-and-forget). 실패해도 미션 UX 차단 0.
-      //   skipped 는 서버에서 durationSec=0 으로 저장(완수 미카운트).
-      void recordMissionCompletion({
-        missionId,
-        elapsedSec,
-        completedReason: reason,
-        anonymousUserId: anonymousUserId ?? undefined,
-      }).catch((err) => console.error("[FR-C-MISSION-COMPLETION] record 실패:", err));
-      // FR-C-MISSION-REWARD-WIRING — skipped 는 별 미적립(서버 durationSec=0). optimistic UI.
+      // FR-C-MISSION-REWARD-WIRING — skipped 는 별 미적립. 우선 optimistic 표시 후 서버 결과로 정정.
       setEarnedStar(reason !== "skipped");
+      // FR-C-MISSION-COMPLETION — 서버 영속화 + 별 적립 권위(starGranted)로 표시 정정.
+      //   일일 재완수(멱등 중복)·적립 실패 시 starGranted=false → 거짓 '별 +1' 표시/연출을 정정(헤드라인 폴백).
+      //   실패해도 미션 UX 차단 0.
+      void (async () => {
+        try {
+          const r = await recordMissionCompletion({
+            missionId,
+            elapsedSec,
+            completedReason: reason,
+            anonymousUserId: anonymousUserId ?? undefined,
+          });
+          if (r.success && !r.starGranted) setEarnedStar(false);
+        } catch (err) {
+          console.error("[FR-C-MISSION-COMPLETION] record 실패:", err);
+        }
+      })();
       // REQ-FUNC-007 — 미션 종료 시 잔여 SPL Toast 정리 + 사이클 ref 리셋.
       // useSplMeter 는 enabled=false 전환에 따라 자동 teardown — 본 setState 는 UI 잔존 방지용.
       setSplToastVisible(false);

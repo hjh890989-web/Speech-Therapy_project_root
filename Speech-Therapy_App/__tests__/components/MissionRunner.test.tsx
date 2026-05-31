@@ -35,7 +35,7 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
   beforeEach(() => {
     trackMock.mockClear();
     recordMock.mockReset();
-    recordMock.mockResolvedValue({ success: true, sessionId: "s1", counted: true });
+    recordMock.mockResolvedValue({ success: true, sessionId: "s1", counted: true, starGranted: true });
     mockedUseVoiceActivity.mockReset();
     mockedUseVoiceActivity.mockReturnValue({
       isSpeaking: false,
@@ -111,6 +111,23 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
     expect(screen.getByTestId("mission-completed-headline").textContent).toContain("별 +1");
     // FR-C-MISSION-COMPLETE-CELEBRATION — 별 적립 시 축하 연출 노출.
     expect(screen.getByTestId("mission-celebration")).toBeInTheDocument();
+  });
+
+  it("서버 starGranted=false(일일 재완수/적립 실패) → '별 +1' 카피·연출 정정 (거짓 표시 방지)", async () => {
+    // optimistic 으로 '별 +1' 표시되나, 서버가 별 미적립을 알리면 헤드라인/연출이 정정돼야 함.
+    recordMock.mockResolvedValue({ success: true, counted: true, starGranted: false });
+    render(<MissionRunner {...longDurationProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /미션 시작/ }));
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "완료" }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("mission-completed-headline").textContent).not.toContain("별 +1");
+    expect(screen.queryByTestId("mission-celebration")).toBeNull();
   });
 
   it("FR-Q-003 fix — 30s 미만 '완료' 클릭 → warning + mission_completed 미발송 (W-AUR KPI 보호)", () => {
