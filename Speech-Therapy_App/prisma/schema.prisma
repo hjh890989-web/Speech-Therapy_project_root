@@ -570,6 +570,45 @@ model VoiceModel {
 }
 
 // ============================================================================
+// DB-018 (V07 신규) — F16 오프라인 일반화 푸시 알림 구독 (Phase 1+)
+//
+// Refs: V07 §4.1 Epic F16, REQ-FUNC-040 (Web Push 일 1회 18:00 + 옵트인 only),
+//       ADR-10 (D5 PWA 부활 의존 — 게이트 off 기본), 정보통신망법 §50 (영리성 옵트인).
+//
+// 책임:
+//   - Web Push API 구독 정보 (endpoint + p256dh + auth). _옵트인 source of truth = 본 row 존재_.
+//   - dispatch Cron 이 본 테이블 조회 → web-push 발송. 옵트아웃 = row DELETE.
+//   - notificationPreference JSON 의 f16PushEnabled 미러는 의도적 미사용 — 이메일 선호
+//     update 가 normalizeNotificationPreference 로 unknown 키를 버려 round-trip clobber 발생
+//     (app/actions/update-notification-preference.ts). row 존재가 단일 진실원 → clobber 무관.
+//
+// R4: endpoint 는 push gateway URL (PII 아님). p256dh/auth 는 구독 payload 암호화 키.
+// 게이트: F16_PUSH_ENABLED + VAPID 키 (lib/push/config.ts). 기본 off — D5 부활 시 활성.
+// FK: application-level (VoiceModel / ChatMessage 동일 컨벤션 — User @relation 미선언).
+// ============================================================================
+
+model PushSubscription {
+  id           String    @id @default(uuid()) @db.Uuid
+  /// 구독 소유 user.id.
+  userId       String
+  /// Web Push endpoint URL — push gateway 주소. @unique (동일 브라우저 재구독 시 upsert).
+  endpoint     String    @unique
+  /// 구독 공개키 (p256dh) — payload 암호화용.
+  p256dh       String
+  /// 구독 auth secret — payload 암호화용.
+  auth         String
+  /// 마지막 발송 시각 (dispatch Cron 갱신). null = 미발송.
+  lastSentAt   DateTime?
+  /// 알림 dismiss 누적 횟수 (Phase 2 빈도 적응 — 임계 이상 dispatch skip / 자동 옵트아웃).
+  dismissCount Int       @default(0)
+  /// 구독 생성 시각 (= 정보통신망법 §50 명시 옵트인 기록 시점).
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([lastSentAt])
+}
+
+// ============================================================================
 // DB-NEW-F15-1 (V07 신규) — F15 LLM 발화 유도 챗봇 메시지 (Phase 1+)
 //
 // Refs: V07 §4.1 Epic F15, REQ-FUNC-038/039, ADR-03 (7일 폐기), ADR-04 (금칙어 0건),

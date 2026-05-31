@@ -57,3 +57,69 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(request).then((cached) => cached ?? new Response("Offline", { status: 503 }))),
   );
 });
+
+// ============================================================================
+// API-020 / FR-C-029 — F16 Web Push 핸들러 (push / notificationclick / notificationclose).
+//
+// dispatch Cron(/api/push/dispatch) 이 보낸 payload(JSON: { title, body, url }) 를 알림 표시.
+// 게이트 off (D5 부활 전) 면 dispatch 가 발송 0건 → 본 핸들러는 자연 비활성.
+// CON-04: 카피는 dispatch 측이 fail-closed 검증한 안전 문구만 도달.
+// ============================================================================
+
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = {};
+  }
+  const title = payload.title || "Speech-Therapy";
+  const options = {
+    body: payload.body || "오늘도 한마디 같이 해봐요.",
+    icon: "/icon-192.svg",
+    badge: "/icon-192.svg",
+    data: { url: payload.url || "/" },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl =
+    (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        // 이미 열린 탭이 있으면 focus (+ navigate).
+        for (const client of clientList) {
+          if ("focus" in client) {
+            client.focus();
+            if ("navigate" in client) client.navigate(targetUrl);
+            return undefined;
+          }
+        }
+        // 없으면 새 창.
+        if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+        return undefined;
+      }),
+  );
+});
+
+self.addEventListener("notificationclose", (event) => {
+  // dismiss 카운트 — 현재 구독 endpoint 로 /api/push/dismiss POST (Phase 2 빈도 적응).
+  event.waitUntil(
+    self.registration.pushManager
+      .getSubscription()
+      .then((sub) => {
+        if (!sub) return undefined;
+        return fetch("/api/push/dismiss", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+          keepalive: true,
+        }).catch(() => undefined);
+      })
+      .catch(() => undefined),
+  );
+});
