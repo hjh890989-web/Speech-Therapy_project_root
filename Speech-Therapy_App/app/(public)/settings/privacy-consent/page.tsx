@@ -26,6 +26,19 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
+interface PrivacyConsentPageProps {
+  // Next.js 16 — searchParams 는 Promise. ConsentRedirectGate 가 ?next= 로 진입 전 경로 전달.
+  searchParams: Promise<{ next?: string }>;
+}
+
+/** next URL sanitize — internal path 만 허용 (open redirect 방어). null = 동의 후 redirect 안 함. */
+function sanitizeNext(raw: string | undefined): string | null {
+  if (typeof raw !== "string" || raw.length === 0) return null;
+  if (!raw.startsWith("/")) return null;
+  if (raw.startsWith("//")) return null; // protocol-relative ("//evil.com") 차단.
+  return raw;
+}
+
 function formatDateKr(d: Date | null): string {
   if (!d) return "미동의";
   const y = d.getFullYear();
@@ -34,7 +47,12 @@ function formatDateKr(d: Date | null): string {
   return `${y}년 ${m}월 ${day}일`;
 }
 
-export default async function SettingsPrivacyConsentPage() {
+export default async function SettingsPrivacyConsentPage({
+  searchParams,
+}: PrivacyConsentPageProps) {
+  const { next } = await searchParams;
+  const nextPath = sanitizeNext(next);
+
   const user = await getCachedUser();
   if (!user) {
     redirect("/login?next=/settings/privacy-consent");
@@ -124,6 +142,7 @@ export default async function SettingsPrivacyConsentPage() {
       <PrivacyConsentForm
         initialPipaConsented={pipaAt !== null}
         initialOverseasConsented={overseasAt !== null}
+        nextPath={nextPath}
       />
 
       <section className="mt-8 space-y-3 text-sm text-slate-500 dark:text-slate-500">

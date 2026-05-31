@@ -30,11 +30,20 @@ beforeEach(() => {
 });
 
 describe("ConsentRedirectGate", () => {
-  it("미동의 + 일반 path → /settings/privacy-consent redirect", () => {
+  it("미동의 + 일반 path → /settings/privacy-consent redirect (+ ?next 보존)", () => {
     usePathnameMock.mockReturnValue("/diagnose");
     render(<ConsentRedirectGate hasConsented={false} />);
+    // FR-Q-022 — 진입 전 경로를 ?next 로 보존 (동의 후 복귀).
     expect(routerReplaceMock).toHaveBeenCalledExactlyOnceWith(
-      "/settings/privacy-consent",
+      "/settings/privacy-consent?next=%2Fdiagnose",
+    );
+  });
+
+  it("미동의 + /chat → ?next=%2Fchat 인코딩 보존", () => {
+    usePathnameMock.mockReturnValue("/chat");
+    render(<ConsentRedirectGate hasConsented={false} />);
+    expect(routerReplaceMock).toHaveBeenCalledExactlyOnceWith(
+      "/settings/privacy-consent?next=%2Fchat",
     );
   });
 

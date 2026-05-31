@@ -12,6 +12,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 
 import { submitChatUtterance } from "@/app/actions/submit-chat-utterance";
+import { useSpeechToText } from "@/lib/hooks/useSpeechToText";
 
 interface Msg {
   role: "user" | "assistant";
@@ -58,6 +59,11 @@ export function ChatClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ChatError | null>(null);
   const listEndRef = useRef<HTMLDivElement | null>(null);
+
+  // FR-Q-022 — 음성 입력(STT). 인식된 텍스트를 기존 입력에 이어붙임. 미지원 시 버튼 미노출.
+  const stt = useSpeechToText((text) =>
+    setInput((prev) => (prev ? `${prev} ${text}` : text)),
+  );
 
   async function send() {
     const text = input.trim();
@@ -179,6 +185,24 @@ export function ChatClient() {
           data-testid="chat-input"
           className="min-h-[44px] flex-1 resize-none rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800"
         />
+        {stt.supported && (
+          <button
+            type="button"
+            onClick={() => (stt.listening ? stt.stop() : stt.start())}
+            disabled={loading}
+            aria-label={stt.listening ? "음성 입력 중지" : "음성으로 입력"}
+            aria-pressed={stt.listening}
+            data-testid="chat-mic"
+            title="음성으로 입력"
+            className={`min-h-[44px] rounded-md border px-3 py-2 text-sm transition-colors disabled:opacity-50 ${
+              stt.listening
+                ? "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                : "border-gray-300 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            }`}
+          >
+            {stt.listening ? "● 듣는 중" : "🎤"}
+          </button>
+        )}
         <button
           type="submit"
           disabled={loading || input.trim().length === 0}

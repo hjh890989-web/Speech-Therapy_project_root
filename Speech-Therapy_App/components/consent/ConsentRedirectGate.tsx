@@ -86,7 +86,14 @@ export function ConsentRedirectGate({ hasConsented }: ConsentRedirectGateProps) 
     if (hasConsented !== false) return; // null / true → 미실행.
     if (isConsentRedirectExcluded(pathname ?? "")) return;
     triggeredRef.current = true;
-    router.replace("/settings/privacy-consent");
+    // 동의 완료 후 원래 보려던 경로로 복귀하도록 ?next= 보존 (예: /chat → 동의 → /chat).
+    // "/" 또는 미확정은 next 생략 (privacy-consent 가 default 흐름 처리).
+    const current = pathname ?? "";
+    const next =
+      current && current !== "/"
+        ? `?next=${encodeURIComponent(current)}`
+        : "";
+    router.replace(`/settings/privacy-consent${next}`);
   }, [hasConsented, pathname, router]);
 
   return null;

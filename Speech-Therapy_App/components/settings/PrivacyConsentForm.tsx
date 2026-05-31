@@ -13,6 +13,7 @@
 //   - 본 폼은 부모 본인 row 의 timestamp 만 업데이트 — 자녀 식별 정보 무관.
 
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { savePrivacyConsent } from "@/app/actions/privacy-consent";
 
@@ -23,12 +24,19 @@ export interface PrivacyConsentFormProps {
   initialPipaConsented: boolean;
   /** 페이지 진입 시점의 국외 이전 동의 여부. */
   initialOverseasConsented: boolean;
+  /**
+   * FR-Q-022 — 동의 흐름 진입 전 경로 (ConsentRedirectGate 가 ?next= 로 전달, sanitize 완료).
+   * 동의 성공 시 이 경로로 복귀 (예: /chat → 동의 → /chat). null = 복귀 없이 success 표시만.
+   */
+  nextPath?: string | null;
 }
 
 export function PrivacyConsentForm({
   initialPipaConsented,
   initialOverseasConsented,
+  nextPath,
 }: PrivacyConsentFormProps) {
+  const router = useRouter();
   const [pipa, setPipa] = useState<boolean>(initialPipaConsented);
   const [overseas, setOverseas] = useState<boolean>(initialOverseasConsented);
   const [status, setStatus] = useState<Status>("idle");
@@ -48,6 +56,10 @@ export function PrivacyConsentForm({
       });
       if (result.success) {
         setStatus("success");
+        // FR-Q-022 — 진입 전 경로(?next)가 있으면 복귀 (예: /chat 미동의 → 동의 → /chat).
+        if (nextPath) {
+          router.push(nextPath);
+        }
       } else {
         setStatus("error");
         switch (result.reason) {
@@ -68,7 +80,7 @@ export function PrivacyConsentForm({
       setStatus("error");
       setErrorMessage("일시적인 오류로 저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
     }
-  }, [bothChecked, pipa, overseas]);
+  }, [bothChecked, pipa, overseas, nextPath, router]);
 
   return (
     <form
