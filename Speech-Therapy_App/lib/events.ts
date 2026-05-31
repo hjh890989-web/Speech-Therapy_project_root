@@ -933,6 +933,21 @@ export type AnalyticsEvent =
       properties: {
         institutionId: string | null;
       };
+    }
+  // === FR-C-PWA-INSTALL-PROMPT — 홈 화면 설치 유도 배너 (리텐션) ===
+  | {
+      // beforeinstallprompt 캡처 → 커스텀 배너 노출 시 1회.
+      // R4: 식별 정보 0 — 단순 노출 카운트(전환율 분모).
+      name: "pwa_install_prompt_shown";
+      properties: Record<string, never>;
+    }
+  | {
+      // "추가" 클릭 후 userChoice 또는 "닫기" 클릭 결과. accepted=설치 수락, dismissed=거절/닫기.
+      // 활용: 배너 전환율(shown→accepted) → 리텐션 레버 효과 측정.
+      name: "pwa_install_prompt_result";
+      properties: {
+        outcome: "accepted" | "dismissed";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { ServiceWorkerRegister } from "./sw-register";
+import { PwaInstallPrompt } from "./pwa-install-prompt";
 import { InstitutionHeader } from "@/components/InstitutionHeader";
 import { OfflineToast } from "@/components/OfflineToast";
 import { MedicalDisclaimerFooter } from "@/components/MedicalDisclaimerFooter";
@@ -72,6 +73,8 @@ export default function RootLayout({
             Service Worker / IndexedDB 미사용 단순화 안 — navigator.onLine 만 구독. */}
         <OfflineToast />
         <ServiceWorkerRegister />
+        {/* FR-C-PWA-INSTALL-PROMPT — 홈 화면 설치 유도 배너(지원 브라우저·미설치·미닫음 시만 노출). */}
+        <PwaInstallPrompt />
         <Analytics />
         <SpeedInsights />
       </body>
