@@ -12,7 +12,7 @@
 // 메뉴 매트릭스 (role 별 항목):
 //   anonymous  : 발음 발달 확인(/diagnose) + 로그인(/login)
 //   parent     : 주간 리뷰(/weekly-review) + 미션(/missions) + 보상 도감(/rewards/collection)
-//                + 예측(/predictions) + 설정(/settings)
+//                + 예측(/predictions) + [F15 활성 시] 이야기 친구(/chat) + 설정(/settings)
 //   teacher    : 위 일부 (주간 리뷰/미션/보상) + 선생님 대시보드(/admin/teacher) + 설정(/settings)
 //   principal  : 부모 메뉴 + 원장 대시보드(/admin/principal) + 선생님 대시보드(/admin/teacher) + 설정(/settings)
 //   admin      : principal 메뉴 + HITL 큐(/admin/hitl) + 설정(/settings)
@@ -42,7 +42,16 @@ import {
 } from "@/lib/nav/badge-counts";
 
 /** 메뉴 항목 산출 — role 별 분기. 본 함수는 분리 export 하여 단위 테스트 (props snapshot) 가능. */
-export function buildNavItemsForRole(role: MainNavRole): MainNavItem[] {
+export interface BuildNavOptions {
+  /// FR-Q-022 — F15 챗봇(`F15_CHAT_ENABLED`) 활성 시에만 "이야기 친구"(/chat) 노출.
+  ///   env 체크는 호출 측(MainNav)에서 — 본 함수는 boolean 입력으로 순수성 유지(테스트 결정성).
+  f15ChatEnabled?: boolean;
+}
+
+export function buildNavItemsForRole(
+  role: MainNavRole,
+  opts: BuildNavOptions = {},
+): MainNavItem[] {
   // 부모 친화 카피 — 격려조 + 큰 글씨로 노출 (CSS 측 처리).
   const PARENT_BASE: MainNavItem[] = [
     { href: "/weekly-review", label: "우리 아이 주간 리뷰", emoji: "📅" },
@@ -50,6 +59,12 @@ export function buildNavItemsForRole(role: MainNavRole): MainNavItem[] {
     { href: "/rewards/collection", label: "보상 도감", emoji: "✨" },
     { href: "/predictions", label: "예측 보기", emoji: "🔮" },
   ];
+
+  // FR-Q-022 — F15 챗봇 활성 시 부모 메뉴에 추가(휴면 시 미노출). 인증 전용(route 401)이라 anonymous 제외.
+  //   PARENT_BASE 인덱스를 건드리지 않도록 별도 항목으로 spread(teacher/expert 의 index 접근 보존).
+  const CHAT_ITEMS: MainNavItem[] = opts.f15ChatEnabled
+    ? [{ href: "/chat", label: "이야기 친구", emoji: "💬" }]
+    : [];
 
   // 운영자 메뉴 — 단순 라벨 (정보 밀도 OK).
   const TEACHER_DASHBOARD: MainNavItem = {
@@ -87,7 +102,7 @@ export function buildNavItemsForRole(role: MainNavRole): MainNavItem[] {
         { href: "/diagnose", label: "발음 발달 확인", emoji: "🎤" },
       ];
     case "parent":
-      return [...PARENT_BASE, SETTINGS];
+      return [...PARENT_BASE, ...CHAT_ITEMS, SETTINGS];
     case "teacher":
       return [
         // 선생님도 부모 화면 일부는 접근 가능 (자녀 본인 계정과 별개 — 데모 / 가이드 목적).
@@ -98,10 +113,11 @@ export function buildNavItemsForRole(role: MainNavRole): MainNavItem[] {
         SETTINGS,
       ];
     case "principal":
-      return [...PARENT_BASE, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, SETTINGS];
+      return [...PARENT_BASE, ...CHAT_ITEMS, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, SETTINGS];
     case "admin":
       return [
         ...PARENT_BASE,
+        ...CHAT_ITEMS,
         PRINCIPAL_DASHBOARD,
         TEACHER_DASHBOARD,
         HITL_QUEUE,
@@ -232,7 +248,9 @@ export async function MainNav(props: MainNavProps = {}) {
     role === "expert" ||
     role === "parent";
 
-  let items = buildNavItemsForRole(role);
+  let items = buildNavItemsForRole(role, {
+    f15ChatEnabled: process.env.F15_CHAT_ENABLED === "true",
+  });
   if (needsBadge && userId) {
     const institutionId = await getCachedUserInstitutionId(userId);
     // FR-CONSENT-BADGE — parent 의 ConsentSignature.parentEmail 매칭용으로 userEmail 전달.

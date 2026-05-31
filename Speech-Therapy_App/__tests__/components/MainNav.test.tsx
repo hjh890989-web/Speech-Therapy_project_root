@@ -195,6 +195,37 @@ describe("buildNavItemsForRole — role 별 메뉴 매트릭스", () => {
       expect(settingsItem!.emoji).toBe("⚙️");
     }
   });
+
+  // FR-Q-022 — F15 챗봇 nav 게이팅 (f15ChatEnabled 입력 기반).
+  it("F15 비활성(default) → '이야기 친구'(/chat) 미노출 (전 role)", () => {
+    for (const role of ["anonymous", "parent", "teacher", "principal", "admin", "expert"] as MainNavRole[]) {
+      expect(buildNavItemsForRole(role).map((i) => i.href)).not.toContain("/chat");
+      // 명시적 false 도 동일.
+      expect(buildNavItemsForRole(role, { f15ChatEnabled: false }).map((i) => i.href)).not.toContain("/chat");
+    }
+  });
+
+  it("F15 활성 → parent/principal/admin 에 '이야기 친구'(/chat) 노출, teacher/expert·anonymous 는 미노출", () => {
+    const has = (role: MainNavRole) =>
+      buildNavItemsForRole(role, { f15ChatEnabled: true }).map((i) => i.href).includes("/chat");
+    expect(has("parent")).toBe(true);
+    expect(has("principal")).toBe(true);
+    expect(has("admin")).toBe(true);
+    // 운영자(부분 부모메뉴)·익명은 미노출.
+    expect(has("teacher")).toBe(false);
+    expect(has("expert")).toBe(false);
+    expect(has("anonymous")).toBe(false);
+    // parent 위치 — 예측 뒤, 설정 앞.
+    const parentHrefs = buildNavItemsForRole("parent", { f15ChatEnabled: true }).map((i) => i.href);
+    expect(parentHrefs).toEqual([
+      "/weekly-review",
+      "/missions",
+      "/rewards/collection",
+      "/predictions",
+      "/chat",
+      "/settings",
+    ]);
+  });
 });
 
 describe("isPathActive — 정확 매치 + prefix", () => {
