@@ -28,6 +28,8 @@ import { prisma } from "@/lib/db";
 import { withActor } from "@/lib/db/with-actor";
 import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { formatKstDate } from "@/lib/timeline/tz";
+import { grantReward } from "@/app/actions/reward";
 
 import type {
   RecordMissionCompletionInput,
@@ -103,11 +105,30 @@ export async function recordMissionCompletion(
     await prisma.sessionLog.create({
       data: { id: sessionId, userId, missionId, durationSec },
     });
-
-    return { success: true, sessionId, counted: durationSec > 0 };
   } catch (err) {
     // FK 위반(미시드 카드) / DB 장애 — graceful(미션 UX 차단 0).
     console.error("[FR-C-MISSION-COMPLETION] sessionLog INSERT failed:", err);
     return { success: false, reason: "internal_error" };
   }
+
+  // FR-C-MISSION-REWARD-WIRING — 정상 완료(durationSec>0)만 별 +1.
+  //   멱등키 = mission-{missionId}-{KST 일자} → 같은 미션 같은 날 재완수는 1회만(파밍 차단),
+  //   다음 날 재완수는 새 별(일일 리텐션 유지). skipped/일일중복/적립실패는 starGranted=false.
+  //   적립 실패는 graceful — 측정 기반(SessionLog)은 이미 영속됐고 보상은 보조.
+  let starGranted = false;
+  if (durationSec > 0) {
+    try {
+      const out = await grantReward({
+        userId,
+        rewardType: "star",
+        amount: 1,
+        idempotencyKey: `mission-${missionId}-${formatKstDate(new Date())}`,
+      });
+      starGranted = !out.wasSkipped;
+    } catch (err) {
+      console.error("[FR-C-MISSION-COMPLETION] 별 적립 실패(graceful):", err);
+    }
+  }
+
+  return { success: true, sessionId, counted: durationSec > 0, starGranted };
 }

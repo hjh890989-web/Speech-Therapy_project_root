@@ -32,6 +32,11 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => cookieGetMock(name) }),
 }));
 
+const grantRewardMock = vi.fn();
+vi.mock("@/app/actions/reward", () => ({
+  grantReward: (...a: unknown[]) => grantRewardMock(...a),
+}));
+
 import { recordMissionCompletion } from "@/app/actions/mission";
 
 const ANON = "anon-uuid-1";
@@ -60,17 +65,35 @@ beforeEach(() => {
   cookieGetMock.mockReturnValue(undefined);
   userUpsertMock.mockResolvedValue({});
   sessionCreateMock.mockResolvedValue({ id: "s1" });
+  grantRewardMock.mockReset();
+  grantRewardMock.mockResolvedValue({
+    success: true,
+    wasSkipped: false,
+    cumulativeStars: 1,
+    treeGrowthLevel: 0,
+    aiDrawingCount: 0,
+  });
 });
 
 describe("recordMissionCompletion — FR-C-MISSION-COMPLETION", () => {
-  it("manual_done → durationSec=elapsedSec(>0), counted=true", async () => {
+  it("manual_done → durationSec=elapsedSec(>0), counted=true + 별 +1 적립", async () => {
     const r = await recordMissionCompletion(input({ completedReason: "manual_done", elapsedSec: 95 }));
     expect(r.success).toBe(true);
     if (!r.success) return;
     expect(r.counted).toBe(true);
+    expect(r.starGranted).toBe(true);
     expect(createArg().data.durationSec).toBe(95);
     expect(createArg().data.missionId).toBe("mock-s-3");
     expect(createArg().data.userId).toBe(ANON);
+    // 날짜 스코프 멱등키 — mission-{missionId}-{YYYY-MM-DD}.
+    const rewardArg = grantRewardMock.mock.calls[0]?.[0] as {
+      userId: string;
+      rewardType: string;
+      amount: number;
+      idempotencyKey: string;
+    };
+    expect(rewardArg).toMatchObject({ userId: ANON, rewardType: "star", amount: 1 });
+    expect(rewardArg.idempotencyKey).toMatch(/^mission-mock-s-3-\d{4}-\d{2}-\d{2}$/);
   });
 
   it("timer_ended → durationSec=elapsedSec, counted=true", async () => {
@@ -79,12 +102,38 @@ describe("recordMissionCompletion — FR-C-MISSION-COMPLETION", () => {
     expect(createArg().data.durationSec).toBe(120);
   });
 
-  it("skipped → durationSec=0, counted=false (W-AUR inflate 차단)", async () => {
+  it("skipped → durationSec=0, counted=false, 별 미적립 (grantReward 미호출)", async () => {
     const r = await recordMissionCompletion(input({ completedReason: "skipped", elapsedSec: 88 }));
     expect(r.success).toBe(true);
     if (!r.success) return;
     expect(r.counted).toBe(false);
+    expect(r.starGranted).toBe(false);
     expect(createArg().data.durationSec).toBe(0);
+    expect(grantRewardMock).not.toHaveBeenCalled();
+  });
+
+  it("같은 미션 같은 날 재완수(멱등 wasSkipped) → starGranted=false (파밍 차단)", async () => {
+    grantRewardMock.mockResolvedValueOnce({
+      success: true,
+      wasSkipped: true, // RewardLog @@unique 중복 — 일일 재완수 1회만.
+      cumulativeStars: 1,
+      treeGrowthLevel: 0,
+      aiDrawingCount: 0,
+    });
+    const r = await recordMissionCompletion(input({ completedReason: "timer_ended" }));
+    expect(r.success && r.starGranted).toBe(false);
+    expect(r.success && r.counted).toBe(true); // 완수 자체는 기록(SessionLog durationSec>0)
+  });
+
+  it("별 적립 실패 → graceful (SessionLog 는 영속, success=true, starGranted=false)", async () => {
+    grantRewardMock.mockRejectedValueOnce(new Error("reward db down"));
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await recordMissionCompletion(input({ completedReason: "manual_done" }));
+    errSpy.mockRestore();
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.starGranted).toBe(false);
+    expect(sessionCreateMock).toHaveBeenCalledTimes(1); // 측정 기반은 무손상
   });
 
   it("User provisioning — withActor + upsert create {id, role:'parent'} (FK 보장, 동의 미변경)", async () => {

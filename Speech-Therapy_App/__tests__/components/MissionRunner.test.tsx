@@ -107,6 +107,8 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
       completedReason: "manual_done",
       anonymousUserId: "anon-test-1",
     });
+    // FR-C-MISSION-REWARD-WIRING — 정상 완료 → 별 적립 카피(optimistic).
+    expect(screen.getByTestId("mission-completed-headline").textContent).toContain("별 +1");
   });
 
   it("FR-Q-003 fix — 30s 미만 '완료' 클릭 → warning + mission_completed 미발송 (W-AUR KPI 보호)", () => {
@@ -146,6 +148,8 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
     expect(recordMock).toHaveBeenCalledWith(
       expect.objectContaining({ completedReason: "skipped", anonymousUserId: "anon-test-1" }),
     );
+    // 건너뛰기는 별 미적립 — 완료 카피에 '별 +1' 없음(거짓 적립 주장 방지).
+    expect(screen.getByTestId("mission-completed-headline").textContent).not.toContain("별 +1");
   });
 
   it("타이머 자동 종료 → mission_completed{timer_ended}", async () => {

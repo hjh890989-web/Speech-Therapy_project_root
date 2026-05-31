@@ -25,6 +25,8 @@ export type RecordMissionCompletionResult =
       sessionId: string;
       /// durationSec > 0 (정상 완료 = W-AUR 카운트 대상)인가. skipped → false.
       counted: boolean;
+      /// 별 +1 신규 적립 여부(FR-C-MISSION-REWARD-WIRING). skipped/일일중복/적립실패 → false.
+      starGranted: boolean;
     }
   | {
       success: false;

@@ -89,6 +89,8 @@ function MissionRunnerInner({
   // FR-C-MISSION-COMPLETION — 완료를 SessionLog 로 영속화(W-AUR 측정 기반). localStorage 권위 id
   //   (useAnonymousUserId — RewardOnMount/진단과 동일 권위) 를 서버 액션에 전달.
   const anonymousUserId = useAnonymousUserId();
+  // FR-C-MISSION-REWARD-WIRING — 정상 완료(skipped 제외) 시 별 +1 적립 → 완료 화면 카피 분기.
+  const [earnedStar, setEarnedStar] = useState(false);
 
   // FR-C-006 — 미션 침묵 감지 → 2단계 intervention (60s tooltip → 90s mirror).
   // orchestrator 가 trackEvent("mission_silence_intervention") 발화 + cooldown / reset 모두 처리.
@@ -197,6 +199,8 @@ function MissionRunnerInner({
         completedReason: reason,
         anonymousUserId: anonymousUserId ?? undefined,
       }).catch((err) => console.error("[FR-C-MISSION-COMPLETION] record 실패:", err));
+      // FR-C-MISSION-REWARD-WIRING — skipped 는 별 미적립(서버 durationSec=0). optimistic UI.
+      setEarnedStar(reason !== "skipped");
       // REQ-FUNC-007 — 미션 종료 시 잔여 SPL Toast 정리 + 사이클 ref 리셋.
       // useSplMeter 는 enabled=false 전환에 따라 자동 teardown — 본 setState 는 UI 잔존 방지용.
       setSplToastVisible(false);
@@ -356,10 +360,21 @@ function MissionRunnerInner({
     <div className="space-y-3" data-testid="mission-runner-completed">
       {splToast}
       <div className="rounded-md bg-emerald-100 px-4 py-3 text-sm text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
-        <p className="mb-1 font-medium">연습 완료! 잘 따라했어요.</p>
+        <p className="mb-1 font-medium" data-testid="mission-completed-headline">
+          {earnedStar ? "연습 완료! ⭐ 별 +1을 받았어요." : "연습 완료! 잘 따라했어요."}
+        </p>
         <p className="text-xs">
-          이제 <strong>&lsquo;발음 연습&rsquo;</strong>에서 실제 발음을 들려주면 정확도 점수와 별을
-          받을 수 있어요.
+          {earnedStar ? (
+            <>
+              <Link href="/rewards" className="font-medium underline">별 도감</Link>에서 모은 별을
+              확인하고, <strong>&lsquo;발음 연습&rsquo;</strong>에서 정확도 점수도 받아 보세요.
+            </>
+          ) : (
+            <>
+              이제 <strong>&lsquo;발음 연습&rsquo;</strong>에서 실제 발음을 들려주면 정확도 점수를
+              받을 수 있어요.
+            </>
+          )}
         </p>
       </div>
       <Link
