@@ -12,6 +12,15 @@ vi.mock("@/lib/analytics", () => ({
   trackEvent: (...args: unknown[]) => trackMock(...args),
 }));
 
+// FR-C-MISSION-COMPLETION — 서버 영속화 액션 + 익명 id mock (client 테스트에서 서버 의존 차단).
+const recordMock = vi.fn();
+vi.mock("@/app/actions/mission", () => ({
+  recordMissionCompletion: (...args: unknown[]) => recordMock(...args),
+}));
+vi.mock("@/lib/hooks/useAnonymousUserId", () => ({
+  useAnonymousUserId: () => "anon-test-1",
+}));
+
 // FR-Q-003-CONTENT-V3 — useVoiceActivity mock 으로 isSpeaking 제어.
 // happy-dom 환경에선 getUserMedia 실패 → currentDb=null → 실제 hook 도 idle 이지만,
 // indicator UI 검증 위해 명시 stub 노출이 필요.
@@ -25,6 +34,8 @@ const mockedUseVoiceActivity = vi.mocked(useVoiceActivity);
 describe("MissionRunner — FR-Q-003 phase 전이", () => {
   beforeEach(() => {
     trackMock.mockClear();
+    recordMock.mockReset();
+    recordMock.mockResolvedValue({ success: true, sessionId: "s1", counted: true });
     mockedUseVoiceActivity.mockReset();
     mockedUseVoiceActivity.mockReturnValue({
       isSpeaking: false,
@@ -89,6 +100,13 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
         completedReason: "manual_done",
       }),
     );
+    // FR-C-MISSION-COMPLETION — 서버 영속화 배선 (anonymousUserId 전달).
+    expect(recordMock).toHaveBeenCalledWith({
+      missionId: "mock-s-2",
+      elapsedSec: 30,
+      completedReason: "manual_done",
+      anonymousUserId: "anon-test-1",
+    });
   });
 
   it("FR-Q-003 fix — 30s 미만 '완료' 클릭 → warning + mission_completed 미발송 (W-AUR KPI 보호)", () => {
@@ -107,6 +125,8 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
       "mission_completed",
       expect.anything(),
     );
+    // 30s 미만 차단 시 서버 영속화도 미발생 (W-AUR inflate 차단 — 진실성 가드 정합).
+    expect(recordMock).not.toHaveBeenCalled();
     expect(screen.getByTestId("mission-runner-warning")).toBeInTheDocument();
     expect(screen.getByTestId("mission-runner-running")).toBeInTheDocument();
   });
@@ -121,6 +141,10 @@ describe("MissionRunner — FR-Q-003 phase 전이", () => {
     expect(trackMock).toHaveBeenCalledWith(
       "mission_completed",
       expect.objectContaining({ completedReason: "skipped" }),
+    );
+    // 건너뛰기도 서버 영속화 호출 (서버가 durationSec=0 으로 저장 — 완수 미카운트).
+    expect(recordMock).toHaveBeenCalledWith(
+      expect.objectContaining({ completedReason: "skipped", anonymousUserId: "anon-test-1" }),
     );
   });
 

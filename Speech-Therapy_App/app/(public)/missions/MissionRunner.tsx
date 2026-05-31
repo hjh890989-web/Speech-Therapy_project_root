@@ -22,6 +22,8 @@ import { useSplMeter } from "@/lib/audio/useSplMeter";
 import { useVoiceActivity } from "@/lib/audio/useVoiceActivity";
 import { trackEvent } from "@/lib/analytics";
 import { useMissionIntervention } from "@/lib/hooks/useMissionIntervention";
+import { useAnonymousUserId } from "@/lib/hooks/useAnonymousUserId";
+import { recordMissionCompletion } from "@/app/actions/mission";
 
 type Phase = "ready" | "running" | "completed";
 type SupportedPhoneme = "ㄱ" | "ㄴ" | "ㅅ" | "ㅈ" | "ㄹ";
@@ -83,6 +85,10 @@ function MissionRunnerInner({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // FR-Q-003 fix — 30초 미만 "완료" 시 사용자에게 warning 노출용 errorMessage state.
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // FR-C-MISSION-COMPLETION — 완료를 SessionLog 로 영속화(W-AUR 측정 기반). localStorage 권위 id
+  //   (useAnonymousUserId — RewardOnMount/진단과 동일 권위) 를 서버 액션에 전달.
+  const anonymousUserId = useAnonymousUserId();
 
   // FR-C-006 — 미션 침묵 감지 → 2단계 intervention (60s tooltip → 90s mirror).
   // orchestrator 가 trackEvent("mission_silence_intervention") 발화 + cooldown / reset 모두 처리.
@@ -183,6 +189,14 @@ function MissionRunnerInner({
         elapsedSec,
         completedReason: reason,
       });
+      // FR-C-MISSION-COMPLETION — 서버 영속화(fire-and-forget). 실패해도 미션 UX 차단 0.
+      //   skipped 는 서버에서 durationSec=0 으로 저장(완수 미카운트).
+      void recordMissionCompletion({
+        missionId,
+        elapsedSec,
+        completedReason: reason,
+        anonymousUserId: anonymousUserId ?? undefined,
+      }).catch((err) => console.error("[FR-C-MISSION-COMPLETION] record 실패:", err));
       // REQ-FUNC-007 — 미션 종료 시 잔여 SPL Toast 정리 + 사이클 ref 리셋.
       // useSplMeter 는 enabled=false 전환에 따라 자동 teardown — 본 setState 는 UI 잔존 방지용.
       setSplToastVisible(false);
@@ -190,7 +204,7 @@ function MissionRunnerInner({
       setPhase("completed");
       setRemainingSec(0);
     },
-    [clearTimer, durationSec, missionId],
+    [clearTimer, durationSec, missionId, anonymousUserId],
   );
 
   const start = useCallback(() => {
