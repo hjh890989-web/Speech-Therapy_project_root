@@ -12,7 +12,7 @@
 // 메뉴 매트릭스 (role 별 항목):
 //   anonymous  : 발음 발달 확인(/diagnose) + 로그인(/login)
 //   parent     : 주간 리뷰(/weekly-review) + 미션(/missions) + 보상 도감(/rewards/collection)
-//                + 예측(/predictions) + [F15 활성 시] 이야기 친구(/chat) + 설정(/settings)
+//                + 예측(/predictions) + [F15 활성 시] 이야기 친구(/chat) + [F11 키 시] 부모 목소리(/voice-recording) + 설정(/settings)
 //   teacher    : 위 일부 (주간 리뷰/미션/보상) + 선생님 대시보드(/admin/teacher) + 설정(/settings)
 //   principal  : 부모 메뉴 + 원장 대시보드(/admin/principal) + 선생님 대시보드(/admin/teacher) + 설정(/settings)
 //   admin      : principal 메뉴 + HITL 큐(/admin/hitl) + 설정(/settings)
@@ -46,6 +46,8 @@ export interface BuildNavOptions {
   /// FR-Q-022 — F15 챗봇(`F15_CHAT_ENABLED`) 활성 시에만 "이야기 친구"(/chat) 노출.
   ///   env 체크는 호출 측(MainNav)에서 — 본 함수는 boolean 입력으로 순수성 유지(테스트 결정성).
   f15ChatEnabled?: boolean;
+  /// FR-Q-021 — F11 음성(`ELEVENLABS_API_KEY` 존재 = 기능 가능) 시에만 "부모 목소리"(/voice-recording) 노출.
+  voiceCloneEnabled?: boolean;
 }
 
 export function buildNavItemsForRole(
@@ -64,6 +66,10 @@ export function buildNavItemsForRole(
   //   PARENT_BASE 인덱스를 건드리지 않도록 별도 항목으로 spread(teacher/expert 의 index 접근 보존).
   const CHAT_ITEMS: MainNavItem[] = opts.f15ChatEnabled
     ? [{ href: "/chat", label: "이야기 친구", emoji: "💬" }]
+    : [];
+  // FR-Q-021 — F11 음성 기능 가능(ELEVENLABS_API_KEY) 시 부모 메뉴에 추가. 인증 전용(page redirect)이라 anonymous 제외.
+  const VOICE_ITEMS: MainNavItem[] = opts.voiceCloneEnabled
+    ? [{ href: "/voice-recording", label: "부모 목소리", emoji: "🎙️" }]
     : [];
 
   // 운영자 메뉴 — 단순 라벨 (정보 밀도 OK).
@@ -102,7 +108,7 @@ export function buildNavItemsForRole(
         { href: "/diagnose", label: "발음 발달 확인", emoji: "🎤" },
       ];
     case "parent":
-      return [...PARENT_BASE, ...CHAT_ITEMS, SETTINGS];
+      return [...PARENT_BASE, ...CHAT_ITEMS, ...VOICE_ITEMS, SETTINGS];
     case "teacher":
       return [
         // 선생님도 부모 화면 일부는 접근 가능 (자녀 본인 계정과 별개 — 데모 / 가이드 목적).
@@ -113,11 +119,12 @@ export function buildNavItemsForRole(
         SETTINGS,
       ];
     case "principal":
-      return [...PARENT_BASE, ...CHAT_ITEMS, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, SETTINGS];
+      return [...PARENT_BASE, ...CHAT_ITEMS, ...VOICE_ITEMS, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, SETTINGS];
     case "admin":
       return [
         ...PARENT_BASE,
         ...CHAT_ITEMS,
+        ...VOICE_ITEMS,
         PRINCIPAL_DASHBOARD,
         TEACHER_DASHBOARD,
         HITL_QUEUE,
@@ -250,6 +257,7 @@ export async function MainNav(props: MainNavProps = {}) {
 
   let items = buildNavItemsForRole(role, {
     f15ChatEnabled: process.env.F15_CHAT_ENABLED === "true",
+    voiceCloneEnabled: Boolean(process.env.ELEVENLABS_API_KEY),
   });
   if (needsBadge && userId) {
     const institutionId = await getCachedUserInstitutionId(userId);

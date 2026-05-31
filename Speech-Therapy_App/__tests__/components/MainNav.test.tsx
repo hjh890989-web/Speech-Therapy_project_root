@@ -226,6 +226,40 @@ describe("buildNavItemsForRole — role 별 메뉴 매트릭스", () => {
       "/settings",
     ]);
   });
+
+  // FR-Q-021 — F11 음성 nav 게이팅 (voiceCloneEnabled = ELEVENLABS_API_KEY 존재).
+  it("F11 비활성(default) → '부모 목소리'(/voice-recording) 미노출", () => {
+    for (const role of ["anonymous", "parent", "teacher", "principal", "admin", "expert"] as MainNavRole[]) {
+      expect(buildNavItemsForRole(role).map((i) => i.href)).not.toContain("/voice-recording");
+    }
+  });
+
+  it("F11 활성 → parent/principal/admin 에 '부모 목소리'(/voice-recording) 노출, teacher/expert·anonymous 미노출", () => {
+    const has = (role: MainNavRole) =>
+      buildNavItemsForRole(role, { voiceCloneEnabled: true }).map((i) => i.href).includes("/voice-recording");
+    expect(has("parent")).toBe(true);
+    expect(has("principal")).toBe(true);
+    expect(has("admin")).toBe(true);
+    expect(has("teacher")).toBe(false);
+    expect(has("expert")).toBe(false);
+    expect(has("anonymous")).toBe(false);
+  });
+
+  it("F15+F11 동시 활성 → parent 메뉴에 /chat·/voice-recording 둘 다(설정 앞)", () => {
+    const hrefs = buildNavItemsForRole("parent", {
+      f15ChatEnabled: true,
+      voiceCloneEnabled: true,
+    }).map((i) => i.href);
+    expect(hrefs).toEqual([
+      "/weekly-review",
+      "/missions",
+      "/rewards/collection",
+      "/predictions",
+      "/chat",
+      "/voice-recording",
+      "/settings",
+    ]);
+  });
 });
 
 describe("isPathActive — 정확 매치 + prefix", () => {

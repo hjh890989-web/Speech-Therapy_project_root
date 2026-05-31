@@ -78,7 +78,7 @@
 | **FR-Q-018** | 정책 페이지 | `/privacy` (PIPA §30 9 섹션 골격) + `/terms` (약관규제법 §3 8 조 골격) — placeholder, 변호사 자문 후 정식 교체 | §12.5, REQ-NF-028 | None | L | ✅ Done (`f976388` placeholder) / 정식 교체 = OPS-004 |
 | **FR-Q-019** | Admin RBAC | `/admin/*` 11 종 묶음 — audit / teacher / teacher/students/[userId]/offline-entry / hitl / hitl/[id] / students/import / principal / cushion-notes / funnel / centers/pdf/[userId] / timeline/[userId] / security/totp-reset | §3.5.4, REQ-NF-019 | API-016, DB-013 | H | ✅ Done (MVP 100%) |
 | **FR-Q-020** | 운영 페이지 | `/status` 시스템 상태 페이지 + `/api/health` Route Handler (REQ-NF-007 uptime) | §3.5.2, §3.5.5, REQ-NF-007 | INFRA-001 | L | ✅ Done |
-| **FR-Q-021** | F11 voice rec | `/voice-recording` 페이지 — 권한 안내 + Disclaimer + 5분 30초 녹음 가이드 | §4.1 F11, REQ-FUNC-036 | API-018 | M | 🟡 P1+ |
+| **FR-Q-021** | F11 voice rec | `/voice-recording` 페이지 — 권한 안내 + Disclaimer + 5분 30초 녹음 가이드 | §4.1 F11, REQ-FUNC-036 | API-018 | M | ✅ **코드 done** (page+form+E2E) — **게이트=`ELEVENLABS_API_KEY`(사용자 env)**. nav 링크 키 존재 시 노출(2026-05-31). |
 | **FR-Q-022** | F15 chat UI | `/chat` 페이지 — `useChat()` 스트리밍 UI + ADR-04 금칙어 자동 검열 (Middleware) | §4.1 F15, REQ-FUNC-038 | API-019 | M | 🟡 P1+ |
 
 ### 2-B. Write / Command Task (V07 신규 13건)
@@ -93,7 +93,7 @@
 | **FR-C-024** | PIPA 4층 | `generateCushion` PIPA 가드 (4층, graceful fallback — Gemini 미호출 시 `SAFE_CUSHION_FALLBACK` 반환) | §12.4.4, REQ-NF-029 | API-014 | L | ✅ Done (`41f431e`) |
 | **FR-C-025** | Gemini PII | `lib/ai/pii-mask.ts` — 한국 PIPA 7 패턴 (RRN / 신용카드 / 이메일 / 전화 / URL / IPv4 / 한국식 주소) Gemini 호출 전 transcript 마스킹 | §12.6, REQ-NF-027 | API-011 | M | ✅ Done (`6f2e287`) |
 | **FR-C-026** | 의료기기법 | `MedicalDisclaimerFooter.tsx` 전역 footer (모든 페이지) + `/privacy` + `/terms` 링크 + result 페이지 3중 disclaimer | §12.7, REQ-NF-028, CON-04 | None | L | ✅ Done (`d05fb51`) |
-| **FR-C-027** | F11 voice clone | `submit_voice_clone` + `applyParentVoice` 화이트리스트 (`storybook` / `lullaby` 만 허용, 교정 페이지 적용 0건 자동 검증) + 7일 폐기 Cron | §4.1 F11, REQ-FUNC-036/037, ADR-03 + ADR-09 | DB-017, API-018 | M | 🟡 P1+ |
+| **FR-C-027** | F11 voice clone | `submit_voice_clone` + `applyParentVoice` 화이트리스트 (`storybook` / `lullaby` 만 허용, 교정 페이지 적용 0건 자동 검증) + 7일 폐기 Cron | §4.1 F11, REQ-FUNC-036/037, ADR-03 + ADR-09 | DB-017, API-018 | M | ✅ **코드 done** (submit+render+ethics-whitelist+7일 cron+테스트) — 동의=PIPA+음성 명시동의(F10 불요). 게이트=`ELEVENLABS_API_KEY`. |
 | **FR-C-028** | F15 chat 안전 | `submit_chat_utterance` + Middleware 금칙어 검열 (ADR-04) + 7일 폐기 Cron + 단일턴 컨텍스트 (pgvector 미사용) | §4.1 F15, REQ-FUNC-039, ADR-14 | API-019 | M | 🟡 P1+ |
 | **FR-C-029** | F16 PWA 푸시 | Service Worker push subscription 등록 + iOS Safari 지원 (D5 부활 트리거) | §4.1 F16, REQ-FUNC-040, ADR-10 | API-020, INFRA-003 | M | 🟡 P1+ (D5 부활 + 일 활성 1,000명+ 이후) |
 | **FR-C-030** | F17 케어로그 | `submit_care_log` Server Action — 부모 직접 입력 (자유놀이 시간 · 외부 센터 세션 메모) → DB-004 INSERT | §4.1 F17, REQ-FUNC-041~043 | DB-004 | L | 🟡 P1 |
