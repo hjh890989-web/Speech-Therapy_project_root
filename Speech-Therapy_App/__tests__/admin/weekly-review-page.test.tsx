@@ -119,12 +119,14 @@ function makeRow(
     id: string;
     weekNumber: number;
     sessionCount: number;
+    missionCompletedCount: number;
     peerPercentileAvg: number | null;
     predictedNextScore: number | null;
     predictionConfidence: number | null;
     viewedAt: Date | null;
   }> = {},
 ) {
+  const sessionCount = overrides.sessionCount ?? 5;
   return {
     id: overrides.id ?? "wr-latest",
     userId: USER_ME,
@@ -135,7 +137,9 @@ function makeRow(
     acousticAvg: 65,
     peerPercentileAvg:
       overrides.peerPercentileAvg === undefined ? 72 : overrides.peerPercentileAvg,
-    sessionCount: overrides.sessionCount ?? 5,
+    sessionCount,
+    // FR-C-WAUR-SWITCH — Summary 의 W-AUR 은 미션완료수 기반. 테스트 의도 보존 위해 sessionCount 미러.
+    missionCompletedCount: overrides.missionCompletedCount ?? sessionCount,
     predictedNextScore:
       overrides.predictedNextScore === undefined ? 78 : overrides.predictedNextScore,
     predictionConfidence:

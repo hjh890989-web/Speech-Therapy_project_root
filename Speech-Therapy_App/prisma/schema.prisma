@@ -260,7 +260,11 @@ model WeeklyReport {
   linguisticAvg        Float
   acousticAvg          Float
   peerPercentileAvg    Float
+  /// 진단(evaluationResult) 세션 수 — 점수 평균/추세의 표본 분모.
   sessionCount         Int
+  /// FR-C-WAUR-SWITCH — 미션 완료수(SessionLog missionId!=null & durationSec>0). 북극성 W-AUR 신호.
+  /// 기존 row 는 default 0(전환 이전 주는 미집계). wAurAchieved 는 >= W_AUR_MIN_MISSIONS 로 재유도.
+  missionCompletedCount Int     @default(0)
   generatedAt          DateTime @default(now())
   /// FR-WEEKLY-UNREAD — 부모가 /weekly-review 페이지를 열어 본 시각.
   /// null = 미열람 (parent nav badge "📅 우리 아이 주간 리뷰" 옆 dot 노출 조건).

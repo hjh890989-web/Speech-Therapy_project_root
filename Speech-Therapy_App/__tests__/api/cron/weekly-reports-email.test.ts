@@ -33,7 +33,7 @@ vi.mock("@/lib/reports/weekly-aggregator", () => ({
   getActiveUsers: (...args: unknown[]) => getActiveUsersMock(...args),
   aggregateWeeklyReport: (...args: unknown[]) => aggregateWeeklyReportMock(...args),
   upsertWeeklyReport: (...args: unknown[]) => upsertWeeklyReportMock(...args),
-  W_AUR_MIN_SESSIONS: 4,
+  W_AUR_MIN_MISSIONS: 4,
 }));
 
 vi.mock("@/lib/notifications/slack", () => ({
@@ -76,6 +76,8 @@ function makeAggData(userId: string, sessionCount: number, wAurAchieved: boolean
     acousticAvg: 75,
     peerPercentileAvg: 60,
     sessionCount,
+    // FR-C-WAUR-SWITCH — 미션 완료수(W-AUR 신호). wAurAchieved 와 정합되게 임계 기준 부여.
+    missionCompletedCount: wAurAchieved ? 4 : 1,
     wAurAchieved,
     predictedNextScore: 82,
   };

@@ -8,10 +8,14 @@
 // 기존 lib/weekly-report.ts 의 aggregateWeeklyScores / getCurrentWeekNumber / previousWeek
 // 는 그대로 유지 (FR-Q-005/006 등 다수 호출자). 본 모듈은 그 위에 cron 도메인 의미를 추가.
 //
-// W-AUR 정의 (북극성 KPI):
-//   - 본 PR (FR-C-010) 기준: "직전 주 evaluationResult sessionCount ≥ 4 (주 4회 이상 발화 세션 완료)"
-//   - 임계값은 W_AUR_MIN_SESSIONS 상수로 노출 — 후속 조정 시 본 상수만 변경하면 cron + 단위 테스트 동시 갱신.
-//   - 본 정의는 SRS REQ-FUNC-027 + PRD §1 (W-AUR ≥ 60%) 의 단순 환원.
+// W-AUR 정의 (북극성 KPI) — FR-C-WAUR-SWITCH(2026-05-31):
+//   - **"직전 주 미션 완료수 ≥ W_AUR_MIN_MISSIONS(4)"** (PRD §1 "주간 미션 완수율").
+//   - 미션 완료 = SessionLog(missionId!=null AND durationSec>0). 건너뛰기/진단 제외.
+//   - (이전 정의: evaluationResult 진단세션수 ≥ 4 — 진단 활동 기준이었음. PRD 정의로 전환.)
+//   - ⚠️ 점수(3축 평균·추세·예측)는 *진단(evaluationResult)에서만* 산출 — 불변(아래 aggregateWeeklyScores).
+//     본 전환은 W-AUR *활동 신호*만 미션 기반으로 바꾸고 점수 의미는 보존한다.
+//   - 미션완료수는 WeeklyReport.missionCompletedCount 로 영속(과거 주 재유도 정합).
+//   - Lean 범위: getActiveUsers 는 진단 기반 유지 — 미션전용 유저(진단0+미션有) 포함은 Phase 2.
 //
 // 예측 점수 (predictedNextScore):
 //   - FR-C-011 (Gemini 회귀) 통합 전 placeholder.
@@ -24,15 +28,37 @@
 import { prisma } from "@/lib/db";
 import {
   aggregateWeeklyScores,
+  weekBounds,
   type ScoreTrend,
 } from "@/lib/weekly-report";
 import { predictNextScore as predictNextScoreFromGemini } from "@/lib/predictions/gemini";
 
 // ----- W-AUR 임계값 -----
 
-/// W-AUR 충족 최소 sessionCount (주 N회 이상 발화 세션 완료).
+/// W-AUR 충족 최소 *미션 완료수* (주 N회 이상 미션 완료). FR-C-WAUR-SWITCH.
 /// 변경 시 cron + 단위 테스트가 본 상수로 동기 — 외부 문서 (PRD §1) 와 충돌 시 본 상수가 source of truth.
-export const W_AUR_MIN_SESSIONS = 4;
+export const W_AUR_MIN_MISSIONS = 4;
+
+/**
+ * (year, weekNumber) 주의 본인 미션 완료수.
+ * 미션 완료 = SessionLog(missionId!=null AND durationSec>0) — 건너뛰기/진단 제외.
+ * 주 윈도우는 점수 집계(aggregateWeeklyScores)와 동일한 KST 기반 weekBounds 사용.
+ */
+export async function countWeeklyMissionCompletions(
+  userId: string,
+  year: number,
+  week: number,
+): Promise<number> {
+  const { start, end } = weekBounds(year, week);
+  return prisma.sessionLog.count({
+    where: {
+      userId,
+      missionId: { not: null },
+      durationSec: { gt: 0 },
+      startTime: { gte: start, lt: end },
+    },
+  });
+}
 
 // ----- 집계 결과 타입 -----
 
@@ -50,8 +76,11 @@ export interface WeeklyReportData {
   linguisticAvg: number;
   acousticAvg: number;
   peerPercentileAvg: number;
+  /// 진단(evaluationResult) 세션 수 — 점수 평균/추세의 표본 분모. (W-AUR 신호 아님)
   sessionCount: number;
-  /// W-AUR 충족 (sessionCount >= W_AUR_MIN_SESSIONS) 여부 — 본 PR 정의.
+  /// 미션 완료수(SessionLog missionId!=null & durationSec>0) — W-AUR 신호. FR-C-WAUR-SWITCH.
+  missionCompletedCount: number;
+  /// W-AUR 충족 (missionCompletedCount >= W_AUR_MIN_MISSIONS) 여부 — 미션 기반 북극성 KPI.
   wAurAchieved: boolean;
   /// FR-C-011 통합 전 mock — "직전 주 3축 평균의 평균 + 5", 0~100 클램프.
   /// FR-C-011 통합 후 본 필드는 실 회귀 모델 결과로 교체.
@@ -87,7 +116,7 @@ export interface AggregateInput {
 /**
  * 사용자 1명, 주 1회 집계.
  * - 0 session → null (호출 측에서 skip, FR-Q-006 의 긍정 메시지는 별도 RSC 분기 책임).
- * - wAurAchieved 는 sessionCount 기반 — W_AUR_MIN_SESSIONS 상수만 source of truth.
+ * - wAurAchieved 는 미션완료수 기반 — W_AUR_MIN_MISSIONS 상수만 source of truth(FR-C-WAUR-SWITCH).
  * - predictedNextScore 는 FR-C-011 통합 후 lib/predictions/gemini.predictNextScore 사용
  *   (graceful — Gemini 실패 시 mock fallback 으로 항상 number 반환).
  *   * NODE_ENV === 'test' / GEMINI_DISABLED='1' 시 mock 만 사용 — 기존 prisma mock 보존.
@@ -98,9 +127,11 @@ export async function aggregateWeeklyReport(
 ): Promise<WeeklyReportData | null> {
   const { userId, year, weekNumber } = input;
   const agg = await aggregateWeeklyScores(userId, year, weekNumber);
-  if (!agg) return null;
+  if (!agg) return null; // Lean: 진단 0 → 리포트 미생성(미션전용 유저 포함은 Phase 2).
 
-  const wAurAchieved = agg.sessionCount >= W_AUR_MIN_SESSIONS;
+  // W-AUR = 미션 완료수 기반(FR-C-WAUR-SWITCH). 점수는 agg(진단)에서만 — 의미 보존.
+  const missionCompletedCount = await countWeeklyMissionCompletions(userId, year, weekNumber);
+  const wAurAchieved = missionCompletedCount >= W_AUR_MIN_MISSIONS;
 
   // FR-C-011 — Gemini 회귀 예측 (graceful fallback). 테스트 / mock 환경에서는 weekHistory 조회 skip
   // 하여 기존 prisma.evaluationResult.findMany mock 시나리오와 충돌 회피.
@@ -132,6 +163,7 @@ export async function aggregateWeeklyReport(
     acousticAvg: agg.acousticAvg,
     peerPercentileAvg: agg.peerPercentileAvg,
     sessionCount: agg.sessionCount,
+    missionCompletedCount,
     wAurAchieved,
     predictedNextScore,
   };
@@ -171,6 +203,7 @@ async function fetchWeekHistoryForPrediction(userId: string): Promise<
         linguisticAvg: true,
         acousticAvg: true,
         sessionCount: true,
+        missionCompletedCount: true,
       },
     });
     return recents.map((r) => ({
@@ -179,7 +212,8 @@ async function fetchWeekHistoryForPrediction(userId: string): Promise<
       linguisticAvg: r.linguisticAvg,
       acousticAvg: r.acousticAvg,
       sessionCount: r.sessionCount,
-      wAurAchieved: r.sessionCount >= W_AUR_MIN_SESSIONS,
+      // W-AUR 재유도 = 저장된 미션완료수 기반(FR-C-WAUR-SWITCH). 기존 row 는 default 0 → false.
+      wAurAchieved: r.missionCompletedCount >= W_AUR_MIN_MISSIONS,
     }));
   } catch {
     return [];
@@ -192,8 +226,8 @@ async function fetchWeekHistoryForPrediction(userId: string): Promise<
  * weeklyReport upsert — 멱등 (수동 재실행 안전).
  * - 복합 unique 키: (userId, year, weekNumber).
  * - generatedAt 은 update path 에서만 now() 로 갱신 (create 는 default).
- * - WeeklyReport 모델에 wAurAchieved 컬럼이 없으므로 본 함수는 sessionCount + predictedNextScore 만 DB 에 저장.
- *   wAurAchieved 는 aggregator 응답 / 분석 이벤트 / cron 응답에서만 노출 (derived).
+ * - sessionCount(진단)+missionCompletedCount(미션)+predictedNextScore 저장. wAurAchieved 는 미저장 —
+ *   missionCompletedCount >= W_AUR_MIN_MISSIONS 로 재유도(loader/prediction history 정합).
  */
 export async function upsertWeeklyReport(data: WeeklyReportData): Promise<void> {
   await prisma.weeklyReport.upsert({
@@ -214,6 +248,7 @@ export async function upsertWeeklyReport(data: WeeklyReportData): Promise<void> 
       acousticAvg: data.acousticAvg,
       peerPercentileAvg: data.peerPercentileAvg,
       sessionCount: data.sessionCount,
+      missionCompletedCount: data.missionCompletedCount,
       predictedNextScore: data.predictedNextScore,
     },
     update: {
@@ -223,6 +258,7 @@ export async function upsertWeeklyReport(data: WeeklyReportData): Promise<void> 
       acousticAvg: data.acousticAvg,
       peerPercentileAvg: data.peerPercentileAvg,
       sessionCount: data.sessionCount,
+      missionCompletedCount: data.missionCompletedCount,
       predictedNextScore: data.predictedNextScore,
       generatedAt: new Date(),
     },

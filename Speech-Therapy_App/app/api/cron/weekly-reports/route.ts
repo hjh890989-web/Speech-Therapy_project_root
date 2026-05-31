@@ -122,8 +122,8 @@ export async function GET(request: Request) {
       // (trackEvent 는 client-side analytics — 본 cron 은 PostHog/GA 등 직접 호출 0).
       console.log(
         `weekly-reports: generated userId=${userId} week=${year}-W${week} ` +
-          `sessions=${data.sessionCount} wAurAchieved=${data.wAurAchieved} ` +
-          `predicted=${data.predictedNextScore ?? "null"}`,
+          `sessions=${data.sessionCount} missions=${data.missionCompletedCount} ` +
+          `wAurAchieved=${data.wAurAchieved} predicted=${data.predictedNextScore ?? "null"}`,
       );
 
       // R4: parentEmail + institutionId 만 select — 그 외 PII 미조회.
@@ -165,6 +165,7 @@ export async function GET(request: Request) {
             linguisticAvg: data.linguisticAvg,
             acousticAvg: data.acousticAvg,
             sessionCount: data.sessionCount,
+            missionCompletedCount: data.missionCompletedCount,
             wAurAchieved: data.wAurAchieved,
             predictedNextScore: data.predictedNextScore,
           },

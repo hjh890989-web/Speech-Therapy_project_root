@@ -481,9 +481,11 @@ export interface WeeklyReportEmailInput {
   linguisticAvg: number;
   /// 음향 평균 (0~100).
   acousticAvg: number;
-  /// 주간 세션 수.
+  /// 주간 진단 세션 수(점수 표본). 본문 표시는 미션 완료수를 사용.
   sessionCount: number;
-  /// W-AUR 충족 여부 (sessionCount ≥ W_AUR_MIN_SESSIONS).
+  /// FR-C-WAUR-SWITCH — 주간 미션 완료수(W-AUR 신호). 본문 "주간 미션 완료" 라벨 기준.
+  missionCompletedCount: number;
+  /// W-AUR 충족 여부 (missionCompletedCount ≥ W_AUR_MIN_MISSIONS).
   wAurAchieved: boolean;
   /// 다음 주 예상 점수 (0~100). null 이면 "준비 중" 표시.
   predictedNextScore: number | null;
@@ -513,7 +515,8 @@ export function buildWeeklyReportEmail(
   const articulation = fmtScore(input.articulationAvg);
   const linguistic = fmtScore(input.linguisticAvg);
   const acoustic = fmtScore(input.acousticAvg);
-  const sessionLabel = `${Math.max(0, Math.floor(input.sessionCount))}회`;
+  // FR-C-WAUR-SWITCH — '주간 활동' 라벨은 미션 완료수 기준(W-AUR 정합).
+  const missionLabel = `${Math.max(0, Math.floor(input.missionCompletedCount))}회`;
   const wAurLine = input.wAurAchieved
     ? "이번 주 주간 활동 목표를 달성했어요. 잘 했어요!"
     : "이번 주 주간 활동이 조금 부족했어요. 다음 주에 다시 함께해요.";
@@ -553,8 +556,8 @@ export function buildWeeklyReportEmail(
       <td style="padding: 8px 12px; border: 1px solid #e5e7eb; text-align: right;">${acoustic} 점</td>
     </tr>
     <tr>
-      <td style="padding: 8px 12px; background: #f5f7fa; border: 1px solid #e5e7eb;">주간 세션 수</td>
-      <td style="padding: 8px 12px; border: 1px solid #e5e7eb; text-align: right;">${sessionLabel}</td>
+      <td style="padding: 8px 12px; background: #f5f7fa; border: 1px solid #e5e7eb;">주간 미션 완료</td>
+      <td style="padding: 8px 12px; border: 1px solid #e5e7eb; text-align: right;">${missionLabel}</td>
     </tr>
   </table>
 
@@ -587,7 +590,7 @@ export function buildWeeklyReportEmail(
     `- 조음 평균: ${articulation} 점`,
     `- 어휘 평균: ${linguistic} 점`,
     `- 음향 평균: ${acoustic} 점`,
-    `- 주간 세션 수: ${sessionLabel}`,
+    `- 주간 미션 완료: ${missionLabel}`,
     "",
     wAurLine,
     predictedLine,

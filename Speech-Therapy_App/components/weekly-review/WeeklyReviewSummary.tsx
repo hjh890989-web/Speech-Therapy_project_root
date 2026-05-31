@@ -9,7 +9,7 @@
 
 import type { ReactNode } from "react";
 
-import { W_AUR_MIN_SESSIONS } from "@/lib/reports/weekly-aggregator";
+import { W_AUR_MIN_MISSIONS } from "@/lib/reports/weekly-aggregator";
 
 export interface WeeklyReviewSummaryProps {
   /// 0~100, latest WeeklyReport.articulationAvg.
@@ -20,8 +20,8 @@ export interface WeeklyReviewSummaryProps {
   acousticAvg: number;
   /// 0~100. null 가능 (Phase 0 데이터 부재 — 폴백 카피 노출).
   peerPercentileAvg: number | null;
-  /// 본 주 evaluationResult 회수.
-  sessionCount: number;
+  /// FR-C-WAUR-SWITCH — 본 주 미션 완료수(W-AUR 신호). 진단 sessionCount 아님.
+  missionCompletedCount: number;
 }
 
 /// 점수 색상 분기 — 의료 판단 아님 (격려 vs 중립). CON-04: 빨강 (불안 자극) 회피.
@@ -36,10 +36,11 @@ export function WeeklyReviewSummary({
   linguisticAvg,
   acousticAvg,
   peerPercentileAvg,
-  sessionCount,
+  missionCompletedCount,
 }: WeeklyReviewSummaryProps) {
-  const wAurAchieved = sessionCount >= W_AUR_MIN_SESSIONS;
-  const remainingForWAur = Math.max(0, W_AUR_MIN_SESSIONS - sessionCount);
+  // FR-C-WAUR-SWITCH — W-AUR 달성 = 미션 완료수 기반(북극성 KPI).
+  const wAurAchieved = missionCompletedCount >= W_AUR_MIN_MISSIONS;
+  const remainingForWAur = Math.max(0, W_AUR_MIN_MISSIONS - missionCompletedCount);
 
   return (
     <section
@@ -81,10 +82,10 @@ export function WeeklyReviewSummary({
           role="status"
         >
           <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-            이번 주 활동 목표 달성!
+            이번 주 미션 목표 달성!
           </p>
           <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
-            주 {W_AUR_MIN_SESSIONS}회 활동을 채웠어요 — 이번 주도 수고하셨어요.
+            주 {W_AUR_MIN_MISSIONS}회 미션을 완료했어요 — 이번 주도 수고하셨어요.
           </p>
         </article>
       ) : (
@@ -93,10 +94,10 @@ export function WeeklyReviewSummary({
           className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30"
         >
           <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-            {remainingForWAur}회 더 하면 이번 주 목표 달성이에요
+            미션 {remainingForWAur}회 더 하면 이번 주 목표 달성이에요
           </p>
           <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-            오늘은 {sessionCount}회 — 주 {W_AUR_MIN_SESSIONS}회를 채우면 다음 주가 더
+            이번 주 {missionCompletedCount}회 완료 — 주 {W_AUR_MIN_MISSIONS}회를 채우면 다음 주가 더
             기대돼요.
           </p>
         </article>

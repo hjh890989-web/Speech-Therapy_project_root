@@ -39,13 +39,13 @@ vi.mock("@/lib/cron-auth", () => ({
 }));
 
 vi.mock("@/lib/reports/weekly-aggregator", async () => {
-  // W_AUR_MIN_SESSIONS / computeMockPredictedScore 등은 실 export 가 필요할 수 있으므로
+  // W_AUR_MIN_MISSIONS / computeMockPredictedScore 등은 실 export 가 필요할 수 있으므로
   // 일부 helper 는 실 모듈에서 가져온 뒤 핵심 3개 (getActiveUsers / aggregate / upsert) 만 mock.
   return {
     getActiveUsers: (...args: unknown[]) => getActiveUsersMock(...args),
     aggregateWeeklyReport: (...args: unknown[]) => aggregateWeeklyReportMock(...args),
     upsertWeeklyReport: (...args: unknown[]) => upsertWeeklyReportMock(...args),
-    W_AUR_MIN_SESSIONS: 4,
+    W_AUR_MIN_MISSIONS: 4,
   };
 });
 

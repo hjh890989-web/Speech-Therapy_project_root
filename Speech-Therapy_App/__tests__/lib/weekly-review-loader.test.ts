@@ -26,7 +26,10 @@ import { loadWeeklyReview } from "@/lib/reports/weekly-review-loader";
 const USER_ME = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const USER_OTHER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
-function makeRow(overrides: Partial<{ id: string; sessionCount: number; weekNumber: number }> = {}) {
+function makeRow(
+  overrides: Partial<{ id: string; sessionCount: number; missionCompletedCount: number; weekNumber: number }> = {},
+) {
+  const sessionCount = overrides.sessionCount ?? 5;
   return {
     id: overrides.id ?? "wr-1",
     userId: USER_ME,
@@ -36,7 +39,9 @@ function makeRow(overrides: Partial<{ id: string; sessionCount: number; weekNumb
     linguisticAvg: 70,
     acousticAvg: 65,
     peerPercentileAvg: 72,
-    sessionCount: overrides.sessionCount ?? 5,
+    sessionCount,
+    // FR-C-WAUR-SWITCH — wAur 는 이제 미션완료수 기반. 테스트 의도 보존 위해 sessionCount 미러(override 가능).
+    missionCompletedCount: overrides.missionCompletedCount ?? sessionCount,
     predictedNextScore: 78,
     predictionConfidence: 0.85,
     generatedAt: new Date("2026-05-24T00:00:00Z"),

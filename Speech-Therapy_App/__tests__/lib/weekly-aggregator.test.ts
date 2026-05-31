@@ -11,14 +11,18 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Prisma mock — evaluationResult.findMany + weeklyReport.upsert 만 사용.
+// Prisma mock — evaluationResult.findMany(점수/진단수) + sessionLog.count(미션 W-AUR) + weeklyReport.upsert.
 const evaluationResultFindManyMock = vi.fn();
+const sessionLogCountMock = vi.fn();
 const weeklyReportUpsertMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
     evaluationResult: {
       findMany: (...args: unknown[]) => evaluationResultFindManyMock(...args),
+    },
+    sessionLog: {
+      count: (...args: unknown[]) => sessionLogCountMock(...args),
     },
     weeklyReport: {
       upsert: (...args: unknown[]) => weeklyReportUpsertMock(...args),
@@ -27,7 +31,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import {
-  W_AUR_MIN_SESSIONS,
+  W_AUR_MIN_MISSIONS,
   aggregateWeeklyReport,
   upsertWeeklyReport,
   getActiveUsers,
@@ -37,6 +41,8 @@ import {
 
 beforeEach(() => {
   evaluationResultFindManyMock.mockReset();
+  sessionLogCountMock.mockReset();
+  sessionLogCountMock.mockResolvedValue(0); // 기본 미션 0 (테스트별 override)
   weeklyReportUpsertMock.mockReset();
 });
 
@@ -64,17 +70,17 @@ function makeRow(
 // ============================================================================
 // 1. W-AUR 임계값 상수
 // ============================================================================
-describe("FR-C-010 — W_AUR_MIN_SESSIONS source of truth", () => {
-  it("주 4회 이상 = W-AUR 충족 기준", () => {
-    expect(W_AUR_MIN_SESSIONS).toBe(4);
+describe("FR-C-WAUR-SWITCH — W_AUR_MIN_MISSIONS source of truth", () => {
+  it("주 4회 미션 완료 = W-AUR 충족 기준", () => {
+    expect(W_AUR_MIN_MISSIONS).toBe(4);
   });
 });
 
 // ============================================================================
-// 2. aggregateWeeklyReport — 정상 / 경계 / null
+// 2. aggregateWeeklyReport — W-AUR=미션완료수 기반(점수=진단 불변)
 // ============================================================================
-describe("aggregateWeeklyReport", () => {
-  it("정상 1 user / 5 row → wAurAchieved=true + 평균 + mock 예측 계산", async () => {
+describe("aggregateWeeklyReport (W-AUR=미션 기반)", () => {
+  it("정상: 진단 5 row(점수) + 미션 4 → sessionCount=5, missionCompletedCount=4, wAur=true", async () => {
     evaluationResultFindManyMock.mockResolvedValueOnce([
       makeRow("user-1", "2026-05-18", 80, 70, 75),
       makeRow("user-1", "2026-05-19", 82, 72, 77),
@@ -82,72 +88,67 @@ describe("aggregateWeeklyReport", () => {
       makeRow("user-1", "2026-05-21", 86, 76, 81),
       makeRow("user-1", "2026-05-22", 88, 78, 83),
     ]);
+    sessionLogCountMock.mockResolvedValueOnce(4); // 미션 완료 4회
 
-    const data = await aggregateWeeklyReport({
-      userId: "user-1",
-      year: 2026,
-      weekNumber: 20,
-    });
+    const data = await aggregateWeeklyReport({ userId: "user-1", year: 2026, weekNumber: 20 });
 
     expect(data).not.toBeNull();
     expect(data!.userId).toBe("user-1");
-    expect(data!.sessionCount).toBe(5);
+    expect(data!.sessionCount).toBe(5); // 진단 표본수(불변)
+    expect(data!.missionCompletedCount).toBe(4); // W-AUR 신호
     expect(data!.wAurAchieved).toBe(true);
-    expect(data!.articulationAvg).toBeCloseTo(84, 6); // (80+82+84+86+88)/5
+    // 점수는 진단 기반 — 불변.
+    expect(data!.articulationAvg).toBeCloseTo(84, 6);
     expect(data!.linguisticAvg).toBeCloseTo(74, 6);
     expect(data!.acousticAvg).toBeCloseTo(79, 6);
-    // mock 예측: (84+74+79)/3 + 5 = 79 + 5 = 84
     expect(data!.predictedNextScore).toBeCloseTo(84, 1);
     expect(data!.scoreTrend).toHaveLength(5);
+    // 미션 카운트 쿼리 필터 — 미션 완료(missionId!=null & durationSec>0)만.
+    const countArg = sessionLogCountMock.mock.calls[0][0] as {
+      where: { missionId: { not: null }; durationSec: { gt: number } };
+    };
+    expect(countArg.where.missionId).toEqual({ not: null });
+    expect(countArg.where.durationSec).toEqual({ gt: 0 });
   });
 
-  it("0 session → null (FR-Q-006 EmptyState 분기 책임을 호출 측에 위임)", async () => {
-    evaluationResultFindManyMock.mockResolvedValueOnce([]);
-    const data = await aggregateWeeklyReport({
-      userId: "user-empty",
-      year: 2026,
-      weekNumber: 20,
-    });
-    expect(data).toBeNull();
-  });
-
-  it("경계 — sessionCount 4 → wAurAchieved=true (포함 경계)", async () => {
-    evaluationResultFindManyMock.mockResolvedValueOnce([
-      makeRow("u", "2026-05-18", 70, 70, 70),
-      makeRow("u", "2026-05-19", 70, 70, 70),
-      makeRow("u", "2026-05-20", 70, 70, 70),
-      makeRow("u", "2026-05-21", 70, 70, 70),
-    ]);
+  it("핵심 의미: 진단 5회 but 미션 0 → wAur=false (진단수는 더 이상 W-AUR 아님)", async () => {
+    const rows = Array.from({ length: 5 }, (_, i) => makeRow("u", `2026-05-${18 + i}`, 60, 60, 60));
+    evaluationResultFindManyMock.mockResolvedValueOnce(rows);
+    sessionLogCountMock.mockResolvedValueOnce(0);
     const data = await aggregateWeeklyReport({ userId: "u", year: 2026, weekNumber: 20 });
-    expect(data!.sessionCount).toBe(4);
-    expect(data!.wAurAchieved).toBe(true);
-  });
-
-  it("경계 — sessionCount 3 → wAurAchieved=false (직전 경계)", async () => {
-    evaluationResultFindManyMock.mockResolvedValueOnce([
-      makeRow("u", "2026-05-18", 70, 70, 70),
-      makeRow("u", "2026-05-19", 70, 70, 70),
-      makeRow("u", "2026-05-20", 70, 70, 70),
-    ]);
-    const data = await aggregateWeeklyReport({ userId: "u", year: 2026, weekNumber: 20 });
-    expect(data!.sessionCount).toBe(3);
+    expect(data!.sessionCount).toBe(5);
+    expect(data!.missionCompletedCount).toBe(0);
     expect(data!.wAurAchieved).toBe(false);
   });
 
-  it("경계 — sessionCount 5 → wAurAchieved=true (충분히 초과)", async () => {
-    const rows = Array.from({ length: 5 }, (_, i) =>
-      makeRow("u", `2026-05-${18 + i}`, 60, 60, 60),
-    );
-    evaluationResultFindManyMock.mockResolvedValueOnce(rows);
+  it("0 진단 → null (점수 부재 — 미션 카운트 전 early-return, Lean: 미션전용 유저 Phase 2)", async () => {
+    evaluationResultFindManyMock.mockResolvedValueOnce([]);
+    const data = await aggregateWeeklyReport({ userId: "user-empty", year: 2026, weekNumber: 20 });
+    expect(data).toBeNull();
+    expect(sessionLogCountMock).not.toHaveBeenCalled(); // early-return — 미션 미조회
+  });
+
+  it("경계 — 미션 4 → wAur=true (포함 경계)", async () => {
+    evaluationResultFindManyMock.mockResolvedValueOnce([makeRow("u", "2026-05-18", 70, 70, 70)]);
+    sessionLogCountMock.mockResolvedValueOnce(4);
     const data = await aggregateWeeklyReport({ userId: "u", year: 2026, weekNumber: 20 });
-    expect(data!.sessionCount).toBe(5);
+    expect(data!.missionCompletedCount).toBe(4);
     expect(data!.wAurAchieved).toBe(true);
+  });
+
+  it("경계 — 미션 3 → wAur=false (직전 경계)", async () => {
+    evaluationResultFindManyMock.mockResolvedValueOnce([makeRow("u", "2026-05-18", 70, 70, 70)]);
+    sessionLogCountMock.mockResolvedValueOnce(3);
+    const data = await aggregateWeeklyReport({ userId: "u", year: 2026, weekNumber: 20 });
+    expect(data!.missionCompletedCount).toBe(3);
+    expect(data!.wAurAchieved).toBe(false);
   });
 
   it("R4 — 반환 객체에 자녀 식별 정보 (이메일/이름) 미포함", async () => {
     evaluationResultFindManyMock.mockResolvedValueOnce([
       makeRow("user-x", "2026-05-19", 80, 70, 75),
     ]);
+    sessionLogCountMock.mockResolvedValueOnce(1);
     const data = await aggregateWeeklyReport({ userId: "user-x", year: 2026, weekNumber: 20 });
     const keys = Object.keys(data!);
     expect(keys).not.toContain("email");
@@ -236,19 +237,20 @@ describe("upsertWeeklyReport — 멱등 (수동 재실행 안전)", () => {
     acousticAvg: 75,
     peerPercentileAvg: 60,
     sessionCount: 1,
-    wAurAchieved: false,
+    missionCompletedCount: 5,
+    wAurAchieved: true,
     predictedNextScore: 80,
   };
 
-  it("upsert 1회 호출 — where 복합 키 + create/update 양쪽 동일 payload", async () => {
+  it("upsert 1회 호출 — where 복합 키 + create/update 양쪽 동일 payload(missionCompletedCount 영속)", async () => {
     weeklyReportUpsertMock.mockResolvedValue({ id: "wr-1" });
     await upsertWeeklyReport(sample);
 
     expect(weeklyReportUpsertMock).toHaveBeenCalledTimes(1);
     const arg = weeklyReportUpsertMock.mock.calls[0][0] as {
       where: { userId_year_weekNumber: { userId: string; year: number; weekNumber: number } };
-      create: { userId: string; year: number; weekNumber: number; sessionCount: number };
-      update: { sessionCount: number; generatedAt: Date };
+      create: { userId: string; year: number; weekNumber: number; sessionCount: number; missionCompletedCount: number };
+      update: { sessionCount: number; missionCompletedCount: number; generatedAt: Date };
     };
 
     expect(arg.where.userId_year_weekNumber).toEqual({
@@ -258,7 +260,9 @@ describe("upsertWeeklyReport — 멱등 (수동 재실행 안전)", () => {
     });
     expect(arg.create.userId).toBe("user-z");
     expect(arg.create.sessionCount).toBe(1);
+    expect(arg.create.missionCompletedCount).toBe(5); // FR-C-WAUR-SWITCH — 미션수 영속
     expect(arg.update.sessionCount).toBe(1);
+    expect(arg.update.missionCompletedCount).toBe(5);
     // update path 에서만 generatedAt 갱신 (create 는 default).
     expect(arg.update.generatedAt).toBeInstanceOf(Date);
   });

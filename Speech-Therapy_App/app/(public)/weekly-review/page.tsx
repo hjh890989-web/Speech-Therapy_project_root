@@ -147,6 +147,7 @@ export default async function WeeklyReviewPage() {
       acousticAvg: latest.acousticAvg,
       peerPercentileAvg: latest.peerPercentileAvg,
       sessionCount: latest.sessionCount,
+      missionCompletedCount: latest.missionCompletedCount,
       predictedNextScore: latest.predictedNextScore,
       predictionConfidence: latest.predictionConfidence,
       generatedAt: latest.generatedAt,
@@ -178,7 +179,7 @@ export default async function WeeklyReviewPage() {
           linguisticAvg={latest.linguisticAvg}
           acousticAvg={latest.acousticAvg}
           peerPercentileAvg={latest.peerPercentileAvg}
-          sessionCount={latest.sessionCount}
+          missionCompletedCount={latest.missionCompletedCount}
         />
       </div>
 

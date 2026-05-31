@@ -17,6 +17,10 @@ vi.mock("@/lib/db", () => ({
     evaluationResult: {
       findMany: (...args: unknown[]) => evaluationResultFindManyMock(...args),
     },
+    // FR-C-WAUR-SWITCH — aggregateWeeklyReport 가 미션 완료수 카운트(본 테스트는 예측 검증이라 0 고정).
+    sessionLog: {
+      count: () => Promise.resolve(0),
+    },
     weeklyReport: {
       findMany: (...args: unknown[]) => weeklyReportFindManyMock(...args),
       upsert: vi.fn(),

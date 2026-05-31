@@ -39,6 +39,8 @@ export interface WeeklyReportEmailArgs {
     linguisticAvg: number;
     acousticAvg: number;
     sessionCount: number;
+    /// FR-C-WAUR-SWITCH — 미션 완료수(W-AUR 신호). 이메일 활동 카피의 기준.
+    missionCompletedCount: number;
     wAurAchieved: boolean;
     predictedNextScore: number | null;
   };
@@ -96,6 +98,7 @@ export async function sendWeeklyReportEmail(
     linguisticAvg: args.report.linguisticAvg,
     acousticAvg: args.report.acousticAvg,
     sessionCount: args.report.sessionCount,
+    missionCompletedCount: args.report.missionCompletedCount,
     wAurAchieved: args.report.wAurAchieved,
     predictedNextScore: args.report.predictedNextScore,
     dashboardLink: args.dashboardLink,

@@ -17,7 +17,7 @@ import {
   type PredictionOutput,
 } from "@/lib/predictions/gemini";
 import { prisma } from "@/lib/db";
-import { W_AUR_MIN_SESSIONS } from "@/lib/reports/weekly-aggregator";
+import { W_AUR_MIN_MISSIONS } from "@/lib/reports/weekly-aggregator";
 
 /**
  * userId 만으로 회귀 예측 (직전 4주 weeklyReport 자동 조회).
@@ -61,6 +61,7 @@ async function loadWeekHistory(userId: string): Promise<PredictionInput["weekHis
         linguisticAvg: true,
         acousticAvg: true,
         sessionCount: true,
+        missionCompletedCount: true,
       },
     });
     return rows.map((r) => ({
@@ -69,7 +70,8 @@ async function loadWeekHistory(userId: string): Promise<PredictionInput["weekHis
       linguisticAvg: r.linguisticAvg,
       acousticAvg: r.acousticAvg,
       sessionCount: r.sessionCount,
-      wAurAchieved: r.sessionCount >= W_AUR_MIN_SESSIONS,
+      // W-AUR 재유도 = 미션완료수 기반(FR-C-WAUR-SWITCH, fetchWeekHistoryForPrediction 와 정합).
+      wAurAchieved: r.missionCompletedCount >= W_AUR_MIN_MISSIONS,
     }));
   } catch {
     return [];

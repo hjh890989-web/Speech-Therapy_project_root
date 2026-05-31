@@ -3,7 +3,7 @@
 // 책임:
 //   1) latest: 가장 최근 WeeklyReport 1건 (orderBy generatedAt desc, take 1)
 //   2) history: 그 외 직전 3건 (총 4주까지 trend chart 입력) — 같은 한 번의 findMany 로 합본 후 분리
-//   3) wAurAchieved: latest 의 sessionCount >= W_AUR_MIN_SESSIONS (4)
+//   3) wAurAchieved: latest 의 missionCompletedCount >= W_AUR_MIN_MISSIONS (4) — FR-C-WAUR-SWITCH
 //   4) hasData: latest !== null
 //
 // RBAC (R4):
@@ -22,7 +22,7 @@
 //   - 상위 UI 컴포넌트가 ScoreTrend type 으로 narrow 처리.
 
 import { prisma } from "@/lib/db";
-import { W_AUR_MIN_SESSIONS } from "@/lib/reports/weekly-aggregator";
+import { W_AUR_MIN_MISSIONS } from "@/lib/reports/weekly-aggregator";
 
 /// WeeklyReport 1건의 helper 친화 shape (Prisma row shape 와 호환).
 /// `WeeklyReport` Prisma row 를 그대로 사용해도 되지만, 테스트 환경에서 Prisma client
@@ -36,7 +36,10 @@ export interface WeeklyReviewRow {
   linguisticAvg: number;
   acousticAvg: number;
   peerPercentileAvg: number;
+  /// 진단 세션 수(점수 표본 분모).
   sessionCount: number;
+  /// FR-C-WAUR-SWITCH — 미션 완료수(W-AUR 신호). 기존 row 는 default 0.
+  missionCompletedCount: number;
   predictedNextScore: number | null;
   predictionConfidence: number | null;
   generatedAt: Date;
@@ -53,7 +56,7 @@ export interface WeeklyReviewData {
   /// latest 를 제외한 직전 주들 — trend chart 입력 (최대 3건, latest + history 합치면 ≤ 4건).
   /// generatedAt desc 정렬 — chart 측에서 reverse 후 X축 시간순 변환 책임.
   history: WeeklyReviewRow[];
-  /// latest.sessionCount >= W_AUR_MIN_SESSIONS (false if latest null).
+  /// latest.missionCompletedCount >= W_AUR_MIN_MISSIONS (false if latest null). FR-C-WAUR-SWITCH.
   wAurAchieved: boolean;
   /// latest !== null.
   hasData: boolean;
@@ -89,7 +92,8 @@ export async function loadWeeklyReview(userId: string): Promise<WeeklyReviewData
   }
 
   const [latest, ...history] = rows;
-  const wAurAchieved = latest.sessionCount >= W_AUR_MIN_SESSIONS;
+  // W-AUR = 미션완료수 기반(FR-C-WAUR-SWITCH). 전환 이전 row 는 missionCompletedCount=0 → false.
+  const wAurAchieved = latest.missionCompletedCount >= W_AUR_MIN_MISSIONS;
   return {
     latest,
     history,

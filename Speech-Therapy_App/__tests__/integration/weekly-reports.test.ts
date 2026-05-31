@@ -21,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const evaluationResultFindManyMock = vi.fn();
 const evaluationResultCountMock = vi.fn();
 const evaluationResultFindFirstMock = vi.fn();
+const sessionLogCountMock = vi.fn();
 const weeklyReportUpsertMock = vi.fn();
 const cookieGetMock = vi.fn();
 const supabaseGetUserMock = vi.fn();
@@ -32,6 +33,10 @@ vi.mock("@/lib/db", () => ({
       findMany: (...args: unknown[]) => evaluationResultFindManyMock(...args),
       count: (...args: unknown[]) => evaluationResultCountMock(...args),
       findFirst: (...args: unknown[]) => evaluationResultFindFirstMock(...args),
+    },
+    // FR-C-WAUR-SWITCH — aggregateWeeklyReport 의 미션 완료수 카운트(real aggregate 경로).
+    sessionLog: {
+      count: (...args: unknown[]) => sessionLogCountMock(...args),
     },
     weeklyReport: {
       upsert: (...args: unknown[]) => weeklyReportUpsertMock(...args),
@@ -105,6 +110,8 @@ beforeEach(() => {
   evaluationResultFindManyMock.mockReset();
   evaluationResultCountMock.mockReset();
   evaluationResultFindFirstMock.mockReset();
+  sessionLogCountMock.mockReset();
+  sessionLogCountMock.mockResolvedValue(0); // FR-C-WAUR-SWITCH — 미션 0 기본(W-AUR 카운트 테스트는 override)
   weeklyReportUpsertMock.mockReset();
   cookieGetMock.mockReset();
   supabaseGetUserMock.mockReset();

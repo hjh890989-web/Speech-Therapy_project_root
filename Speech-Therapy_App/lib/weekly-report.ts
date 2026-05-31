@@ -202,7 +202,7 @@ export function assessDataSufficiency(
 //   기존 (UTC 월요일 00:00) 은 KST 사용자의 주차 인지와 9시간 어긋남.
 //   본 함수 호출 측 (aggregateWeeklyScores) 은 결과를 prisma.where.createdAt.gte/lt 로 사용 —
 //   `createdAt` 은 UTC instant 이므로 반환 Date 도 instant 단위로 -9h 보정.
-function weekBounds(year: number, week: number) {
+export function weekBounds(year: number, week: number) {
   // ISO 8601: 1월 4일이 1주차에 포함 (year, week 의 "year" 는 KST 기준 ISO year).
   // KST wall-clock 의 1월 4일 자정을 가리키는 instant = UTC 1월 3일 15:00.
   // 단순화: UTC 1월 4일 자정 기준으로 주차 계산 후 마지막에 -9h.

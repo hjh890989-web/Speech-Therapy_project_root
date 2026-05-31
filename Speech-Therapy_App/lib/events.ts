@@ -312,6 +312,8 @@ export type AnalyticsEvent =
         userId: string;
         weekStart: string;
         sessionCount: number;
+        /// FR-C-WAUR-SWITCH — 미션 완료수(W-AUR 신호). 진단 sessionCount 와 분리 측정.
+        missionCompletedCount: number;
         wAurAchieved: boolean;
       };
     }

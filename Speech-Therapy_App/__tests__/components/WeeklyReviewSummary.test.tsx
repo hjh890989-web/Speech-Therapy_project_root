@@ -12,7 +12,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 
-// WeeklyReviewSummary 는 lib/reports/weekly-aggregator 에서 W_AUR_MIN_SESSIONS 상수만 import 하나,
+// WeeklyReviewSummary 는 lib/reports/weekly-aggregator 에서 W_AUR_MIN_MISSIONS 상수만 import 하나,
 // aggregator 가 lib/db (Prisma client) 를 transitively 의존 — Prisma client 가 generate 안 된
 // 테스트 환경에서는 vite import-analysis 가 실패한다. mock 으로 lib/db 차단.
 vi.mock("@/lib/db", () => ({ prisma: {} }));
@@ -35,7 +35,7 @@ describe("WeeklyReviewSummary — FR-Q-WEEKLY-REVIEW 요약 카드", () => {
         linguisticAvg={68.4}
         acousticAvg={71}
         peerPercentileAvg={72}
-        sessionCount={4}
+        missionCompletedCount={4}
       />,
     );
 
@@ -60,7 +60,7 @@ describe("WeeklyReviewSummary — FR-Q-WEEKLY-REVIEW 요약 카드", () => {
         linguisticAvg={70}
         acousticAvg={70}
         peerPercentileAvg={50}
-        sessionCount={5}
+        missionCompletedCount={5}
       />,
     );
 
@@ -75,7 +75,7 @@ describe("WeeklyReviewSummary — FR-Q-WEEKLY-REVIEW 요약 카드", () => {
         linguisticAvg={70}
         acousticAvg={70}
         peerPercentileAvg={50}
-        sessionCount={2}
+        missionCompletedCount={2}
       />,
     );
 
@@ -92,7 +92,7 @@ describe("WeeklyReviewSummary — FR-Q-WEEKLY-REVIEW 요약 카드", () => {
         linguisticAvg={70}
         acousticAvg={70}
         peerPercentileAvg={null}
-        sessionCount={4}
+        missionCompletedCount={4}
       />,
     );
 
@@ -107,7 +107,7 @@ describe("WeeklyReviewSummary — FR-Q-WEEKLY-REVIEW 요약 카드", () => {
         linguisticAvg={70}
         acousticAvg={70}
         peerPercentileAvg={80}
-        sessionCount={4}
+        missionCompletedCount={4}
       />,
     );
 
@@ -122,7 +122,7 @@ describe("WeeklyReviewSummary — FR-Q-WEEKLY-REVIEW 요약 카드", () => {
         linguisticAvg={70}
         acousticAvg={70}
         peerPercentileAvg={20}
-        sessionCount={4}
+        missionCompletedCount={4}
       />,
     );
 
@@ -138,7 +138,7 @@ describe("WeeklyReviewSummary — FR-Q-WEEKLY-REVIEW 요약 카드", () => {
         linguisticAvg={75}
         acousticAvg={70}
         peerPercentileAvg={60}
-        sessionCount={5}
+        missionCompletedCount={5}
       />,
     );
     assertNoMedicalTerms(a.textContent ?? "");
@@ -150,7 +150,7 @@ describe("WeeklyReviewSummary — FR-Q-WEEKLY-REVIEW 요약 카드", () => {
         linguisticAvg={40}
         acousticAvg={30}
         peerPercentileAvg={10}
-        sessionCount={1}
+        missionCompletedCount={1}
       />,
     );
     assertNoMedicalTerms(b.textContent ?? "");
@@ -162,7 +162,7 @@ describe("WeeklyReviewSummary — FR-Q-WEEKLY-REVIEW 요약 카드", () => {
         linguisticAvg={70}
         acousticAvg={70}
         peerPercentileAvg={null}
-        sessionCount={3}
+        missionCompletedCount={3}
       />,
     );
     assertNoMedicalTerms(c.textContent ?? "");
