@@ -69,6 +69,11 @@ model User {
   /// null = 미동의. 본 컬럼이 null 이면 STT (Google Cloud Speech US) / Gemini API (US/global) 호출 차단.
   /// 대상: Google Cloud Speech (Web Speech API 경유) + Google AI Studio (Gemini) 의 미국 / 글로벌 위치.
   overseasTransferConsentAt DateTime?
+  /// F10 — 연구 데이터 활용 동의 Tier (SRS §5.3 / ADR-15). null = 미동의(연구 활용 0).
+  /// 값: T1(운영) / T2(UX 통계) / T3(내부 모델개선) / T4-a·T4-b(학술) / T4-c(외부협력·IRB).
+  /// HITL 재학습(sync_retraining_data TRIGGER)은 T4-a/b/c 동의 시에만 적재(보수적 게이팅, FR-C-WAUR-SWITCH 별개).
+  /// 수집 UI 는 후속(Full) — 본 Lean PR 은 컬럼 + TRIGGER 게이팅만(하드코딩 'T4-c' 오표기 해소).
+  f10ResearchConsentTier String?
   /// 구독 등급. 기본 free.
   subscriptionTier SubscriptionTier @default(free)
   /// 가입 시각.
