@@ -21,7 +21,9 @@ import { redirect } from "next/navigation";
 
 import { getCachedUser } from "@/lib/auth/cached-get-user";
 import { getNotificationPreference } from "@/lib/notifications/preference";
+import { isF16PushEnabled } from "@/lib/push/config";
 import { NotificationPreferenceForm } from "@/components/settings/NotificationPreferenceForm";
+import { PushNotificationToggle } from "@/components/settings/PushNotificationToggle";
 
 export const metadata = {
   title: "알림 선호 — Speech-Therapy",
@@ -42,6 +44,9 @@ export default async function SettingsNotificationsPage() {
 
   // 2) preference fetch — helper 가 graceful (DB 부재/실패 → DEFAULTS).
   const preference = await getNotificationPreference(user.id);
+
+  // 3) F16 푸시 게이트 — 서버에서 결정 (off 시 토글 미렌더, D5 부활 전 기본).
+  const f16PushEnabled = isF16PushEnabled();
 
   return (
     <main
@@ -64,6 +69,13 @@ export default async function SettingsNotificationsPage() {
       </p>
 
       <NotificationPreferenceForm initialPreference={preference} />
+
+      {/* F16 푸시 알림 — 게이트 on 일 때만 노출 (D5 부활 의존). 별도 opt-in 섹션. */}
+      {f16PushEnabled && (
+        <section className="mt-8">
+          <PushNotificationToggle />
+        </section>
+      )}
     </main>
   );
 }
