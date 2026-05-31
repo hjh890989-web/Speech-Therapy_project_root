@@ -30,8 +30,16 @@ import {
   buildDiversityAlertMessage,
 } from "@/lib/hitl/expert-diversity";
 import { sendSlackMessage } from "@/lib/notifications/slack";
+import {
+  getCurrentPhase,
+  isWithinIdempotencyWindow,
+  setSystemConfig,
+  SYSTEM_CONFIG_KEYS,
+} from "@/lib/config/system-config";
 
 const WINDOW_DAYS = 7; // 직전 7일 cohort — 3 게이트 검증 입력.
+/// 재학습 트리거 멱등성 윈도우 (일) — 7일 내 재발화(위탁 알림 중복) 차단 (HITL-006 Scenario 6).
+const RETRAINING_IDEMPOTENCY_DAYS = 7;
 
 export async function GET(request: Request) {
   const auth = verifyCronSecret(request);
@@ -46,11 +54,10 @@ export async function GET(request: Request) {
   const now = new Date();
   const since = new Date(now.getTime() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
-  // Phase 분기 — env 또는 default Phase 1 (운영 정책 변경 시 env override).
-  const phase: "phase1" | "phase2" =
-    process.env.HITL_DIVERSITY_PHASE === "phase2" ? "phase2" : "phase1";
-
   try {
+    // Phase 분기 — ADR-13 getCurrentPhase (env override → DB → default phase1).
+    const phase = await getCurrentPhase();
+
     // (1) cohort 조회.
     const cohort = await listRetrainingCohort({ since });
     const diffPctValues = cohort.map((c) => c.diffPct);
@@ -68,9 +75,40 @@ export async function GET(request: Request) {
       to: now.toISOString(),
     };
 
-    // (3) Slack alert — 통과/미통과 모두 발송.
-    const gateMessage = buildRetrainingGateMessage(gateResult, period);
-    const gateSlackResult = await sendSlackMessage(gateMessage);
+    // (3) Slack alert + 멱등성 (HITL-006 Scenario 6).
+    //   - allPassed(트리거) 시: 7일 내 이미 트리거했으면 skip(위탁 알림 중복 차단),
+    //     아니면 발송 + triggered_at 기록.
+    //   - 미통과 시: 운영 가시성 위해 기존대로 발송 (트리거 아님 — 멱등성 무관).
+    let gateSlackSent = false;
+    let triggered = false;
+    let idempotencySkip = false;
+    if (gateResult.allPassed) {
+      const within = await isWithinIdempotencyWindow(
+        SYSTEM_CONFIG_KEYS.HITL_RETRAINING_TRIGGERED_AT,
+        RETRAINING_IDEMPOTENCY_DAYS,
+        now,
+      );
+      if (within) {
+        idempotencySkip = true; // 7일 내 재발화 — 위탁 알림 중복 차단.
+      } else {
+        const gateMessage = buildRetrainingGateMessage(gateResult, period);
+        const r = await sendSlackMessage(gateMessage);
+        gateSlackSent = r.ok;
+        triggered = true;
+        try {
+          await setSystemConfig(
+            SYSTEM_CONFIG_KEYS.HITL_RETRAINING_TRIGGERED_AT,
+            now.toISOString(),
+          );
+        } catch (err) {
+          console.error("[FR-C-HITL-006] triggered_at 기록 실패:", err);
+        }
+      }
+    } else {
+      const gateMessage = buildRetrainingGateMessage(gateResult, period);
+      const r = await sendSlackMessage(gateMessage);
+      gateSlackSent = r.ok;
+    }
 
     // (4) FR-C-HITL-007 — 다양성 임계 위반 별도 alert (게이트 3 미통과 시).
     let diversityAlertSent = false;
@@ -101,7 +139,9 @@ export async function GET(request: Request) {
           hhi: gateResult.diversity.hhi,
           gini: gateResult.diversity.gini,
           top3SharePct: gateResult.diversity.top3SharePct,
-          slackSent: gateSlackResult.ok,
+          slackSent: gateSlackSent,
+          triggered,
+          idempotencySkip,
           diversityAlertSent,
           elapsedMs: Date.now() - start,
         },
@@ -121,7 +161,9 @@ export async function GET(request: Request) {
         top3SharePct: gateResult.diversity.top3SharePct,
         uniqueExpertCount: gateResult.diversity.uniqueExpertCount,
       },
-      slackSent: gateSlackResult.ok,
+      slackSent: gateSlackSent,
+      triggered,
+      idempotencySkip,
       diversityAlertSent,
       period,
       phase,

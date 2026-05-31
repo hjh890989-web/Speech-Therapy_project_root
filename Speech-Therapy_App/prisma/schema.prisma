@@ -694,6 +694,31 @@ model ModelRetrainingData {
 }
 
 // ============================================================================
+// ADR-13 — SystemConfig (런타임 키-밸류 토글 + 멱등성 타임스탬프)
+//
+// Refs: ADR-13 (getCurrentPhase 하이브리드 — env override → DB → default),
+//       FR-C-HITL-006 (재학습 멱등성 retraining_triggered_at), FR-C-HITL-007 (다양성 phase).
+//
+// 책임:
+//   - HITL 재학습/다양성 Cron 의 _멱등성 가드_ (마지막 트리거 시각 — 7일 내 재발화 차단).
+//   - 운영 phase 토글 (phase1/phase2) — env 미설정 시 DB 값, 둘 다 없으면 phase1 default.
+//   - 향후 F15/F16 게이트 등 런타임 토글 공용 store (key 네임스페이스로 확장).
+//
+// 정책: 값은 _문자열_ (타임스탬프=ISO, phase='phase1'/'phase2', boolean='true'/'false').
+//   lib/config/system-config.ts 가 유일 진입점 (타입 안전 + graceful 폴백).
+// R4: 운영 설정만 — 사용자/자녀 식별 정보 미저장.
+// ============================================================================
+
+model SystemConfig {
+  /// 설정 키 (예: 'hitl_retraining_triggered_at' / 'hitl_diversity_alerted_at' / 'hitl_diversity_phase').
+  key       String   @id
+  /// 값 (문자열 — ISO 타임스탬프 / 'phase1'|'phase2' / 'true'|'false').
+  value     String
+  /// 마지막 갱신 시각.
+  updatedAt DateTime @updatedAt @default(now())
+}
+
+// ============================================================================
 // INFRA-005 후속 — 서버 측 분석 이벤트 query-able sink (Phase 1)
 //
 // Refs: MON-001(funnel.ts 가 '옵션 B'로 보류했던 store), AGENTS.md §2.2(PII), R4.

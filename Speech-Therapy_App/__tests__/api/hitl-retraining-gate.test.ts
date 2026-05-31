@@ -31,13 +31,32 @@ vi.mock("@/lib/notifications/slack", () => ({
   sendSlackMessage: (text: string) => sendSlackMock(text),
 }));
 
+// ADR-13 system-config — getCurrentPhase 는 env 반영(기존 [4]/[6] 정합), 멱등성은 mock.
+const isWithinMock = vi.fn();
+const setConfigMock = vi.fn();
+vi.mock("@/lib/config/system-config", () => ({
+  SYSTEM_CONFIG_KEYS: {
+    HITL_RETRAINING_TRIGGERED_AT: "hitl_retraining_triggered_at",
+    HITL_DIVERSITY_ALERTED_AT: "hitl_diversity_alerted_at",
+    HITL_DIVERSITY_PHASE: "hitl_diversity_phase",
+  },
+  getCurrentPhase: async () =>
+    process.env.HITL_DIVERSITY_PHASE === "phase2" ? "phase2" : "phase1",
+  isWithinIdempotencyWindow: (...a: unknown[]) => isWithinMock(...a),
+  setSystemConfig: (...a: unknown[]) => setConfigMock(...a),
+}));
+
 import { GET } from "@/app/api/cron/hitl-retraining-gate/route";
 
 beforeEach(() => {
   listRetrainingCohortMock.mockReset();
   aggregateByExpertMock.mockReset();
   sendSlackMock.mockReset();
+  isWithinMock.mockReset();
+  setConfigMock.mockReset();
   sendSlackMock.mockResolvedValue({ ok: true });
+  isWithinMock.mockResolvedValue(false);
+  setConfigMock.mockResolvedValue(undefined);
   delete process.env.HITL_DIVERSITY_PHASE;
 });
 
@@ -197,5 +216,62 @@ describe("FR-C-HITL-006 — Cron Route Handler", () => {
       expect(JSON.stringify(parsed)).not.toMatch(/userId|sessionId|email/i);
     }
     logSpy.mockRestore();
+  });
+
+  it("[8] 3 게이트 통과 + 멱등성 윈도우 이내 → idempotencySkip, Slack 미발송", async () => {
+    isWithinMock.mockResolvedValue(true);
+    const cohort = new Array(500).fill(null).map((_, i) => ({
+      id: `entry-${i}`,
+      sessionId: `sess-${i}`,
+      expertId: `expert-${i % 10}`,
+      diffPct: 0.8,
+      consentTier: "T4-c",
+      sanitized: true,
+      createdAt: new Date(),
+    }));
+    listRetrainingCohortMock.mockResolvedValue(cohort);
+    const dist = new Map<string, number>();
+    for (let i = 0; i < 10; i++) dist.set(`expert-${i}`, 50);
+    aggregateByExpertMock.mockResolvedValue(dist);
+
+    const response = await GET(makeRequest());
+    const body = await response.json();
+    expect(body.allPassed).toBe(true);
+    expect(body.idempotencySkip).toBe(true);
+    expect(body.triggered).toBe(false);
+    expect(body.slackSent).toBe(false);
+    // gate3 통과(다양성 OK) → 다양성 alert 도 없음 → Slack 0회.
+    expect(sendSlackMock).not.toHaveBeenCalled();
+    expect(setConfigMock).not.toHaveBeenCalled();
+  });
+
+  it("[9] 3 게이트 통과 + 윈도우 밖(fresh) → triggered + triggered_at 기록", async () => {
+    isWithinMock.mockResolvedValue(false);
+    const cohort = new Array(500).fill(null).map((_, i) => ({
+      id: `entry-${i}`,
+      sessionId: `sess-${i}`,
+      expertId: `expert-${i % 10}`,
+      diffPct: 0.8,
+      consentTier: "T4-c",
+      sanitized: true,
+      createdAt: new Date(),
+    }));
+    listRetrainingCohortMock.mockResolvedValue(cohort);
+    const dist = new Map<string, number>();
+    for (let i = 0; i < 10; i++) dist.set(`expert-${i}`, 50);
+    aggregateByExpertMock.mockResolvedValue(dist);
+
+    const response = await GET(makeRequest());
+    const body = await response.json();
+    expect(body.allPassed).toBe(true);
+    expect(body.triggered).toBe(true);
+    expect(body.idempotencySkip).toBe(false);
+    expect(sendSlackMock).toHaveBeenCalledWith(
+      expect.stringContaining("외부 ML 위탁 트리거"),
+    );
+    expect(setConfigMock).toHaveBeenCalledWith(
+      "hitl_retraining_triggered_at",
+      expect.any(String),
+    );
   });
 });
