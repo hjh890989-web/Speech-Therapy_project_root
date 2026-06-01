@@ -167,4 +167,88 @@ describe("WeeklyReviewSummary — FR-Q-WEEKLY-REVIEW 요약 카드", () => {
     );
     assertNoMedicalTerms(c.textContent ?? "");
   });
+
+  describe("W-AUR 경계 + peer 클램프 (FR-C-WAUR-SWITCH 백필, TEST-024)", () => {
+    // missionCompletedCount 기반 W-AUR 전환(전일 FR-C-WAUR-SWITCH)의 경계값 —
+    // 기존 [2]/[3] 은 5(달성)/2(미달성)만 검증. 아래는 >= 경계·remaining 단수·0회·peer 클램프 가드.
+    it("[B1] missionCompletedCount === 4 (정확히 목표) → achieved (>= 경계, off-by-one 가드)", () => {
+      const { container } = render(
+        <WeeklyReviewSummary
+          articulationAvg={70}
+          linguisticAvg={70}
+          acousticAvg={70}
+          peerPercentileAvg={50}
+          missionCompletedCount={4}
+        />,
+      );
+      expect(
+        container.querySelector("[data-testid='weekly-review-waur-achieved']"),
+      ).not.toBeNull();
+      expect(
+        container.querySelector("[data-testid='weekly-review-waur-pending']"),
+      ).toBeNull();
+    });
+
+    it("[B2] missionCompletedCount === 3 → pending '1회 더' (remaining 단수 경계)", () => {
+      const { container } = render(
+        <WeeklyReviewSummary
+          articulationAvg={70}
+          linguisticAvg={70}
+          acousticAvg={70}
+          peerPercentileAvg={50}
+          missionCompletedCount={3}
+        />,
+      );
+      const pending = container.querySelector("[data-testid='weekly-review-waur-pending']");
+      expect(pending).not.toBeNull();
+      expect(pending?.textContent).toContain("1회 더");
+      expect(pending?.textContent).toContain("3회 완료");
+    });
+
+    it("[B3] missionCompletedCount === 0 (신규 사용자) → pending '4회 더' + '0회 완료'", () => {
+      const { container } = render(
+        <WeeklyReviewSummary
+          articulationAvg={0}
+          linguisticAvg={0}
+          acousticAvg={0}
+          peerPercentileAvg={50}
+          missionCompletedCount={0}
+        />,
+      );
+      const pending = container.querySelector("[data-testid='weekly-review-waur-pending']");
+      expect(pending).not.toBeNull();
+      expect(pending?.textContent).toContain("4회 더");
+      expect(pending?.textContent).toContain("0회 완료");
+    });
+
+    it("[B4] peerPercentileAvg=0 → '상위 100%' (클램프 상한)", () => {
+      const { container } = render(
+        <WeeklyReviewSummary
+          articulationAvg={70}
+          linguisticAvg={70}
+          acousticAvg={70}
+          peerPercentileAvg={0}
+          missionCompletedCount={4}
+        />,
+      );
+      const text =
+        container.querySelector("[data-testid='weekly-review-peer-text']")?.textContent ?? "";
+      expect(text).toContain("상위 100%");
+    });
+
+    it("[B5] peerPercentileAvg=100 → '상위 0%' (클램프 하한)", () => {
+      const { container } = render(
+        <WeeklyReviewSummary
+          articulationAvg={70}
+          linguisticAvg={70}
+          acousticAvg={70}
+          peerPercentileAvg={100}
+          missionCompletedCount={4}
+        />,
+      );
+      const text =
+        container.querySelector("[data-testid='weekly-review-peer-text']")?.textContent ?? "";
+      expect(text).toContain("상위 0%");
+    });
+  });
 });
