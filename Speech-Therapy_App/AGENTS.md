@@ -95,8 +95,9 @@
 ### 5.4 외부 스킬 라이브러리 (Matt Pocock skills)
 
 - 본 프로젝트의 `.agents/skills/` / `.cursor/skills/` / `.claude/skills/` 의 **100~120 번대** 스킬은 [github.com/mattpocock/skills](https://github.com/mattpocock/skills) (MIT) 에서 통합. 출처 헤더 + `LICENSE-mattpocock-skills.md` 보존
+- **130-goal-setting** ([github.com/wild-mental/goal-setting-skill](https://github.com/wild-mental/goal-setting-skill), MIT, 2026-06-01 통합) — 장기 실행 `/goal` 프롬프트를 측정·증명·종료 가능하게 설계하는 메타 스킬. 출처 헤더 + `LICENSE-goal-setting-skill.md` 보존. 산출물 실행엔 `/goal`(Claude Code v2.1.139+) 필요
 - 본 프로젝트 자체 스킬 번호: 001~003 (canonical) + 300~311 (.cursor/skills 백엔드)
-- 외부 라이브러리 원본 (`Speech-Therapy_App/skills/`) 은 `.gitignore` 처리 — 참고용 보존, 통합 후 commit 제외
+- 외부 라이브러리 원본 (`Speech-Therapy_App/skills/`, 루트 `Harness&Skills/`) 은 `.gitignore` 처리 — 참고용 보존, 통합 후 commit 제외
 - 자주 쓰는 스킬: **`grill-me`** (방향 점검), **`handoff`** (sub-session 인계), **`triage`** (이슈 분류), **`diagnose`** (에러 진단), **`to-issues`** (요구사항→issue)
 
 ---

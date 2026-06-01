@@ -12,8 +12,9 @@
 
 1. **`.claude/skills/001~003`** (canonical 자체 스킬) — `srs-task-decomposition` / `git-pr-workflow` / `error-fix-protocol`
 2. **`.claude/skills/100~120`** (Matt Pocock 외부 통합, MIT) — `grill-me` / `handoff` / `write-a-skill` / `diagnose` / `triage` / `to-issues` / `tdd` / `zoom-out` / `git-guardrails`
-3. **`.cursor/skills/300~311`** — 백엔드 도메인 스킬 (Server Actions, Prisma, Supabase, Zod, AI SDK, …) — Claude 도 같은 내용 참조
-4. **`.claude/agents/`** — subagent 위임 후보 (react-frontend, java-spring 등 8종, 단 도메인 부적합 에이전트는 위임 자제)
+3. **`.claude/skills/130-goal-setting`** (wild-mental 외부 통합, MIT) — `/goal-setting`: 장기 실행 `/goal` 프롬프트를 Required 4섹션(목표·범위 / 세부규칙 / 종료조건+방법 / 제약) + Three Pillars(Feasibility·Demonstrability·Boundedness)로 설계. 산출물(`/goal …`) 실행엔 `/goal`(Claude Code v2.1.139+) 필요
+4. **`.cursor/skills/300~311`** — 백엔드 도메인 스킬 (Server Actions, Prisma, Supabase, Zod, AI SDK, …) — Claude 도 같은 내용 참조
+5. **`.claude/agents/`** — subagent 위임 후보 (react-frontend, java-spring 등 8종, 단 도메인 부적합 에이전트는 위임 자제)
 
 자주 사용:
 - 방향 점검: `grill-me`

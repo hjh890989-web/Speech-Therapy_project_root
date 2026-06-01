@@ -29,6 +29,11 @@ client_secret_*.json
 # 원본은 참고용 로컬 보존만, repo 에 미포함.
 Speech-Therapy_App/skills/
 
+# 외부 하니스/스킬 수집 폴더 (Agent-Harness 스캐폴딩 원본 + mattpocock/skills 원본 + goal-setting-skill 원본).
+# goal-setting 만 .agents/.cursor/.claude/skills/130 으로 통합 (commit 됨). 나머지는 참고용 로컬 보존, nested .git 다수 → repo 미포함.
+Harness&Skills/
+goal-setting-skill/
+
 # 정리 작업 임시 백업 (안전 확인 후 사용자가 직접 삭제)
 .git_backup/
 
