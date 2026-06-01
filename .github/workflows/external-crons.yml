@@ -26,6 +26,13 @@
 #   - hitl-escalation: hourly → every 2h (HITL 큐 적체 위험 vs Actions 비용)
 #   - 나머지 4 cron 은 schedule 동일 (daily / weekly)
 #
+# 2026-06-01 추가 (2 cron, audit §0-AUDIT "경계선 갭" 해소 — 총 11 cron):
+#   - expert-diversity (FR-C-HITL-007): daily 20:00 UTC = 05:00 KST. `/api/cron/expert-diversity`.
+#       retraining-gate 와 독립. SystemConfig 멱등성(7일 재알림 차단)은 2026-06-01 deploy 로 활성.
+#   - push-dispatch (API-020 F16): daily 09:00 UTC = 18:00 KST. `/api/push/dispatch`.
+#       ⚠️ prefix 가 `/api/cron/` 아닌 `/api/push/` → Fire step 이 name 의 "/" 로 분기.
+#       F16 게이트(isF16PushEnabled) off 시 무발송 200 — 활성은 D5 부활 + Pro 전환 후.
+#
 # 향후 (MVP 후):
 #   - Vercel Pro 업그레이드 시 본 워크플로 삭제 + vercel.json 8 cron 복귀
 #   - 또는 Upstash QStash / Cloudflare Workers Cron 등 대안 검토
@@ -63,11 +70,17 @@ on:
     # chat-cleanup — FR-C-NEW-F15 F15 챗봇 발화 7일 폐기 (ADR-03).
     # ChatMessage.expiresAt < now → hard-delete. daily 5AM UTC (voice-model-cleanup 와 분리).
     - cron: "0 5 * * *"
+    # push-dispatch — API-020 F16 일 1회 푸시 발송 (/api/push/dispatch).
+    # daily 09:00 UTC = 18:00 KST. F16 게이트 off 시 무발송 200 (활성은 D5 부활 후).
+    - cron: "0 9 * * *"
+    # expert-diversity — FR-C-HITL-007 expert 분포 편향 독립 모니터링 (retraining-gate 와 독립).
+    # daily 20:00 UTC = 05:00 KST. SystemConfig 멱등성(7일 재알림 차단)으로 중복 alert 방지.
+    - cron: "0 20 * * *"
   # 수동 trigger — Actions 탭 Run workflow 에서 특정 cron 만 호출 가능.
   workflow_dispatch:
     inputs:
       target:
-        description: "수동 실행할 cron path (예: audio-cleanup). 'all' 시 9개 모두."
+        description: "수동 실행할 cron path (예: audio-cleanup). 'all' 시 11개 모두."
         required: true
         default: "all"
         type: choice
@@ -82,6 +95,8 @@ on:
           - hitl-retraining-gate
           - voice-model-cleanup
           - chat-cleanup
+          - push/dispatch
+          - expert-diversity
 
 jobs:
   fire-cron:
@@ -115,11 +130,13 @@ jobs:
             ["30 3 * * *"]="hitl-retraining-gate"
             ["0 4 * * *"]="voice-model-cleanup"
             ["0 5 * * *"]="chat-cleanup"
+            ["0 9 * * *"]="push/dispatch"
+            ["0 20 * * *"]="expert-diversity"
           )
           if [ -n "$SCHEDULE" ]; then
             paths="${SCHED_MAP[$SCHEDULE]:-}"
           elif [ "$MANUAL" = "all" ] || [ -z "$MANUAL" ]; then
-            paths="error-monitor hitl-escalation funnel-alert consent-reminder consent-expire audio-cleanup hitl-retraining-gate voice-model-cleanup chat-cleanup"
+            paths="error-monitor hitl-escalation funnel-alert consent-reminder consent-expire audio-cleanup hitl-retraining-gate voice-model-cleanup chat-cleanup push/dispatch expert-diversity"
           else
             paths="$MANUAL"
           fi
@@ -138,7 +155,11 @@ jobs:
           fi
           fail=0
           for name in $PATHS; do
-            url="$BASE/api/cron/$name"
+            # name 에 "/" 포함 시 (예: push/dispatch) /api/$name, 그 외 cron 은 /api/cron/$name.
+            case "$name" in
+              */*) url="$BASE/api/$name" ;;
+              *)   url="$BASE/api/cron/$name" ;;
+            esac
             echo "→ GET $url"
             # Vercel Cron 호출 규약: GET 메서드. lib/cron-auth.ts verifyCronSecret 도 Request 표준 사용.
             # (POST 사용 시 route handler 가 405 Method Not Allowed 응답 — 5/27 1차 fire 시 학습)
