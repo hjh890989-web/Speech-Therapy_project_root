@@ -248,4 +248,99 @@ describe("TEST-017 — audit_log_triggers R4 sanitize 검증", () => {
       expect([...SUSPICIOUS_PATTERNS]).toEqual(expected);
     });
   });
+
+  describe("Scenario 7: 무게이트 심화 — 다단계 중첩 · substring · key-only 경계 (TEST-017 백필)", () => {
+    // ⚠️ 실제 동작: audit_sanitize_jsonb (SQL + TS 재현) 는 중첩 object 를 _깊이 제한 없이_ 재귀한다.
+    //    소스 주석의 "1단계 재귀" 는 before/after wrapper 를 가리키는 intent 표현이며,
+    //    구현은 v_value 가 object 인 한 자기 자신을 재귀 호출(migration.sql L107)한다.
+    //    아래 테스트는 그 실제 full-recursion 동작 + key-only/substring 경계를 회귀 가드·문서화한다.
+
+    it("migration.sql 의 sanitize 함수가 자기 자신을 재귀 호출한다 (full recursion 보장)", () => {
+      const sql = fs.readFileSync(MIGRATION_PATH, "utf8");
+      const selfCalls = sql.match(/audit_sanitize_jsonb\(v_value\)/g) ?? [];
+      expect(selfCalls.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("depth-2 중첩 — created.childMeta.birthday 가 REDACTED (RewardLog INSERT 가설)", () => {
+      const input = {
+        created: {
+          id: "r1",
+          rewardType: "star",
+          childMeta: { birthday: "2020-01-01", nickname: "safe" },
+        },
+      };
+      expect(auditSanitizeJsonb(input)).toEqual({
+        created: {
+          id: "r1",
+          rewardType: "star",
+          childMeta: { birthday: "[REDACTED]", nickname: "safe" },
+        },
+      });
+    });
+
+    it("depth-3 중첩 — before.meta.profile.email 가 REDACTED", () => {
+      const input = {
+        before: { meta: { profile: { email: "p@x.com", locale: "ko" } } },
+      };
+      expect(auditSanitizeJsonb(input)).toEqual({
+        before: { meta: { profile: { email: "[REDACTED]", locale: "ko" } } },
+      });
+    });
+
+    it("중첩 wrapper — 비-PII 형제 키 보존, 내부 PII 키만 strip (HITLQueue correctedScore 가설)", () => {
+      const input = {
+        after: { correctedScore: { value: 80, evaluator_email: "expert@x.com" } },
+      };
+      expect(auditSanitizeJsonb(input)).toEqual({
+        after: { correctedScore: { value: 80, evaluator_email: "[REDACTED]" } },
+      });
+    });
+
+    it.each([
+      ["phoneme", "음소 분석"],
+      ["addressable", true],
+      ["realnamed", "x"],
+      ["emailVerified", true],
+    ])(
+      "substring 매칭 — 키 %s 는 의심 substring 포함으로 보수적 REDACTED (over-redaction 허용)",
+      (key, value) => {
+        const result = auditSanitizeJsonb({ [key as string]: value, id: "u1" }) as Record<
+          string,
+          unknown
+        >;
+        expect(result[key as string]).toBe("[REDACTED]");
+        expect(result.id).toBe("u1");
+      },
+    );
+
+    it("key-only 매칭 — 안전 키의 PII-형 값은 그대로 통과 (value 스캔 안 함)", () => {
+      // sanitize 는 _키 이름_ 만 본다. note 값에 연락처/이메일 형태 문자열이 있어도 strip 하지 않는다.
+      const input = { note: "보호자 연락처 010-1234-5678 / parent@x.com" };
+      expect(auditSanitizeJsonb(input)).toEqual(input);
+    });
+
+    it("RewardLog INSERT created — 복수 PII 키 동시 strip, 비-PII 보존", () => {
+      const input = {
+        created: { id: "r1", rewardType: "star", email: "p@x.com", phone: "010-1" },
+      };
+      expect(auditSanitizeJsonb(input)).toEqual({
+        created: { id: "r1", rewardType: "star", email: "[REDACTED]", phone: "[REDACTED]" },
+      });
+    });
+
+    it("DELETE — deleted wrapper 복수 PII (ssn/rrn/address) 동시 strip", () => {
+      const input = {
+        deleted: { id: "u1", role: "parent", ssn: "880101-1", rrn: "880101-1", address: "서울" },
+      };
+      expect(auditSanitizeJsonb(input)).toEqual({
+        deleted: {
+          id: "u1",
+          role: "parent",
+          ssn: "[REDACTED]",
+          rrn: "[REDACTED]",
+          address: "[REDACTED]",
+        },
+      });
+    });
+  });
 });
