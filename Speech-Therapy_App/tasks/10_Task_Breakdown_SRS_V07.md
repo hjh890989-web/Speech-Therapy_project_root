@@ -46,18 +46,19 @@
 | **FR-Q-022** | ✅ 코드 done | 스트리밍 UI + disclaimer(전역 footer 이미 done) + consent redirect + STT 마이크 + `?next` 보존(본 audit 후속) |
 | **TEST-020** | 🔶 partial | 금칙어/7일폐기/단일턴 단위 42 PASS. 잔여=`/chat` e2e + 재생성-1회 폴백(spec↔코드 충돌, 설계 확정 선행) |
 | **FR-C-030** | ✅ done | submit_care_log + Zod + PIPA + withActor audit + OfflineEntry 모델/RLS + weekly summary, 11 PASS (duration/therapistName 미반영=설계 단순화) |
-| **TEST-024** | 🔶 partial | submit+weekly-summary 22 PASS. 잔여=통합 view/F4 시각화/Form 테스트 (분단위 집계는 OfflineEntry duration 필드 부재로 모델 확장 선행) |
+| **TEST-024** | 🔶 partial | submit+weekly-summary 22 PASS + F4 WeeklyReviewSummary W-AUR 경계 5 (2026-06-01 `771bc8d`: count==4/3/0 · peer 0→상위100%/100→상위0%). 잔여=통합 view/Form 테스트 (분단위 집계는 OfflineEntry duration 필드 부재로 모델 확장 선행=게이트) |
 | **FR-C-HITL-007** | 🔶 partial | Phase1 Top-3 게이트+독립 cron 핸들러+멱등성(본 세션)+22 테스트 done. 잔여=cron 스케줄 미등록 + Phase2 위반대응 3종 + admin 시각화 |
 | **TEST-023** | 🔶 partial | Phase1+HHI/Gini+alerting 22 PASS. 잔여=Phase2 remediation 시나리오 3종(코드 부재로 구조적 차단) |
 | **MON-006** | 🔶 partial | 계산+route+Slack 코드 done. 잔여=cron 스케줄 미등록 + 전용 채널 분리 (Phase2 진입 게이트) |
-| **TEST-017** | 🔶 partial | R4 sanitize 단위/정적 85 PASS. 잔여=실 SQL TRIGGER 발화 통합 테스트(shadow branch 인프라) |
-| **API-015** | 🔶 partial | consent-sign/signOut **LIVE**, bulk-import/offline-entry는 B2B Phase2 게이트. 잔여=Server Action 단위 테스트 2 + 부하 테스트 |
+| **TEST-017** | 🔶 partial | R4 sanitize 단위/정적 85 PASS + 무게이트 심화 11 (2026-06-01 `f9004a1`: full-recursion·substring over-redaction·key-only 경계 — sanitize 는 실제 무제한 깊이 재귀, "1단계" 주석은 intent). 잔여=실 SQL TRIGGER 발화 통합 테스트(shadow branch 인프라=게이트) |
+| **API-015** | 🔶 partial | consent-sign/signOut **LIVE** + 액션 단위 테스트 14 done (2026-06-01 `5505ee8`: consent-sign 10 + sign-out 4). bulk-import/offline-entry는 B2B Phase2 게이트. 잔여=부하 테스트(Phase2) |
 | **FR-C-031** | 🔶 partial(보류) | 검증 helper 3종 + `prediction_cta_clicked` 계측 실배선. 나머지(모델/Cron/Amplitude)는 **결제 PG 미도입 게이트** |
 | **TEST-025** | 🔶 partial(보류) | 단위(exp2-cohort) PASS. 통합/e2e는 결제 PG 게이트 |
 
 **게이트 대기(코드 done, 활성만)**: F11 3종(`ELEVENLABS_API_KEY`) · F15 2종(`F15_CHAT_ENABLED`, **임상 13항목 통과**).
 **보류(외부 게이트)**: EXP-2(결제 PG) · HITL 다양성 Phase2(MAU 1,000+).
 **경계선 갭(게이트 무관, 지금 배선 가능)**: `external-crons.yml` 에 dispatch(F16) + expert-diversity cron 2줄 미등록.
+**2026-06-01 테스트 백필 (`/goal` QUEUE_EMPTY)**: TEST-017(+11)·API-015(+14)·TEST-024(+5) 무게이트 슬라이스 — vitest 2967→2997, 회귀 0, 3커밋(`f9004a1`·`5505ee8`·`771bc8d`). 상세 `docs/loop/DECISION_LOG.md`. 게이트분(실 SQL TRIGGER 통합·OfflineEntry duration 모델·B2B bulk-import/offline-entry)은 범위 밖 유지.
 
 ---
 
