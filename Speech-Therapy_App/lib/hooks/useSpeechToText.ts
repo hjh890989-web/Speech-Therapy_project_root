@@ -67,9 +67,13 @@ export function useSpeechToText(
   const [supported] = useState<boolean>(() => isSpeechToTextSupported());
   const [listening, setListening] = useState(false);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
-  // 최신 콜백 참조 (start 의 closure 가 stale 되지 않도록).
+  // 최신 콜백 참조 (start 의 closure 가 stale 되지 않도록). ref 갱신은 effect 에서 —
+  // render 중 ref.current 변경 금지(react-hooks/refs). onResult 는 STT 결과 콜백(start 이후
+  // 비동기 이벤트)에서만 읽히므로 effect 시점 갱신으로 항상 최신 반영.
   const onResultRef = useRef(onResult);
-  onResultRef.current = onResult;
+  useEffect(() => {
+    onResultRef.current = onResult;
+  }, [onResult]);
 
   const stop = useCallback(() => {
     try {

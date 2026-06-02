@@ -90,18 +90,25 @@ export function useVoiceActivity(args: UseVoiceActivityArgs): UseVoiceActivityRe
   );
 
   // enabled false 전환 시 모든 상태 reset (다음 enable 시 baseline 재측정).
+  // 같은 값 setState 는 React 가 no-op 처리 → if 가드 불필요. 자기 state(isSpeaking/baselineDb)를
+  // 조건·dep 에서 제거해 cascading render(react-hooks/set-state-in-effect) 차단. enabled=true 동안
+  // 본 effect 는 early-return no-op 이고, 그때 isSpeaking 은 메인 effect 만 갱신하므로 동작 동일.
   useEffect(() => {
-    if (!enabled) {
-      baselineBufferRef.current = [];
-      aboveSinceRef.current = null;
-      if (silenceTimeoutRef.current) {
-        clearTimeout(silenceTimeoutRef.current);
-        silenceTimeoutRef.current = null;
-      }
-      if (isSpeaking) setIsSpeaking(false);
-      if (baselineDb !== null) setBaselineDb(null);
+    if (enabled) return;
+    baselineBufferRef.current = [];
+    aboveSinceRef.current = null;
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
     }
-  }, [enabled, isSpeaking, baselineDb]);
+    // 외부 제어(enabled) 에 내부 VAD 상태를 동기화하는 의도된 reset-on-disable cleanup.
+    // hook 이라 컴포넌트 key/ render-time derive 패턴이 부적합 → 명시적 effect 유지.
+    // 같은 값이면 React no-op 이라 cascade 없음(자기 state 는 dep 에서 이미 제거).
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setIsSpeaking(false);
+    setBaselineDb(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled) return;

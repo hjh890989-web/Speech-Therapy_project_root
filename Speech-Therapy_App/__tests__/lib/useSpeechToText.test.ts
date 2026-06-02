@@ -23,6 +23,8 @@ class FakeRecognition {
   onerror: (() => void) | null = null;
   onend: (() => void) | null = null;
   constructor() {
+    // 테스트 fake — 직전 생성 인스턴스를 기록해 onresult/onend 등을 외부에서 트리거.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- test fake instance 캡처(의도)
     lastRec = this;
   }
 }
