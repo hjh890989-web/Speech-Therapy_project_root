@@ -15,8 +15,11 @@ import { test, expect } from "@playwright/test";
 
 const F15_ENABLED = process.env.F15_CHAT_ENABLED === "true";
 
-/// CON-04 핵심 금칙어 (diagnose-flow.spec 과 동일 집합).
-const BANNED = ["치료", "진단", "장애", "환자", "처방", "의료적 판단"];
+/// CON-04 핵심 금칙어. "의료적 판단"은 제외 — 전역 MedicalDisclaimerFooter(REQ-NF-028)의
+/// "의료적 판단이 필요한 경우 의료기관 진료 권장" 은 비의료기기 고지의 *합법·필수* 문구이며
+/// CON-04 위반 아님(canonical 금칙어 = 치료/진단/장애, tasks/07 strict-reading 판정). 의료기기/
+/// 의료기관/진료 등 의료-맥락 단어도 고지 목적상 정상. (diagnose-flow.spec 도 동일 제외 필요 — 별도.)
+const BANNED = ["치료", "진단", "장애", "환자", "처방"];
 
 async function expectNoBannedWords(bodyText: string) {
   for (const word of BANNED) {

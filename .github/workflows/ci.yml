@@ -7,10 +7,12 @@
 # 검증 범위:
 #   quality-gate  : tsc --noEmit + eslint + vitest run
 #   next-build    : next build (Turbopack chunking / "use server" 룰 위반 사전 차단)
+#   e2e-chat      : F15 /chat playwright (게이트 ON, route-mock — 안전 표면 회귀 가드, 2026-06-02 추가)
 #   prisma-drift  : prisma migrate status (DB 연결 — secrets 필요)
 #
 # 범위 외 (의도적 제외):
-#   - playwright e2e — Vercel preview deploy 후 별도 워크플로
+#   - playwright e2e 전체 (diagnose / onboarding 등) — Vercel preview deploy 후 별도 워크플로
+#     (단 F15 /chat e2e 는 안전 표면 회귀 가드로 본 워크플로 e2e-chat job 에 포함)
 #
 # next-build job 추가 사유 (2026-05-25 §16 sub-session 학습):
 #   - vitest + tsc + lint 모두 통과해도 `next build` 가 깨질 수 있음.
@@ -154,6 +156,80 @@ jobs:
 
       - name: Next build (Turbopack — chunking / "use server" 룰 검증)
         run: npx next build
+
+  # ---------------------------------------------------------------------------
+  # e2e-chat — F15 /chat 안전 표면 e2e (playwright, 게이트 ON).
+  #
+  # 2026-06-02: F15 활성 evidence. chat-flow.spec 은 /api/chat/stream 을 page.route 로
+  #   canned 스트림 mock → 실 Gemini / auth 불요. F15_CHAT_ENABLED=true 로 runner + 서버 동일
+  #   env → ON describe(스트리밍 UI · 401/403 에러 매핑 · CON-04 금칙어 0) 실행, OFF 는 skip.
+  # webServer 자동부팅(next dev) 대신 next build + next start 수동 기동(프로덕션 경로 —
+  #   로컬 dev 부팅 이슈 회피 + PLAYWRIGHT_BASE_URL 로 playwright 자동 webServer skip).
+  #   2026-06-02 로컬 검증 동일 흐름 (next start + PLAYWRIGHT_BASE_URL → ON 10 passed).
+  # ---------------------------------------------------------------------------
+  e2e-chat:
+    name: e2e-chat (F15 /chat playwright, 게이트 ON)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: Speech-Therapy_App
+
+    env:
+      DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+      DIRECT_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+      GOOGLE_GENERATIVE_AI_API_KEY: "ci-dummy-key"
+      NEXT_PUBLIC_SUPABASE_URL: "https://ci-dummy.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-dummy-anon-key"
+      NEXT_PUBLIC_BASE_URL: "https://ci-dummy.example"
+      NEXT_PUBLIC_SITE_URL: "https://ci-dummy.example"
+      TZ: "Asia/Seoul"
+      # F15 게이트 ON — runner(F15_ENABLED) + 수동 기동 서버 동일 env 로 ON describe 실행.
+      F15_CHAT_ENABLED: "true"
+      # 외부 baseURL 지정 → playwright 자동 webServer(next dev) skip (아래 next start 수동 기동).
+      PLAYWRIGHT_BASE_URL: "http://localhost:4000"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24 + npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: Speech-Therapy_App/package-lock.json
+
+      - name: Install dependencies (npm ci, postinstall prisma generate)
+        run: npm ci
+
+      - name: Install Playwright chromium (+ OS deps)
+        run: npx playwright install --with-deps chromium
+
+      - name: Next build (prod)
+        run: npx next build
+
+      - name: Start prod server + run F15 /chat e2e (gate ON)
+        run: |
+          npm start &
+          SERVER_PID=$!
+          # 서버 준비 대기 (최대 60s) — /chat 200 확인.
+          ready=false
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:4000/chat >/dev/null 2>&1; then
+              echo "server ready after ${i}s"; ready=true; break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "true" ]; then
+            echo "::error::next start 서버가 60s 내 부팅 실패"
+            kill "$SERVER_PID" 2>/dev/null || true
+            exit 1
+          fi
+          npx playwright test chat-flow --reporter=line
+          status=$?
+          kill "$SERVER_PID" 2>/dev/null || true
+          exit $status
 
   # ---------------------------------------------------------------------------
   # prisma-drift — schema.prisma 와 운영 DB 의 migration history 일치 검증.
