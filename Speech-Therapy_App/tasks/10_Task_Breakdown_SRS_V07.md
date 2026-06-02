@@ -43,8 +43,8 @@
 | **API-020** | ✅ done | subscribe/unsubscribe/dispatch/dismiss + web-push wrapper. dispatch cron `external-crons.yml` 등록(2026-06-01, 09:00 UTC). 런타임 활성=D5 부활(F16 게이트 off 시 no-op 200) |
 | **FR-C-029** | ✅ done | SW push/click/close + usePushSubscription hook + 토글 UI(본 세션). 게이트=D5 부활 |
 | **TEST-021** | ✅ done | config/send/actions/routes/static 50건. dispatch 자동스케줄 등록(2026-06-01 `external-crons.yml`) |
-| **FR-Q-022** | ✅ 코드 done | 스트리밍 UI + disclaimer(전역 footer 이미 done) + consent redirect + STT 마이크 + `?next` 보존(본 audit 후속) |
-| **TEST-020** | 🔶 partial | 금칙어/7일폐기/단일턴 단위 PASS + **swap-terminal 정본 확정·spec 정합(2026-06-02 `d9e5429` 후속): 재생성-1회 충돌 해소 + 결정 잠금 테스트**. 잔여=`/chat` e2e CI 수집(webServer 부팅 이슈). ⇒ F15 활성 BLOCKING 결정 해소(남은 건 e2e CI + 플래그 go) |
+| **FR-Q-022** | ✅ done + **F15 Production 활성(2026-06-02)** | 스트리밍 UI + disclaimer + consent redirect + STT 마이크 + `?next`. **prod /chat LIVE** (`F15_CHAT_ENABLED=true` Production scope; prod 실검증: 채팅 UI·nav 링크·STT·비로그인 401·이중동의·금칙어→안전폴백) |
+| **TEST-020** | ✅ done | 금칙어/7일폐기/단일턴 단위 + **swap-terminal 정본·spec 정합(2026-06-02 `3402f5b`: 재생성-1회 충돌 해소 + 결정 잠금 테스트)** + **e2e CI green(`92fc0d6` ci.yml `e2e-chat` job, 게이트 ON 10 passed)** + **prod 실검증(금칙어→안전폴백)**. |
 | **FR-C-030** | ✅ done | submit_care_log + Zod + PIPA + withActor audit + OfflineEntry 모델/RLS + weekly summary, 11 PASS (duration/therapistName 미반영=설계 단순화) |
 | **TEST-024** | 🔶 partial | submit+weekly-summary 22 PASS + F4 WeeklyReviewSummary W-AUR 경계 5 (2026-06-01 `771bc8d`: count==4/3/0 · peer 0→상위100%/100→상위0%). 잔여=통합 view/Form 테스트 (분단위 집계는 OfflineEntry duration 필드 부재로 모델 확장 선행=게이트) |
 | **FR-C-HITL-007** | 🔶 partial | Phase1 Top-3 게이트+독립 cron 핸들러+멱등성+22 테스트 done. cron 스케줄 등록(2026-06-01 `external-crons.yml`, 20:00 UTC). 잔여=Phase2 위반대응 3종 + admin 시각화 |
@@ -55,10 +55,11 @@
 | **FR-C-031** | 🔶 partial(보류) | 검증 helper 3종 + `prediction_cta_clicked` 계측 실배선. 나머지(모델/Cron/Amplitude)는 **결제 PG 미도입 게이트** |
 | **TEST-025** | 🔶 partial(보류) | 단위(exp2-cohort) PASS. 통합/e2e는 결제 PG 게이트 |
 
-**게이트 대기(코드 done, 활성만)**: F11 3종(`ELEVENLABS_API_KEY`) · F15 2종(`F15_CHAT_ENABLED`, **임상 13항목 통과**).
+**게이트 대기(코드 done, 활성만)**: F11 3종(`ELEVENLABS_API_KEY`). **F15 → Production 활성 완료(2026-06-02)** — `F15_CHAT_ENABLED=true`(Prod+Preview scope), 임상 13항목 통과 + e2e CI green + prod 실검증. 롤백=flag false+재배포.
 **보류(외부 게이트)**: EXP-2(결제 PG) · HITL 다양성 Phase2(MAU 1,000+).
 **경계선 갭(해소 2026-06-01)**: `external-crons.yml` 에 push-dispatch(F16, 09:00 UTC) + expert-diversity(HITL-007, 20:00 UTC) cron 2줄 등록 완료. `push/*` 는 `/api/cron/` 아닌 `/api/push/` prefix → Fire step 이 name 의 "/" 로 분기.
 **2026-06-01 테스트 백필 (`/goal` QUEUE_EMPTY)**: TEST-017(+11)·API-015(+14)·TEST-024(+5) 무게이트 슬라이스 — vitest 2967→2997, 회귀 0, 3커밋(`f9004a1`·`5505ee8`·`771bc8d`). 상세 `docs/loop/DECISION_LOG.md`. 게이트분(실 SQL TRIGGER 통합·OfflineEntry duration 모델·B2B bulk-import/offline-entry)은 범위 밖 유지.
+**2026-06-02 F15 Production 활성**: TEST-020 swap-terminal 정본(`3402f5b`) → e2e-chat CI job(`92fc0d6`) → react-hooks lint 3건 복구로 CI 전체 green(`07bcc0e`, 05-31부터 red였음) → Preview 검증 → **Production flip(`F15_CHAT_ENABLED=true`) + prod 실검증 완료**. vitest 3004. 상세 `Prompt/대화기록_2026-06-02.md`.
 
 ---
 
