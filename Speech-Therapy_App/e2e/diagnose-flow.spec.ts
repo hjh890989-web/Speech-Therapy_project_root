@@ -39,7 +39,9 @@ test.describe("FR-Q-001 진단 페이지", () => {
     const body = await page.locator("body").innerText();
     // AGENTS.md §2.1 의 CON-04 핵심 금칙어 + PRIMARY 의료 단어.
     // 본 sub-session 의 갭 분석 (07 보고서) 반영 — "진단" UI 카피 제거 검증.
-    const bannedWords = ["치료", "진단", "장애", "환자", "처방", "의료적 판단"];
+    // "의료적 판단" 제외 — 전역 MedicalDisclaimerFooter(REQ-NF-028)의 합법·필수 고지 문구
+    // (canonical CON-04 = 치료/진단/장애). chat-flow.spec 과 동일 정합(2026-06-02).
+    const bannedWords = ["치료", "진단", "장애", "환자", "처방"];
     for (const word of bannedWords) {
       expect(body, `금칙어 "${word}" 발견됨`).not.toContain(word);
     }
@@ -91,7 +93,9 @@ test.describe("FR-Q-002 결과 페이지 — MOCK_SESSION_ID 직접 진입", () 
     const body = await page.locator("body").innerText();
     // 07 보고서 (2026-05-16) 의 갭 해소 결과 검증.
     // "진단" 버튼 → "발음 확인" 으로 / "의료적 판단" → "의료적 평가" 로 교체됨.
-    const bannedWords = ["치료", "진단", "장애", "환자", "처방", "의료적 판단"];
+    // "의료적 판단" 제외 — 전역 MedicalDisclaimerFooter(REQ-NF-028)의 합법·필수 고지 문구
+    // (canonical CON-04 = 치료/진단/장애). chat-flow.spec 과 동일 정합(2026-06-02).
+    const bannedWords = ["치료", "진단", "장애", "환자", "처방"];
     for (const word of bannedWords) {
       expect(body, `금칙어 "${word}" 발견됨`).not.toContain(word);
     }

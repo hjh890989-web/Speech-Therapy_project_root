@@ -35,7 +35,6 @@ import { sendParentInvite } from "@/app/actions/parent-invite";
 
 // FR-PERF-3-USE-SERVER-REFACTOR — non-async exports 는 ./student-bulk-import-shape 으로 분리.
 import type {
-  ParentInviteSummary,
   SubmitBulkImportOptions,
   SubmitBulkImportResult,
 } from "./student-bulk-import-shape";

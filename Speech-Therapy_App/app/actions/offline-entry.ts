@@ -35,15 +35,11 @@ import {
   createOfflineEntry,
   OFFLINE_ENTRY_KINDS,
   OFFLINE_ENTRY_NOTE_MAX_LENGTH,
-  type OfflineEntryKind,
 } from "@/lib/offline-entry/repo";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 // FR-PERF-3-USE-SERVER-REFACTOR — non-async exports 는 ./offline-entry-shape 으로 분리.
-import type {
-  SubmitOfflineEntryInput,
-  SubmitOfflineEntryResult,
-} from "./offline-entry-shape";
+import type { SubmitOfflineEntryResult } from "./offline-entry-shape";
 
 /// 본 Action 허용 role — teacher / principal / admin.
 /// expert / parent 차단.
