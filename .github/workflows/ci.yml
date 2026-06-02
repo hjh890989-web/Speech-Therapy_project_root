@@ -7,12 +7,12 @@
 # 검증 범위:
 #   quality-gate  : tsc --noEmit + eslint + vitest run
 #   next-build    : next build (Turbopack chunking / "use server" 룰 위반 사전 차단)
-#   e2e-chat      : F15 /chat playwright (게이트 ON, route-mock — 안전 표면 회귀 가드, 2026-06-02 추가)
+#   e2e           : 공개 e2e 전체 playwright (chat/diagnose/consent/voice — 게이트·UI·에러매핑, route-mock, 2026-06-02)
 #   prisma-drift  : prisma migrate status (DB 연결 — secrets 필요)
 #
 # 범위 외 (의도적 제외):
-#   - playwright e2e 전체 (diagnose / onboarding 등) — Vercel preview deploy 후 별도 워크플로
-#     (단 F15 /chat e2e 는 안전 표면 회귀 가드로 본 워크플로 e2e-chat job 에 포함)
+#   - auth 의존 e2e (*.auth.spec — Supabase service-role secrets 필요) — secrets 환경/별도 워크플로
+#     (공개 e2e 전체[chat/diagnose/consent/voice]는 본 워크플로 e2e job 에 포함, 2026-06-02)
 #
 # next-build job 추가 사유 (2026-05-25 §16 sub-session 학습):
 #   - vitest + tsc + lint 모두 통과해도 `next build` 가 깨질 수 있음.
@@ -158,17 +158,18 @@ jobs:
         run: npx next build
 
   # ---------------------------------------------------------------------------
-  # e2e-chat — F15 /chat 안전 표면 e2e (playwright, 게이트 ON).
+  # e2e — 공개 e2e 전체 (playwright): chat-flow / diagnose-flow / consent-flow / voice-recording-flow.
   #
-  # 2026-06-02: F15 활성 evidence. chat-flow.spec 은 /api/chat/stream 을 page.route 로
-  #   canned 스트림 mock → 실 Gemini / auth 불요. F15_CHAT_ENABLED=true 로 runner + 서버 동일
-  #   env → ON describe(스트리밍 UI · 401/403 에러 매핑 · CON-04 금칙어 0) 실행, OFF 는 skip.
-  # webServer 자동부팅(next dev) 대신 next build + next start 수동 기동(프로덕션 경로 —
-  #   로컬 dev 부팅 이슈 회피 + PLAYWRIGHT_BASE_URL 로 playwright 자동 webServer skip).
-  #   2026-06-02 로컬 검증 동일 흐름 (next start + PLAYWRIGHT_BASE_URL → ON 10 passed).
+  # 2026-06-02: chat-flow 안전표면(F15 ON — 스트리밍·401/403 에러매핑·CON-04 금칙어 0) + diagnose
+  #   (진단/결과 페이지·Disclaimer·백분위 넛지) + consent(정책/PIPA 페이지) + voice 인증가드. spec 이
+  #   /api/* 를 page.route 로 mock 하거나 공개 페이지만 보므로 실 Gemini/DB/auth 불요. auth 의존
+  #   *.auth.spec 은 Supabase service-role 부재로 playwright project 가 자동 제외. F15_CHAT_ENABLED
+  #   =true 로 chat ON describe 실행(타 spec 무영향).
+  # webServer 자동부팅(next dev) 대신 next build + next start 수동 기동(프로덕션 경로 — 로컬 dev
+  #   부팅 이슈 회피 + PLAYWRIGHT_BASE_URL 로 playwright 자동 webServer skip). 로컬 검증: 공개 50 passed.
   # ---------------------------------------------------------------------------
-  e2e-chat:
-    name: e2e-chat (F15 /chat playwright, 게이트 ON)
+  e2e:
+    name: e2e (public specs — playwright)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -209,7 +210,7 @@ jobs:
       - name: Next build (prod)
         run: npx next build
 
-      - name: Start prod server + run F15 /chat e2e (gate ON)
+      - name: Start prod server + run public e2e (playwright)
         run: |
           npm start &
           SERVER_PID=$!
@@ -226,7 +227,7 @@ jobs:
             kill "$SERVER_PID" 2>/dev/null || true
             exit 1
           fi
-          npx playwright test chat-flow --reporter=line
+          npx playwright test --reporter=line
           status=$?
           kill "$SERVER_PID" 2>/dev/null || true
           exit $status

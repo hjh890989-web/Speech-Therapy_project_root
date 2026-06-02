@@ -25,10 +25,10 @@ test.describe("FR-Q-001 진단 페이지", () => {
       await expect(disclaimers.nth(i)).toBeVisible();
     }
 
-    // 입력 항목 ≤ 3 (slider · select · checkbox).
+    // 핵심 진단 입력 (slider · select) + 동의/이해 checkbox (현재 3개: 만14세미만·국외이전·이해).
     await expect(page.getByRole("slider", { name: /자녀 월령/ })).toBeVisible();
     await expect(page.locator('select#targetPhoneme')).toBeVisible();
-    await expect(page.getByRole("checkbox")).toBeVisible();
+    await expect(page.getByRole("checkbox").first()).toBeVisible();
 
     // 발화 시작 버튼 또는 미지원 안내 — 브라우저별 다를 수 있음.
     // chromium 은 Web Speech 미지원이라 안내 메시지 표시될 것.
@@ -75,7 +75,8 @@ test.describe("FR-Q-002 결과 페이지 — MOCK_SESSION_ID 직접 진입", () 
 
     // mockSuccessHigh.peerPercentile = 92 → 상위 8%.
     await expect(page.getByText("또래 백분위")).toBeVisible();
-    await expect(page.getByText(/상위 \d+% 안에 들어요/)).toBeVisible();
+    // "상위 N% 안에 들어요" 는 넛지 카피 + 백분위 라인 2곳에 노출 → first() 로 strict-mode 회피.
+    await expect(page.getByText(/상위 \d+% 안에 들어요/).first()).toBeVisible();
 
     // 3축 점수 카드 (조음 / 언어 / 음향).
     await expect(page.getByText("조음")).toBeVisible();

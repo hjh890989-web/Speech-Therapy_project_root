@@ -22,10 +22,11 @@ test.describe("SEC-COMP-PIPA — 정책 페이지 접근", () => {
     await expect(
       page.getByRole("heading", { name: /개인정보 처리방침/ }),
     ).toBeVisible();
-    // PIPA §22-6 / §17 섹션 포함.
+    // 정식본(변호사 자문 반영)으로 재작성됨 — placeholder 시절 문자열 대신 현행 섹션 토픽으로 검증.
+    // PIPA §22조의6(만 14세 미만) + 국외 이전(§17 맥락) 섹션 포함.
     const body = await page.locator("body").innerText();
-    expect(body).toContain("PIPA §22조 6항");
-    expect(body).toContain("PIPA §17조");
+    expect(body).toContain("만 14세 미만");
+    expect(body).toContain("국외 이전");
   });
 
   test("/terms placeholder 페이지 로드 + 비의료기기 명시", async ({ page }) => {
