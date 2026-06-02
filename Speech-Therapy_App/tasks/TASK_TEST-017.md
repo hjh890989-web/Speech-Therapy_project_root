@@ -34,10 +34,10 @@ assignees: ''
 - [ ] 단위 테스트 — `audit_sanitize_jsonb` 함수 단독 호출:
   - input: `{"realname": "홍길동", "score": 80, "child": {"birthdate": "2020-01-01"}}`
   - expected: `{"realname": "[REDACTED]", "score": 80, "child": {"birthdate": "[REDACTED]"}}`
-- [ ] 통합 테스트 — 실 Prisma transaction 으로 TRIGGER 발화 검증:
-  - 테스트 DB (Supabase shadow branch 또는 in-memory PostgreSQL) 사용
-  - `prisma.user.update({where: {id: 'u1'}, data: {pipaUnderageConsentAt: new Date()}})`
-  - AuditLog row 조회 → action='UPDATE' + actorId + sanitized JSONB 검증
+- [x] 통합 테스트 — **실 PostgreSQL(PGlite in-process WASM)로 TRIGGER 발화 검증** (`__tests__/integration/audit-r4-sanitize-db.test.ts`, 10 PASS, 2026-06-02):
+  - **in-memory PostgreSQL(PGlite=PG16 WASM) 채택** — Supabase shadow branch 불요(vitest in-process, 외부 DB/CI service 0). pg-mem 은 plpgsql 미지원이라 배제.
+  - 실제 `migration.sql`(audit_sanitize_jsonb + audit_trigger_fn + 3 TRIGGER) 로드 → 4개 테이블 최소 스캐폴드에 INSERT/UPDATE/DELETE 발화
+  - AuditLog row 조회 → action(`{Table}_{op}`) + actorId(GUC `audit.actor_id` 캡처 / 'system' fallback) + sanitized diff(중첩 재귀·false-positive 0) 검증
 - [ ] 의심 키 7종 (`realname / ssn / rrn / email / phone / address / birthdate`) 7 케이스 매트릭스 검증
 - [ ] `pg_proc` 함수 존재 검증 SQL (smoke test)
 

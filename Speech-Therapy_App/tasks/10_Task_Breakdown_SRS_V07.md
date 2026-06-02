@@ -50,7 +50,7 @@
 | **FR-C-HITL-007** | 🔶 partial | Phase1 Top-3 게이트+독립 cron 핸들러+멱등성+22 테스트 done. cron 스케줄 등록(2026-06-01 `external-crons.yml`, 20:00 UTC). 잔여=Phase2 위반대응 3종 + admin 시각화 |
 | **TEST-023** | 🔶 partial | Phase1+HHI/Gini+alerting 22 PASS. 잔여=Phase2 remediation 시나리오 3종(코드 부재로 구조적 차단) |
 | **MON-006** | 🔶 partial | 계산+route+Slack 코드 done. 잔여=cron 스케줄 미등록 + 전용 채널 분리 (Phase2 진입 게이트) |
-| **TEST-017** | 🔶 partial | R4 sanitize 단위/정적 85 PASS + 무게이트 심화 11 (2026-06-01 `f9004a1`: full-recursion·substring over-redaction·key-only 경계 — sanitize 는 실제 무제한 깊이 재귀, "1단계" 주석은 intent). 잔여=실 SQL TRIGGER 발화 통합 테스트(shadow branch 인프라=게이트) |
+| **TEST-017** | ✅ done | R4 sanitize 단위/정적 85 + 무게이트 심화 11(2026-06-01 `f9004a1`) + **실 SQL TRIGGER 통합 10(2026-06-02: PGlite in-process Postgres 로 실 migration PL/pgSQL 발화 — INSERT/UPDATE/DELETE→AuditLog 자동적재·중첩 sanitize·actorId GUC·'system' fallback 검증)**. shadow branch 인프라 불요(vitest 내 실행). |
 | **API-015** | 🔶 partial | consent-sign/signOut **LIVE** + 액션 단위 테스트 14 done (2026-06-01 `5505ee8`: consent-sign 10 + sign-out 4). bulk-import/offline-entry는 B2B Phase2 게이트. 잔여=부하 테스트(Phase2) |
 | **FR-C-031** | 🔶 partial(보류) | 검증 helper 3종 + `prediction_cta_clicked` 계측 실배선. 나머지(모델/Cron/Amplitude)는 **결제 PG 미도입 게이트** |
 | **TEST-025** | 🔶 partial(보류) | 단위(exp2-cohort) PASS. 통합/e2e는 결제 PG 게이트 |
