@@ -12,7 +12,7 @@ assignees: ''
 - **Phase**: 🟡 P1+
 - **Mode**: 명세대로 + ADR-14 임상 안전 게이트 의존
 - **Discope 적용**: 해당 없음 (F15 활성은 ADR-14 게이트 통과 후)
-- **목적**: F15 chat 의 의료 용어 0건 자동 검증 (Middleware proxy.ts) + 7일 폐기 Cron + 단일턴 컨텍스트 (pgvector 미사용) 단위 + 통합 테스트. ADR-14 임상 안전 게이트 통과 evidence 의 핵심 자동 검증. Gemini Pro 1.5 응답에 금칙어 1건 발생 시 즉시 차단 + 사용자 재생성 1회 후 폴백.
+- **목적**: F15 chat 의 의료 용어 0건 자동 검증 (Route Handler stream transform) + 7일 폐기 Cron + 단일턴 컨텍스트 (pgvector 미사용) 단위 + 통합 테스트. ADR-14 임상 안전 게이트 통과 evidence 의 핵심 자동 검증. Gemini 응답에 금칙어 1건 발생 시 **즉시 차단(swap) + 결정적 안전 폴백 멘트 1회 노출 후 stream 종료** (재생성 retry 없음 — **2026-06-02 swap-terminal 정본 확정, 기존 명세 "재생성 1회"와 코드 충돌 해소**: 자녀 대화엔 2차 Gemini 호출보다 즉시 결정적 폴백이 안전·저비용·저지연, 3-layer 가드와 일관).
 
 ## 🔗 References
 - **SRS V07**: [`../docs/65_SRS_V07_Merged_Master_Final.md`](../docs/65_SRS_V07_Merged_Master_Final.md)
@@ -24,12 +24,12 @@ assignees: ''
 - **선행 구현**: FR-C-028 (chat 안전망), API-019 (chat stream + 7일 폐기 Cron)
 
 ## ✅ Task Breakdown
-- [ ] `__tests__/unit/chat-medical-term-filter.test.ts` 단위 테스트:
-  - test 1 — Middleware proxy.ts 의 응답 stream chunk scan, 금칙어 1건 발견 시 차단
-  - test 2 — 금칙어 10종 ("치료/진단/장애/환자/병/증상/처방/병원/아프/문제아") 매트릭스 검증
+- [x] `__tests__/lib/ai/profanity-filter.test.ts` 단위 테스트 — 실제 검열 = **Route Handler stream transform `filterStream` + INSERT 전 `submitChatUtterance` + system prompt** 3중 방어. (proxy.ts 는 stream 본문 스캔 불가 → 명세의 "proxy.ts 검열"은 부정확, 정정.)
+  - test 1 — 응답 stream chunk scan(문장 경계 buffer), 금칙어 1건 발견 시 차단
+  - test 2 — 금칙어 10종 ("치료/진단/장애/환자/병/증상/처방/병원/아프다/문제아") 매트릭스 검증
   - test 3 — 금칙어 미포함 응답 정상 통과
-  - test 4 — 1차 차단 후 재생성 1회 시도
-  - test 5 — 2차도 차단 시 안전 폴백 메시지 ("죄송합니다. 다시 시도해주세요")
+  - test 4 — **금칙어 감지 시 swap 마커 + 안전 폴백 후 stream 즉시 종료 (swap-terminal — 재생성 없음)**
+  - test 5 — **금칙어 후 후속 clean 청크 미방출 + 폴백 정확히 1회 (재생성 retry 부재 가드) + 경계 횡단(치.료/치\n료) carry 탐지**
 - [ ] `__tests__/integration/f15-chat-lifecycle.test.ts`:
   - test 1 — `submit_chat_utterance` Server Action → chat_utterances INSERT, expiresAt = createdAt + 7d
   - test 2 — 7일 경과 후 Cron 실행 → 만료 row 삭제 검증
@@ -41,18 +41,18 @@ assignees: ''
 ## 🧪 Acceptance Criteria (BDD/GWT)
 **Scenario 1: 금칙어 응답 차단 (REQ-FUNC-039 + ADR-04)**
 - **Given**: Gemini 응답 "이건 진단 결과입니다"
-- **When**: Middleware proxy.ts scan
-- **Then**: stream 차단 + 재생성 1회 trigger
+- **When**: Route Handler stream transform(`filterStream`) 문장 경계 scan
+- **Then**: stream 차단 + swap 마커 + 안전 폴백 멘트 enqueue 후 close (재생성 trigger 없음 — swap-terminal)
 
 **Scenario 2: 정상 응답 통과**
 - **Given**: Gemini 응답 "발음 가이드를 제공합니다"
 - **When**: scan
 - **Then**: stream 통과, 사용자에 정상 표시
 
-**Scenario 3: 재생성 후에도 금칙어 시 안전 폴백**
-- **Given**: 1차 + 2차 응답 모두 금칙어 포함
-- **When**: 2차 차단
-- **Then**: "죄송합니다. 다시 시도해주세요" 안전 폴백 메시지 노출
+**Scenario 3: swap-terminal 결정성 (2026-06-02 정본 — 재생성 없음)**
+- **Given**: 금칙어 문장 뒤에 clean 문장이 이어지는 응답
+- **When**: 금칙어 문장에서 swap
+- **Then**: 안전 폴백 멘트("우리 같이 천천히 한 번 더 이야기해 볼까요? 😊") 정확히 1회 노출 + 후속 clean 청크 미방출(stream 종료). 2차 Gemini 호출/재생성 retry 없음.
 
 **Scenario 4: 7일 폐기 (REQ-FUNC-039 + ADR-03)**
 - **Given**: chat_utterances row, createdAt = 8일 전

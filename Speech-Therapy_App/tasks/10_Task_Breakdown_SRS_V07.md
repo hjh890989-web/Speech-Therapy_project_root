@@ -44,7 +44,7 @@
 | **FR-C-029** | ✅ done | SW push/click/close + usePushSubscription hook + 토글 UI(본 세션). 게이트=D5 부활 |
 | **TEST-021** | ✅ done | config/send/actions/routes/static 50건. dispatch 자동스케줄 등록(2026-06-01 `external-crons.yml`) |
 | **FR-Q-022** | ✅ 코드 done | 스트리밍 UI + disclaimer(전역 footer 이미 done) + consent redirect + STT 마이크 + `?next` 보존(본 audit 후속) |
-| **TEST-020** | 🔶 partial | 금칙어/7일폐기/단일턴 단위 42 PASS. 잔여=`/chat` e2e + 재생성-1회 폴백(spec↔코드 충돌, 설계 확정 선행) |
+| **TEST-020** | 🔶 partial | 금칙어/7일폐기/단일턴 단위 PASS + **swap-terminal 정본 확정·spec 정합(2026-06-02 `d9e5429` 후속): 재생성-1회 충돌 해소 + 결정 잠금 테스트**. 잔여=`/chat` e2e CI 수집(webServer 부팅 이슈). ⇒ F15 활성 BLOCKING 결정 해소(남은 건 e2e CI + 플래그 go) |
 | **FR-C-030** | ✅ done | submit_care_log + Zod + PIPA + withActor audit + OfflineEntry 모델/RLS + weekly summary, 11 PASS (duration/therapistName 미반영=설계 단순화) |
 | **TEST-024** | 🔶 partial | submit+weekly-summary 22 PASS + F4 WeeklyReviewSummary W-AUR 경계 5 (2026-06-01 `771bc8d`: count==4/3/0 · peer 0→상위100%/100→상위0%). 잔여=통합 view/Form 테스트 (분단위 집계는 OfflineEntry duration 필드 부재로 모델 확장 선행=게이트) |
 | **FR-C-HITL-007** | 🔶 partial | Phase1 Top-3 게이트+독립 cron 핸들러+멱등성+22 테스트 done. cron 스케줄 등록(2026-06-01 `external-crons.yml`, 20:00 UTC). 잔여=Phase2 위반대응 3종 + admin 시각화 |

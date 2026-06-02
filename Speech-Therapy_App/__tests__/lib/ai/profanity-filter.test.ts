@@ -110,4 +110,21 @@ describe("filterStream — 문장 경계 검열 + swap", () => {
     expect(out3).not.toContain("치료");
     expect(out3).toContain(CHAT_SWAP_MARKER);
   });
+
+  // TEST-020 swap-terminal 정본 (2026-06-02 결정 — spec "재생성 1회" ↔ 코드 충돌 해소).
+  // 금칙어 감지 시 즉시 안전 폴백으로 교체하고 stream 을 종료한다. 재생성(2차 Gemini 호출)·
+  // retry 없음 — 결정적·저비용·저지연. 본 테스트가 향후 retry 도입 회귀를 차단한다.
+  it("[swap-terminal] 금칙어 후 후속 clean 청크 미방출 + 폴백 정확히 1회 (재생성 retry 부재 가드)", async () => {
+    // 금칙어 문장 뒤에 깨끗한 문장이 더 와도, swap 후 stream 이 종료되어 후속은 드롭된다.
+    const out = await collect(
+      filterStream(streamOf(["병원 갔어. ", "그래도 즐거웠어! ", "또 보자!"])),
+    );
+    // 결정적 종료 — 출력은 정확히 [swap 마커 + 안전 폴백] 뿐.
+    expect(out).toBe(`${CHAT_SWAP_MARKER}${SAFE_FALLBACK_MESSAGE}`);
+    // 안전 폴백은 정확히 1회 — 재생성/2차 시도로 인한 중복 없음.
+    expect(out.split(SAFE_FALLBACK_MESSAGE).length - 1).toBe(1);
+    // 금칙어 이후 clean 문장은 방출되지 않음 (terminal).
+    expect(out).not.toContain("즐거웠어");
+    expect(out).not.toContain("또 보자");
+  });
 });
