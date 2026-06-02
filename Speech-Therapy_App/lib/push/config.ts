@@ -28,8 +28,11 @@ export interface VapidKeys {
  * subject 는 VAPID_SUBJECT env, 미설정 시 안전 default (mailto:).
  */
 export function getVapidKeys(): VapidKeys | null {
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  // env 복사-붙여넣기 시 끼어드는 공백/개행 + base64 padding('=') 제거 → web-push setVapidDetails 의
+  // 엄격한 url-safe base64(무패딩) 검증 통과 보장 (2026-06-03 dispatch 500 "Vapid public key must be
+  // URL safe Base 64" fix). 키 바이트 자체는 불변(공백/패딩만 정규화)이라 구독 keypair 와 정합.
+  const publicKey = process.env.VAPID_PUBLIC_KEY?.replace(/\s/gu, "").replace(/=+$/u, "");
+  const privateKey = process.env.VAPID_PRIVATE_KEY?.replace(/\s/gu, "").replace(/=+$/u, "");
   if (!publicKey || !privateKey) return null;
 
   const subject =

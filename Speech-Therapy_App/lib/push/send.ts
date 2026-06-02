@@ -53,8 +53,15 @@ function ensureVapid(): boolean {
   const keys = getVapidKeys();
   if (!keys) return false;
   if (!vapidConfigured) {
-    webpush.setVapidDetails(keys.subject, keys.publicKey, keys.privateKey);
-    vapidConfigured = true;
+    // setVapidDetails 는 키 형식 불량 시 throw — graceful 계약("throw 0") 위해 try/catch 로
+    // 감싸 false 반환(발송 skip). 키 정규화(config.getVapidKeys)와 함께 dispatch 500 방지(2026-06-03).
+    try {
+      webpush.setVapidDetails(keys.subject, keys.publicKey, keys.privateKey);
+      vapidConfigured = true;
+    } catch (err) {
+      console.error("[F16] setVapidDetails 실패 (VAPID 키 형식 오류):", err);
+      return false;
+    }
   }
   return true;
 }
