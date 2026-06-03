@@ -970,6 +970,18 @@ export type AnalyticsEvent =
       properties: {
         step: "landing" | "diagnose_started" | "mission_started";
       };
+    }
+  // === FR-C-STREAK-MILESTONE — 연속 활동 마일스톤(3/7/14/30) 보너스 첫 도달 ===
+  | {
+      // recordMissionCompletion 이 마일스톤 첫 도달 시 보너스 적립(멱등) 직후 1회 발송.
+      // 간접 레버(일일 재방문→주4회 W-AUR) → 마일스톤 도달 빈도 + W-AUR 전환 교차 분석.
+      // R4 보호: userId(부모/익명) + 마일스톤/보너스 메트릭만 — 자녀 식별 정보 0건.
+      name: "streak_milestone_reached";
+      properties: {
+        milestone: number;
+        bonusStars: number;
+        treeGranted: boolean;
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

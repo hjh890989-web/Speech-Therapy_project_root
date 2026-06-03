@@ -37,6 +37,12 @@ vi.mock("@/app/actions/reward", () => ({
   grantReward: (...a: unknown[]) => grantRewardMock(...a),
 }));
 
+// FR-C-STREAK-MILESTONE — 마일스톤 보너스는 getMissionStreak 결과로 분기.
+const getMissionStreakMock = vi.fn();
+vi.mock("@/lib/missions/streak", () => ({
+  getMissionStreak: (...a: unknown[]) => getMissionStreakMock(...a),
+}));
+
 import { recordMissionCompletion } from "@/app/actions/mission";
 
 const ANON = "anon-uuid-1";
@@ -73,6 +79,9 @@ beforeEach(() => {
     treeGrowthLevel: 0,
     aiDrawingCount: 0,
   });
+  // 기본 — 마일스톤 아님(current=0) → 보너스 미발동(기존 테스트 영향 0).
+  getMissionStreakMock.mockReset();
+  getMissionStreakMock.mockResolvedValue({ current: 0, activeToday: true });
 });
 
 describe("recordMissionCompletion — FR-C-MISSION-COMPLETION", () => {
@@ -182,5 +191,74 @@ describe("recordMissionCompletion — FR-C-MISSION-COMPLETION", () => {
     expect(r.success).toBe(false);
     if (r.success) return;
     expect(r.reason).toBe("internal_error");
+  });
+});
+
+describe("recordMissionCompletion — FR-C-STREAK-MILESTONE 마일스톤 보너스", () => {
+  it("3일 마일스톤 첫 도달 → 별 +2 보너스(streak-3 멱등키), 나무 없음(<7)", async () => {
+    getMissionStreakMock.mockResolvedValue({ current: 3, activeToday: true });
+    await recordMissionCompletion(input({ completedReason: "manual_done", elapsedSec: 95 }));
+    // call[0]=미션 별, call[1]=마일스톤 보너스.
+    expect(grantRewardMock).toHaveBeenCalledTimes(2);
+    const bonusArg = grantRewardMock.mock.calls[1][0] as {
+      rewardType: string;
+      amount: number;
+      idempotencyKey: string;
+    };
+    expect(bonusArg).toMatchObject({ rewardType: "star", amount: 2 });
+    expect(bonusArg.idempotencyKey).toBe(`streak-3-${ANON}`);
+  });
+
+  it("7일 마일스톤 → 별 +3 + 나무 1 성장(streak-tree-7, dead-code 활성)", async () => {
+    getMissionStreakMock.mockResolvedValue({ current: 7, activeToday: true });
+    await recordMissionCompletion(input({ completedReason: "timer_ended", elapsedSec: 120 }));
+    expect(grantRewardMock).toHaveBeenCalledTimes(3); // 미션 별 + 보너스 별 + 나무
+    expect((grantRewardMock.mock.calls[1][0] as { amount: number }).amount).toBe(3);
+    const treeArg = grantRewardMock.mock.calls[2][0] as {
+      rewardType: string;
+      amount: number;
+      idempotencyKey: string;
+    };
+    expect(treeArg).toMatchObject({ rewardType: "tree", amount: 1 });
+    expect(treeArg.idempotencyKey).toBe(`streak-tree-7-${ANON}`);
+  });
+
+  it("30일 마일스톤 → 별 +10 (amount.max(10) 경계)", async () => {
+    getMissionStreakMock.mockResolvedValue({ current: 30, activeToday: true });
+    await recordMissionCompletion(input());
+    expect((grantRewardMock.mock.calls[1][0] as { amount: number }).amount).toBe(10);
+  });
+
+  it("비-마일스톤(5일) → 보너스 미발동 (미션 별만)", async () => {
+    getMissionStreakMock.mockResolvedValue({ current: 5, activeToday: true });
+    await recordMissionCompletion(input());
+    expect(grantRewardMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("마일스톤 이미 도달(보너스 wasSkipped) → 나무 미발동 (평생 1회 파밍 차단)", async () => {
+    getMissionStreakMock.mockResolvedValue({ current: 7, activeToday: true });
+    grantRewardMock
+      .mockResolvedValueOnce({ success: true, wasSkipped: false, cumulativeStars: 1, treeGrowthLevel: 0, aiDrawingCount: 0 }) // 미션 별
+      .mockResolvedValueOnce({ success: true, wasSkipped: true, cumulativeStars: 1, treeGrowthLevel: 0, aiDrawingCount: 0 }); // 보너스 멱등 skip
+    await recordMissionCompletion(input());
+    // 미션 별 + 보너스(skip) = 2회. 나무는 시도 안 함(wasSkipped 가드).
+    expect(grantRewardMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("skipped 미션 → 마일스톤 미발동 (durationSec=0)", async () => {
+    getMissionStreakMock.mockResolvedValue({ current: 3, activeToday: true });
+    await recordMissionCompletion(input({ completedReason: "skipped", elapsedSec: 88 }));
+    expect(grantRewardMock).not.toHaveBeenCalled();
+  });
+
+  it("마일스톤 보너스 실패 → graceful (success=true, 미션 완료 무손상)", async () => {
+    getMissionStreakMock.mockResolvedValue({ current: 3, activeToday: true });
+    grantRewardMock
+      .mockResolvedValueOnce({ success: true, wasSkipped: false, cumulativeStars: 1, treeGrowthLevel: 0, aiDrawingCount: 0 }) // 미션 별
+      .mockRejectedValueOnce(new Error("bonus db down")); // 보너스 적립 실패
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await recordMissionCompletion(input());
+    errSpy.mockRestore();
+    expect(r.success).toBe(true);
   });
 });

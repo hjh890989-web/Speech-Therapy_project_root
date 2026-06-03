@@ -30,6 +30,13 @@ import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { formatKstDate } from "@/lib/timeline/tz";
 import { grantReward } from "@/app/actions/reward";
+import { getMissionStreak } from "@/lib/missions/streak";
+import { trackServerEvent } from "@/lib/analytics-server";
+
+// FR-C-STREAK-MILESTONE — 연속 활동 마일스톤별 escalating 별 보너스(amount.max(10) 준수).
+//   평생 1회(멱등키에 일자 없이 milestone만 — 파밍 차단). 7일+ 는 나무 1 성장 동반.
+const STREAK_MILESTONE_BONUS: Record<number, number> = { 3: 2, 7: 3, 14: 5, 30: 10 };
+const STREAK_TREE_MIN_MILESTONE = 7;
 
 import type {
   RecordMissionCompletionInput,
@@ -127,6 +134,47 @@ export async function recordMissionCompletion(
       starGranted = !out.wasSkipped;
     } catch (err) {
       console.error("[FR-C-MISSION-COMPLETION] 별 적립 실패(graceful):", err);
+    }
+  }
+
+  // FR-C-STREAK-MILESTONE — 연속 활동 마일스톤(3/7/14/30) 첫 도달 시 보너스.
+  //   정상 완료(durationSec>0)만. SessionLog INSERT 후라 getMissionStreak 가 오늘 포함 streak 반환.
+  //   멱등키 streak-{milestone}-{userId} (일자 없음) → 평생 1회(파밍 차단). 7일+ 는 나무 1 성장
+  //   (incrementTreeGrowth 첫 프로덕션 트리거 → /rewards/collection '나무 0' 해소).
+  //   간접 레버(일일 재방문→주4회 W-AUR)라 streak_milestone_reached 텔레메트리로 전환 측정.
+  //   전부 graceful — 측정 기반(SessionLog)·기본 별은 이미 영속, 보너스는 보조.
+  if (durationSec > 0) {
+    try {
+      const streak = await getMissionStreak(userId);
+      const bonus = STREAK_MILESTONE_BONUS[streak.current];
+      if (bonus) {
+        const bonusOut = await grantReward({
+          userId,
+          rewardType: "star",
+          amount: bonus,
+          idempotencyKey: `streak-${streak.current}-${userId}`,
+        });
+        // 멱등 wasSkipped=false 일 때만 = 이 마일스톤 *첫 도달*.
+        if (!bonusOut.wasSkipped) {
+          let treeGranted = false;
+          if (streak.current >= STREAK_TREE_MIN_MILESTONE) {
+            const treeOut = await grantReward({
+              userId,
+              rewardType: "tree",
+              amount: 1,
+              idempotencyKey: `streak-tree-${streak.current}-${userId}`,
+            });
+            treeGranted = !treeOut.wasSkipped;
+          }
+          void trackServerEvent(
+            "streak_milestone_reached",
+            { milestone: streak.current, bonusStars: bonus, treeGranted },
+            userId,
+          );
+        }
+      }
+    } catch (err) {
+      console.error("[FR-C-STREAK-MILESTONE] 마일스톤 보너스 실패(graceful):", err);
     }
   }
 
