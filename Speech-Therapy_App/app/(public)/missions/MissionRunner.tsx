@@ -92,6 +92,12 @@ function MissionRunnerInner({
   const anonymousUserId = useAnonymousUserId();
   // FR-C-MISSION-REWARD-WIRING — 정상 완료(skipped 제외) 시 별 +1 적립 → 완료 화면 카피 분기.
   const [earnedStar, setEarnedStar] = useState(false);
+  // FR-C-STREAK-MILESTONE — 이번 완료로 첫 도달한 마일스톤(서버 result). 완료 화면 연출용.
+  const [milestone, setMilestone] = useState<{
+    days: number;
+    bonusStars: number;
+    treeGranted: boolean;
+  } | null>(null);
 
   // FR-C-006 — 미션 침묵 감지 → 2단계 intervention (60s tooltip → 90s mirror).
   // orchestrator 가 trackEvent("mission_silence_intervention") 발화 + cooldown / reset 모두 처리.
@@ -206,6 +212,14 @@ function MissionRunnerInner({
             anonymousUserId: anonymousUserId ?? undefined,
           });
           if (r.success && !r.starGranted) setEarnedStar(false);
+          // FR-C-STREAK-MILESTONE — 첫 도달 마일스톤이면 완료 화면 보너스 연출.
+          if (r.success && r.milestoneReached) {
+            setMilestone({
+              days: r.milestoneReached,
+              bonusStars: r.bonusStars ?? 0,
+              treeGranted: r.treeGranted ?? false,
+            });
+          }
         } catch (err) {
           console.error("[FR-C-MISSION-COMPLETION] record 실패:", err);
         }
@@ -380,6 +394,17 @@ function MissionRunnerInner({
           <span className="animate-star-pop text-2xl" style={{ animationDelay: "0ms" }}>⭐</span>
           <span className="animate-star-pop text-4xl" style={{ animationDelay: "80ms" }}>⭐</span>
           <span className="animate-star-pop text-2xl" style={{ animationDelay: "160ms" }}>⭐</span>
+        </div>
+      )}
+      {/* FR-C-STREAK-MILESTONE — 마일스톤 첫 도달 보너스 연출(서버 result 도착 후 pop-in). */}
+      {milestone && (
+        <div
+          data-testid="mission-milestone-celebration"
+          className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+        >
+          <span aria-hidden="true">🔥</span> {milestone.days}일 연속 달성! 보너스 별 +
+          {milestone.bonusStars}
+          {milestone.treeGranted ? " 와 함께 나무가 자랐어요 🌱" : "을 받았어요 ⭐"}
         </div>
       )}
       <div className="rounded-md bg-emerald-100 px-4 py-3 text-sm text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">

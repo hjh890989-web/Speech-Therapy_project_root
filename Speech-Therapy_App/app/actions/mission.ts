@@ -32,11 +32,10 @@ import { formatKstDate } from "@/lib/timeline/tz";
 import { grantReward } from "@/app/actions/reward";
 import { getMissionStreak } from "@/lib/missions/streak";
 import { trackServerEvent } from "@/lib/analytics-server";
-
-// FR-C-STREAK-MILESTONE — 연속 활동 마일스톤별 escalating 별 보너스(amount.max(10) 준수).
-//   평생 1회(멱등키에 일자 없이 milestone만 — 파밍 차단). 7일+ 는 나무 1 성장 동반.
-const STREAK_MILESTONE_BONUS: Record<number, number> = { 3: 2, 7: 3, 14: 5, 30: 10 };
-const STREAK_TREE_MIN_MILESTONE = 7;
+import {
+  STREAK_MILESTONE_BONUS,
+  STREAK_TREE_MIN_MILESTONE,
+} from "@/lib/missions/streak-milestones";
 
 import type {
   RecordMissionCompletionInput,
@@ -143,6 +142,9 @@ export async function recordMissionCompletion(
   //   (incrementTreeGrowth 첫 프로덕션 트리거 → /rewards/collection '나무 0' 해소).
   //   간접 레버(일일 재방문→주4회 W-AUR)라 streak_milestone_reached 텔레메트리로 전환 측정.
   //   전부 graceful — 측정 기반(SessionLog)·기본 별은 이미 영속, 보너스는 보조.
+  let milestoneReached: number | undefined;
+  let bonusStars: number | undefined;
+  let milestoneTreeGranted = false;
   if (durationSec > 0) {
     try {
       const streak = await getMissionStreak(userId);
@@ -156,7 +158,6 @@ export async function recordMissionCompletion(
         });
         // 멱등 wasSkipped=false 일 때만 = 이 마일스톤 *첫 도달*.
         if (!bonusOut.wasSkipped) {
-          let treeGranted = false;
           if (streak.current >= STREAK_TREE_MIN_MILESTONE) {
             const treeOut = await grantReward({
               userId,
@@ -164,11 +165,13 @@ export async function recordMissionCompletion(
               amount: 1,
               idempotencyKey: `streak-tree-${streak.current}-${userId}`,
             });
-            treeGranted = !treeOut.wasSkipped;
+            milestoneTreeGranted = !treeOut.wasSkipped;
           }
+          milestoneReached = streak.current;
+          bonusStars = bonus;
           void trackServerEvent(
             "streak_milestone_reached",
-            { milestone: streak.current, bonusStars: bonus, treeGranted },
+            { milestone: streak.current, bonusStars: bonus, treeGranted: milestoneTreeGranted },
             userId,
           );
         }
@@ -178,5 +181,13 @@ export async function recordMissionCompletion(
     }
   }
 
-  return { success: true, sessionId, counted: durationSec > 0, starGranted };
+  return {
+    success: true,
+    sessionId,
+    counted: durationSec > 0,
+    starGranted,
+    milestoneReached,
+    bonusStars,
+    treeGranted: milestoneReached !== undefined ? milestoneTreeGranted : undefined,
+  };
 }

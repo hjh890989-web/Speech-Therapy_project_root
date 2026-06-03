@@ -27,6 +27,12 @@ export type RecordMissionCompletionResult =
       counted: boolean;
       /// 별 +1 신규 적립 여부(FR-C-MISSION-REWARD-WIRING). skipped/일일중복/적립실패 → false.
       starGranted: boolean;
+      /// FR-C-STREAK-MILESTONE — 이번 완료로 *첫 도달*한 연속 마일스톤(3/7/14/30). 없으면 undefined.
+      milestoneReached?: number;
+      /// 마일스톤 보너스 별 수(milestoneReached 있을 때만).
+      bonusStars?: number;
+      /// 7일+ 마일스톤 나무 1 성장 여부(milestoneReached 있을 때만).
+      treeGranted?: boolean;
     }
   | {
       success: false;

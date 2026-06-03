@@ -18,6 +18,7 @@ import { getMissionStreak } from "@/lib/missions/streak";
 import { getWeeklyMissionGoal } from "@/lib/missions/weekly-goal";
 import { getResumableMission } from "@/lib/missions/resumable";
 import { pickReengageBanner } from "@/lib/missions/reengage-banner";
+import { nextStreakMilestone } from "@/lib/missions/streak-milestones";
 import { ReengageBannerBeacon } from "./ReengageBannerBeacon";
 import { MissionRunner } from "./MissionRunner";
 import { getMissionContent } from "@/lib/mocks/mission-content";
@@ -174,6 +175,8 @@ export default async function MissionsPage() {
     resumableMissionId,
     hasUser: Boolean(userId),
   });
+  // FR-C-STREAK-MILESTONE — 다음 마일스톤 보너스까지 남은 일수(활동일 affirmation 카피).
+  const nextMs = nextStreakMilestone(streak.current);
 
   // Sprint 1 호환 안전망: mockContinue.recommendedMissionId 는 UUID(레거시 curriculum mock)라
   // slug 카드 id(mock-*-*)와 결코 일치하지 않음 → 사실상 항상 cards[0] 로 폴백(의도된 안전 동작).
@@ -250,7 +253,10 @@ export default async function MissionsPage() {
             className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-sm font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
           >
             <span aria-hidden="true">🔥</span>
-            {`${streak.current}일 연속 — 오늘도 함께했어요! 잘하고 있어요.`}
+            {`${streak.current}일 연속 — 오늘도 함께했어요!`}
+            {nextMs
+              ? ` 다음 보너스까지 ${nextMs.daysLeft}일 🎁`
+              : " 잘하고 있어요."}
           </p>
         )
       )}

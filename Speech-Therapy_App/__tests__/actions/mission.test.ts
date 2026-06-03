@@ -197,7 +197,7 @@ describe("recordMissionCompletion — FR-C-MISSION-COMPLETION", () => {
 describe("recordMissionCompletion — FR-C-STREAK-MILESTONE 마일스톤 보너스", () => {
   it("3일 마일스톤 첫 도달 → 별 +2 보너스(streak-3 멱등키), 나무 없음(<7)", async () => {
     getMissionStreakMock.mockResolvedValue({ current: 3, activeToday: true });
-    await recordMissionCompletion(input({ completedReason: "manual_done", elapsedSec: 95 }));
+    const r = await recordMissionCompletion(input({ completedReason: "manual_done", elapsedSec: 95 }));
     // call[0]=미션 별, call[1]=마일스톤 보너스.
     expect(grantRewardMock).toHaveBeenCalledTimes(2);
     const bonusArg = grantRewardMock.mock.calls[1][0] as {
@@ -207,11 +207,15 @@ describe("recordMissionCompletion — FR-C-STREAK-MILESTONE 마일스톤 보너�
     };
     expect(bonusArg).toMatchObject({ rewardType: "star", amount: 2 });
     expect(bonusArg.idempotencyKey).toBe(`streak-3-${ANON}`);
+    // result 에 마일스톤 정보(완료 화면 연출용) — 3일은 나무 없음.
+    expect(r.success && r.milestoneReached).toBe(3);
+    expect(r.success && r.bonusStars).toBe(2);
+    expect(r.success && r.treeGranted).toBe(false);
   });
 
   it("7일 마일스톤 → 별 +3 + 나무 1 성장(streak-tree-7, dead-code 활성)", async () => {
     getMissionStreakMock.mockResolvedValue({ current: 7, activeToday: true });
-    await recordMissionCompletion(input({ completedReason: "timer_ended", elapsedSec: 120 }));
+    const r = await recordMissionCompletion(input({ completedReason: "timer_ended", elapsedSec: 120 }));
     expect(grantRewardMock).toHaveBeenCalledTimes(3); // 미션 별 + 보너스 별 + 나무
     expect((grantRewardMock.mock.calls[1][0] as { amount: number }).amount).toBe(3);
     const treeArg = grantRewardMock.mock.calls[2][0] as {
@@ -221,6 +225,9 @@ describe("recordMissionCompletion — FR-C-STREAK-MILESTONE 마일스톤 보너�
     };
     expect(treeArg).toMatchObject({ rewardType: "tree", amount: 1 });
     expect(treeArg.idempotencyKey).toBe(`streak-tree-7-${ANON}`);
+    // result — 7일은 나무 동반.
+    expect(r.success && r.milestoneReached).toBe(7);
+    expect(r.success && r.treeGranted).toBe(true);
   });
 
   it("30일 마일스톤 → 별 +10 (amount.max(10) 경계)", async () => {
