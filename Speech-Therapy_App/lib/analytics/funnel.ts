@@ -154,8 +154,15 @@ async function countMissionCompleted(from: Date, to: Date): Promise<number> {
 }
 
 async function countRewardGranted(from: Date, to: Date): Promise<number> {
+  // 미션 완료 보상만 — idempotencyKey 'mission-{missionId}-{KST일자}' prefix (app/actions/mission.ts).
+  // 진단 결과 별(키 'session-…', diagnose/result/RewardOnMount)을 제외해 funnel reward 단계가
+  // mission_completed 의 하위집합이 되도록(단조성 회복). 미필터 시 진단 별이 분자에 혼입돼
+  // conversion>100%·비단조가 발생했음(funnel-bottleneck-readiness 감사, 2026-06-03).
   return prisma.rewardLog.count({
-    where: { createdAt: { gte: from, lt: to } },
+    where: {
+      createdAt: { gte: from, lt: to },
+      idempotencyKey: { startsWith: "mission-" },
+    },
   });
 }
 

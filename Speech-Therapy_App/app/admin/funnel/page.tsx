@@ -28,12 +28,55 @@ import {
   addUtcDays,
   aggregateFunnelByDay,
   FUNNEL_STEP_LABEL,
+  type FunnelStepName,
   type FunnelSummary,
   toDayStartUtc,
 } from "@/lib/analytics/funnel";
 import { FunnelDailyChart } from "./FunnelChart";
 
 export const dynamic = "force-dynamic";
+
+// MON-001 후속 (funnel-bottleneck-readiness 감사, 2026-06-03) — 단계별 *측정 신뢰도*.
+//   이 dashboard 는 도메인 테이블 역산이라 일부 '직전 대비' 셀이 구조적 아티팩트다.
+//   owner 가 가장 낮은 셀을 기계적으로 병목으로 오독하지 않도록, 각 단계의 conversionFromPrev
+//   신뢰도를 표에 명시한다(display-only — 집계 로직 불변).
+type ReliabilityLevel = "base" | "reliable" | "directional" | "artifact";
+const STEP_RELIABILITY: Record<
+  FunnelStepName,
+  { level: ReliabilityLevel; note: string }
+> = {
+  landing: {
+    level: "base",
+    note: "기준 단계(진단 1회+ distinct 사용자). 진짜 랜딩 페이지 진입은 미계측.",
+  },
+  diagnose_started: {
+    level: "artifact",
+    note: "주의: landing(distinct user) 대비 row count라 100% 초과 가능. '재진단 강도'이지 유입→진단 전환 아님.",
+  },
+  diagnose_completed: {
+    level: "artifact",
+    note: "주의: 시작과 동일 소스(EvaluationResult)를 두 번 세어 항상 100%. 정보량 0 — 병목 판정에 쓰지 말 것.",
+  },
+  mission_started: {
+    level: "directional",
+    note: "방향성: 'started'는 완료+스킵 합(진짜 시작 아님) + 멀티데이·코호트 부재. 추이 참고용.",
+  },
+  mission_completed: {
+    level: "reliable",
+    note: "상대적 신뢰: 동일 SessionLog 풀(분자/분모) → 오염 적음. 단 의미는 '비-스킵 완주율'.",
+  },
+  reward_granted: {
+    level: "directional",
+    note: "방향성: 미션 보상만 필터(진단 별 제외). 재완수=별 1회 멱등이라 반복 완수 시 저평가 가능.",
+  },
+};
+
+const RELIABILITY_BADGE: Record<ReliabilityLevel, { label: string; cls: string }> = {
+  base: { label: "기준", cls: "bg-slate-100 text-slate-600" },
+  reliable: { label: "신뢰", cls: "bg-emerald-100 text-emerald-800" },
+  directional: { label: "방향성", cls: "bg-amber-100 text-amber-800" },
+  artifact: { label: "주의", cls: "bg-rose-100 text-rose-800" },
+};
 
 export const metadata = {
   title: "퍼널 CVR 대시보드 — Speech-Therapy",
@@ -206,6 +249,17 @@ export default async function FunnelDashboardPage({ searchParams }: PageProps) {
           <li>본 dashboard 는 그와 별개로 기존 도메인 테이블 (EvaluationResult / SessionLog / RewardLog) 역산.</li>
           <li>자녀 식별 정보 0건 — 모든 표시값은 집계 카운트 + 비율.</li>
           <li>오늘 데이터는 진행중이라 기본 range 에서 제외됩니다.</li>
+          <li className="text-rose-700">
+            <strong>측정 한계(병목 판정 시 필수)</strong>: &lsquo;발음 확인 시작↔완료&rsquo;는 동일
+            소스를 두 번 세어 <strong>항상 100%</strong>(정보량 0). &lsquo;유입→발음 확인 시작&rsquo;은
+            distinct user 대비 row count라 <strong>100% 초과 가능</strong>(재진단 강도이지 진입 전환
+            아님). 진짜 유입 이탈·미션 열람 후 미시작은 row 자체가 없어 <strong>비가시</strong>.
+            &lsquo;측정 신뢰도&rsquo; 열에서 <strong>신뢰/방향성</strong> 단계만 병목 후보로 볼 것.
+          </li>
+          <li>
+            북극성 <strong>W-AUR(주 4회 미션 완료)은 본 funnel 밖</strong>(weekly-aggregator).
+            funnel 의 미션 완료는 &lsquo;단일 완료&rsquo;까지만 — retention 병목은 별도 표면에서 확인.
+          </li>
         </ul>
       </footer>
     </main>
@@ -248,12 +302,18 @@ function FunnelStepsTable({ summary }: { summary: FunnelSummary }) {
             <th scope="col" className="px-3 py-2">카운트</th>
             <th scope="col" className="px-3 py-2">직전 대비</th>
             <th scope="col" className="px-3 py-2">유입 대비 누적</th>
+            <th scope="col" className="px-3 py-2">측정 신뢰도</th>
           </tr>
         </thead>
         <tbody>
           {summary.steps.map((step, idx) => {
+            const reliability = STEP_RELIABILITY[step.name];
+            const badge = RELIABILITY_BADGE[reliability.level];
+            // 아티팩트 단계(항상 100%·>100% 가능)는 drop-off 강조 억제 — 오독 방지.
             const dropOff =
-              step.conversionFromPrev !== null && step.conversionFromPrev < 0.5;
+              reliability.level !== "artifact" &&
+              step.conversionFromPrev !== null &&
+              step.conversionFromPrev < 0.5;
             const cellClass = dropOff
               ? "bg-rose-50 text-rose-800 font-semibold"
               : "text-slate-700";
@@ -282,6 +342,19 @@ function FunnelStepsTable({ summary }: { summary: FunnelSummary }) {
                   <span data-testid={`funnel-step-cumulative-${step.name}`}>
                     {formatPercent(step.cumulativeConversion)}
                   </span>
+                </td>
+                <td className="px-3 py-2">
+                  <span
+                    data-testid={`funnel-step-reliability-${step.name}`}
+                    data-reliability={reliability.level}
+                    className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${badge.cls}`}
+                    title={reliability.note}
+                  >
+                    {badge.label}
+                  </span>
+                  <p className="mt-1 max-w-[22rem] text-[11px] leading-snug text-slate-500">
+                    {reliability.note}
+                  </p>
                 </td>
               </tr>
             );

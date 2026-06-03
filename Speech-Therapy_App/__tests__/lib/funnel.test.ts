@@ -104,6 +104,13 @@ describe("aggregateFunnel — 정상 6단계 카운트 + conversion", () => {
     expect(findArg.distinct).toContain("userId");
     expect(findArg.where.createdAt.gte.getTime()).toBe(from.getTime());
     expect(findArg.where.createdAt.lt.getTime()).toBe(to.getTime());
+
+    // reward_granted 는 미션 보상만 — idempotencyKey 'mission-' prefix 필터 (진단 별 제외).
+    // funnel reward 단계가 mission_completed 의 하위집합이 되도록 단조성 회복(2026-06-03 감사).
+    const rewardArg = rewardLogCountMock.mock.calls[0][0] as {
+      where: { idempotencyKey?: { startsWith?: string } };
+    };
+    expect(rewardArg.where.idempotencyKey?.startsWith).toBe("mission-");
   });
 });
 
