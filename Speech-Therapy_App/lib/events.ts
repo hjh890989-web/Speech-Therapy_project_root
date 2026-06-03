@@ -948,6 +948,17 @@ export type AnalyticsEvent =
       properties: {
         outcome: "accepted" | "dismissed";
       };
+    }
+  // === FR-C-REENGAGE-BANNER — /missions 적응형 재유도 배너 노출 (리텐션 레버) ===
+  | {
+      // missions 페이지 mount 시 적응형 배너가 렌더된 경우 1회 (client beacon, Strict Mode 가드).
+      // variant: 노출된 배너 종류 — resume(이어하기) / streak(연속 끊김 방지) / weekly_goal(목표 임박).
+      // R4 보호: userId / 자녀 식별 정보 0건 — variant 라벨만.
+      // KPI 활용: 배너 노출 → 미션 완료 전환율(간접 W-AUR 레버 효과) 측정.
+      name: "reengage_banner_shown";
+      properties: {
+        variant: "resume" | "streak" | "weekly_goal";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

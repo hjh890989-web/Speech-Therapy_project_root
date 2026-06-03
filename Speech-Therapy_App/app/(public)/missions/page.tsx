@@ -18,6 +18,9 @@ import { type MissionFixture } from "@/lib/mocks/missions";
 import { getMissionCards } from "@/lib/missions/card-repo";
 import { getMissionStreak } from "@/lib/missions/streak";
 import { getWeeklyMissionGoal } from "@/lib/missions/weekly-goal";
+import { getResumableMission } from "@/lib/missions/resumable";
+import { pickReengageBanner } from "@/lib/missions/reengage-banner";
+import { ReengageBannerBeacon } from "./ReengageBannerBeacon";
 import { MissionRunner } from "./MissionRunner";
 import { getMissionContent } from "@/lib/mocks/mission-content";
 import { MissionPhonemeIsolation } from "@/components/missions/MissionPhonemeIsolation";
@@ -69,10 +72,26 @@ async function computeRecommendation(
   userId: string | undefined,
   cards: readonly MissionFixture[],
 ): Promise<RecommendationState> {
-  // 폴백: 익명 미사용자 → mockContinue 기반 (Sprint 1 단순화 흐름 유지).
+  // FR-C-ONBOARDING-PHONEME — 신규/세션0 user 의 fallback 음소를 온보딩 관심음소(preferredPhonemes)
+  // 로 개인화 → 첫 미션 관련성↑(활성화). 익명/미설정/미지원·조회 실패 → ㅅ 유지(graceful).
+  let fallbackPhoneme: SupportedPhoneme = "ㅅ";
+  if (userId) {
+    try {
+      const profile = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { preferredPhonemes: true },
+      });
+      const first = profile?.preferredPhonemes?.[0] ?? null;
+      if (isSupportedPhoneme(first)) fallbackPhoneme = first;
+    } catch (err) {
+      console.error("missions: preferredPhonemes 조회 실패(graceful)", err);
+    }
+  }
+
+  // 폴백: 익명/세션0 → 관심음소(없으면 ㅅ) 기반 추천 (Sprint 1 단순화 흐름 유지).
   const fallbackRecommendation: MissionRecommendation =
     pickRecommendedMission(
-      { difficulty: 2, phoneme: "ㅅ", reason: "continue" },
+      { difficulty: 2, phoneme: fallbackPhoneme, reason: "continue" },
       cards,
     ) ?? {
       mission: cards[0],
@@ -160,6 +179,17 @@ export default async function MissionsPage() {
     : { current: 0, activeToday: false };
   // FR-C-WEEKLY-MISSION-GOAL — 이번 주 미션 목표 진행도(W-AUR 라이브). 빈 userId 도 0/goal graceful.
   const weeklyGoal = await getWeeklyMissionGoal(userId ?? "");
+  // FR-C-REENGAGE-BANNER — 적응형 재유도 배너(우선순위 1종). resume 은 userId 있을 때만 조회(graceful).
+  const resumableRaw = userId ? await getResumableMission(userId) : undefined;
+  // 딥링크 안전: 로드된 카드에 실제 존재하는 미션만 resume 대상 (없으면 미표시).
+  const resumableMissionId =
+    resumableRaw && cards.some((c) => c.id === resumableRaw) ? resumableRaw : undefined;
+  const reengageBanner = pickReengageBanner({
+    streak,
+    weeklyGoal,
+    resumableMissionId,
+    hasUser: Boolean(userId),
+  });
 
   // Sprint 1 호환 안전망: mockContinue.recommendedMissionId 는 UUID(레거시 curriculum mock)라
   // slug 카드 id(mock-*-*)와 결코 일치하지 않음 → 사실상 항상 cards[0] 로 폴백(의도된 안전 동작).
@@ -208,17 +238,37 @@ export default async function MissionsPage() {
               : `${weeklyGoal.remaining}회 더 하면 이번 주 목표 달성이에요.`}
         </p>
       </div>
-      {/* FR-C-DAILY-STREAK — 연속 활동 streak 배너 (1일+ 일 때만). 일일 재방문 동기. */}
-      {streak.current >= 1 && (
-        <p
-          data-testid="mission-streak"
-          className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-sm font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+      {/* FR-C-REENGAGE-BANNER — 적응형 재유도 배너(우선순위 1종). 일일 재방문 동기.
+          배너 없을 때만 기존 streak affirmation(오늘 활동 완료) 폴백 노출. */}
+      {reengageBanner ? (
+        <div
+          data-testid="reengage-banner"
+          data-variant={reengageBanner.variant}
+          className="mb-4 flex flex-col gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between"
         >
-          <span aria-hidden="true">🔥</span>
-          {streak.activeToday
-            ? `${streak.current}일 연속 — 오늘도 함께했어요! 잘하고 있어요.`
-            : `${streak.current}일 연속 중이에요! 오늘 미션으로 이어가 볼까요?`}
-        </p>
+          <span className="inline-flex items-center gap-2">
+            <span aria-hidden="true">🌱</span>
+            {reengageBanner.message}
+          </span>
+          <Link
+            href={reengageBanner.href ?? "#today-mission"}
+            className="inline-flex min-h-[40px] shrink-0 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+          >
+            {reengageBanner.cta}
+          </Link>
+          <ReengageBannerBeacon variant={reengageBanner.variant} />
+        </div>
+      ) : (
+        streak.current >= 1 &&
+        streak.activeToday && (
+          <p
+            data-testid="mission-streak"
+            className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-sm font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+          >
+            <span aria-hidden="true">🔥</span>
+            {`${streak.current}일 연속 — 오늘도 함께했어요! 잘하고 있어요.`}
+          </p>
+        )
       )}
       <header className="mb-8 space-y-2">
         <h1 className="text-2xl font-bold sm:text-3xl">오늘의 미션</h1>
@@ -254,8 +304,8 @@ export default async function MissionsPage() {
     <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
       {headerSection}
 
-      {/* 추천 미션 1개 강조 — FR-C-008 적응형 카피 */}
-      <section className="mb-10 rounded-lg border-2 border-emerald-500 bg-emerald-50 p-5 dark:bg-emerald-950/30">
+      {/* 추천 미션 1개 강조 — FR-C-008 적응형 카피. id: 재유도 배너 CTA 앵커 타깃. */}
+      <section id="today-mission" className="mb-10 rounded-lg border-2 border-emerald-500 bg-emerald-50 p-5 dark:bg-emerald-950/30">
         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
           {state.recommendation.copy}
         </p>
@@ -371,6 +421,7 @@ function RestEmptyState({
 
   return (
     <section
+      id="today-mission"
       data-testid="missions-rest-empty"
       className="rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50/50 p-8 text-center dark:border-emerald-800 dark:bg-emerald-950/20"
     >

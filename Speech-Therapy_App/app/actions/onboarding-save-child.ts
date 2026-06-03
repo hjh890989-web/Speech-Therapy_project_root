@@ -13,9 +13,10 @@
 //   - 성공 시 { success: true, userId, childAgeMonths }.
 //
 // R4 (자녀 보호):
-//   - 자녀 이름 / 생년월일 / 주소 0건 저장 — User.childAgeMonths (월령) 만.
-//   - targetPhonemes 는 본 PR 에서 DB 저장 X (User 스키마에 컬럼 부재) —
-//     향후 ChildProfile 모델 도입 시 link. 현재는 응답에 echo 만.
+//   - 자녀 이름 / 생년월일 / 주소 0건 저장 — User.childAgeMonths (월령) + preferredPhonemes (관심 음소) 만.
+//   - preferredPhonemes 는 User.preferredPhonemes 컬럼(20260525 마이그레이션)에 영속화 —
+//     재방문/다기기 prefill + missions 신규(세션0) fallback 음소로 재사용
+//     (update-child-profile 와 동일 컬럼·정합. FR-C-ONBOARDING-PHONEME 번들).
 //
 // CON-04: 본 Action 의 메시지 / 주석에 의료 단정 금칙어 0건 — "발음 발달 확인" 표현 사용.
 
@@ -106,11 +107,12 @@ export async function saveChildInfo(
   }
 
   // 4) prisma update — 본인 row 만. withActor (DB-011) 가 audit actor 캡처.
+  //    childAgeMonths + preferredPhonemes 영속화 (검증된 validPhonemes — 화이트리스트 통과분만).
   try {
     await withActor(userId, async (tx) => {
       await tx.user.update({
         where: { id: userId },
-        data: { childAgeMonths: Math.trunc(age) },
+        data: { childAgeMonths: Math.trunc(age), preferredPhonemes: validPhonemes },
       });
     });
   } catch {

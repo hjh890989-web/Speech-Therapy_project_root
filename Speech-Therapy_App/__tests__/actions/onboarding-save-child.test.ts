@@ -95,7 +95,11 @@ describe("saveChildInfo — FR-C-PARENT-ONBOARDING", () => {
     expect(updateMock).toHaveBeenCalledTimes(1);
     const callArg = updateMock.mock.calls[0][0];
     expect(callArg.where).toEqual({ id: USER_ID });
-    expect(callArg.data).toEqual({ childAgeMonths: 48 });
+    // FR-C-ONBOARDING-PHONEME — childAgeMonths + preferredPhonemes(검증분) 영속화.
+    expect(callArg.data).toEqual({
+      childAgeMonths: 48,
+      preferredPhonemes: ["ㅅ", "ㄴ"],
+    });
   });
 
   it("age 범위 미만 (23) → invalid_age", async () => {
