@@ -38,12 +38,15 @@ vi.mock("@/app/actions/reward", () => ({
   grantReward: (...a: unknown[]) => grantRewardMock(...a),
 }));
 
-// --- 공유 prisma mock (mission create + funnel/badge count + funnel eval/reward + badge weekly/consent) ---
+// --- 공유 prisma mock ---
+// AnalyticsEvent 재연결 후: funnel mission_started=AnalyticsEvent, 완료/보상=도메인 findMany(distinct).
+// badge missionPendingToday=sessionLog.count (별도). mission.ts=sessionLog.create.
 const sessionCreateMock = vi.fn();
-const sessionCountMock = vi.fn();
-const evalFindManyMock = vi.fn();
-const evalCountMock = vi.fn();
-const rewardCountMock = vi.fn();
+const sessionCountMock = vi.fn(); // badge missionPendingToday
+const sessionFindManyMock = vi.fn(); // funnel mission_completed (distinct userId)
+const analyticsFindManyMock = vi.fn(); // funnel landing/diagnose_started/mission_started
+const evalFindManyMock = vi.fn(); // funnel diagnose_completed
+const rewardFindManyMock = vi.fn(); // funnel reward_granted
 const weeklyCountMock = vi.fn();
 const consentCountMock = vi.fn();
 vi.mock("@/lib/db", () => ({
@@ -51,12 +54,15 @@ vi.mock("@/lib/db", () => ({
     sessionLog: {
       create: (...a: unknown[]) => sessionCreateMock(...a),
       count: (...a: unknown[]) => sessionCountMock(...a),
+      findMany: (...a: unknown[]) => sessionFindManyMock(...a),
     },
     evaluationResult: {
       findMany: (...a: unknown[]) => evalFindManyMock(...a),
-      count: (...a: unknown[]) => evalCountMock(...a),
     },
-    rewardLog: { count: (...a: unknown[]) => rewardCountMock(...a) },
+    analyticsEvent: {
+      findMany: (...a: unknown[]) => analyticsFindManyMock(...a),
+    },
+    rewardLog: { findMany: (...a: unknown[]) => rewardFindManyMock(...a) },
     weeklyReport: { count: (...a: unknown[]) => weeklyCountMock(...a) },
     consentSignature: { count: (...a: unknown[]) => consentCountMock(...a) },
     user: { findUnique: vi.fn() },
@@ -116,25 +122,37 @@ async function recordedDurationSec(
   return arg.data.durationSec;
 }
 
-/// funnel 의 mission_started / mission_completed WHERE 캡처.
-async function funnelMissionWheres(): Promise<{
-  started: SessionWhere;
-  completed: SessionWhere;
+/// funnel 의 mission_completed WHERE(SessionLog findMany) + mission_started step(AnalyticsEvent) 캡처.
+/// (AnalyticsEvent 재연결 후: 완료만 SessionLog 파생, 시작은 funnel_step_reached 이벤트.)
+async function funnelMissionCapture(): Promise<{
+  completedWhere: SessionWhere;
+  missionStartedStep: string | undefined;
 }> {
-  sessionCountMock.mockReset();
-  sessionCountMock.mockResolvedValue(0);
+  analyticsFindManyMock.mockReset();
+  analyticsFindManyMock.mockResolvedValue([]);
   evalFindManyMock.mockResolvedValue([]);
-  evalCountMock.mockResolvedValue(0);
-  rewardCountMock.mockResolvedValue(0);
+  sessionFindManyMock.mockReset();
+  sessionFindManyMock.mockResolvedValue([]);
+  rewardFindManyMock.mockResolvedValue([]);
   await aggregateFunnel({
     from: new Date("2026-05-21T00:00:00Z"),
     to: new Date("2026-05-22T00:00:00Z"),
   });
-  // fetchRawCounts 의 Promise.all 순서: [...eval, missionStarted(#0), missionCompleted(#1), reward]
-  return {
-    started: (sessionCountMock.mock.calls[0]?.[0] as { where: SessionWhere }).where,
-    completed: (sessionCountMock.mock.calls[1]?.[0] as { where: SessionWhere }).where,
-  };
+  // 완료 = sessionLog.findMany 1회(mission_completed). 시작 = analyticsEvent.findMany(step=mission_started).
+  const completedWhere = (
+    sessionFindManyMock.mock.calls[0]?.[0] as { where: SessionWhere }
+  ).where;
+  const missionStartedCall = analyticsFindManyMock.mock.calls.find(
+    (c) =>
+      (c[0] as { where?: { properties?: { equals?: string } } }).where
+        ?.properties?.equals === "mission_started",
+  );
+  const missionStartedStep = (
+    missionStartedCall?.[0] as
+      | { where?: { properties?: { equals?: string } } }
+      | undefined
+  )?.where?.properties?.equals;
+  return { completedWhere, missionStartedStep };
 }
 
 /// badge 의 missionPendingToday WHERE 캡처.
@@ -155,9 +173,10 @@ beforeEach(() => {
     grantRewardMock,
     sessionCreateMock,
     sessionCountMock,
+    sessionFindManyMock,
+    analyticsFindManyMock,
     evalFindManyMock,
-    evalCountMock,
-    rewardCountMock,
+    rewardFindManyMock,
     weeklyCountMock,
     consentCountMock,
   ]) {
@@ -170,17 +189,18 @@ afterEach(() => {
 });
 
 describe("미션 완료 durationSec 교차 계약 (mission ↔ funnel ↔ badge)", () => {
-  it("[C1] funnel mission_completed WHERE = durationSec > 0 (어디서도 미단언이던 정의 잠금)", async () => {
-    const { completed } = await funnelMissionWheres();
-    expect(completed.missionId).toEqual({ not: null });
-    expect(completed.durationSec).toEqual({ gt: 0 });
+  it("[C1] funnel mission_completed WHERE = durationSec > 0 (SessionLog distinct, 정의 잠금)", async () => {
+    const { completedWhere } = await funnelMissionCapture();
+    expect(completedWhere.missionId).toEqual({ not: null });
+    expect(completedWhere.durationSec).toEqual({ gt: 0 });
   });
 
-  it("[C2] funnel mission_started 는 durationSec 무필터 — 완료+스킵 모두 카운트", async () => {
-    const { started } = await funnelMissionWheres();
-    expect(started.missionId).toEqual({ not: null });
-    // started 단계는 durationSec 제약 없음 → 시작(완료/스킵 무관) 전부 포함.
-    expect(started.durationSec).toBeUndefined();
+  it("[C2] funnel mission_started 는 AnalyticsEvent(funnel_step_reached, step=mission_started) — SessionLog 미파생", async () => {
+    const { missionStartedStep } = await funnelMissionCapture();
+    // AnalyticsEvent 재연결 후: 시작은 SessionLog 무필터 count 가 아니라 funnel_step_reached distinct user.
+    expect(missionStartedStep).toBe("mission_started");
+    // SessionLog.findMany 는 완료(mission_completed) 단 1회만 — 시작은 SessionLog 미사용.
+    expect(sessionFindManyMock).toHaveBeenCalledTimes(1);
   });
 
   it("[C3] badge missionPendingToday WHERE = durationSec <= 0", async () => {
@@ -190,9 +210,9 @@ describe("미션 완료 durationSec 교차 계약 (mission ↔ funnel ↔ badge)
   });
 
   it("[C4] 핵심 불변식 — funnel-완료(>0) 와 badge-미완료(<=0) 는 boundary 0 에서 정확히 상보 (gap/overlap 0)", async () => {
-    const { completed } = await funnelMissionWheres();
+    const { completedWhere } = await funnelMissionCapture();
     const pendingWhere = await badgePendingWhere();
-    const isCompleted = intPredicate(completed.durationSec);
+    const isCompleted = intPredicate(completedWhere.durationSec);
     const isPending = intPredicate(pendingWhere.durationSec);
 
     // 음수·0·양수 전 도메인에서 두 술어는 정확히 서로의 부정이어야 한다.
@@ -202,9 +222,9 @@ describe("미션 완료 durationSec 교차 계약 (mission ↔ funnel ↔ badge)
   });
 
   it("[C5] mission.ts 출력이 두 술어에 정합 — 완료→funnel만, 스킵→badge만", async () => {
-    const { completed } = await funnelMissionWheres();
+    const { completedWhere } = await funnelMissionCapture();
     const pendingWhere = await badgePendingWhere();
-    const isCompleted = intPredicate(completed.durationSec);
+    const isCompleted = intPredicate(completedWhere.durationSec);
     const isPending = intPredicate(pendingWhere.durationSec);
 
     // 정상 완료(manual_done / timer_ended) → durationSec>0 → funnel 완료 ✓ / badge 미완료 ✗
@@ -220,15 +240,5 @@ describe("미션 완료 durationSec 교차 계약 (mission ↔ funnel ↔ badge)
     expect(skippedDur).toBe(0);
     expect(isCompleted(skippedDur)).toBe(false);
     expect(isPending(skippedDur)).toBe(true);
-  });
-
-  it("[C6] mission_started 는 완료/스킵 양쪽을 포함 (started ⊇ completed ∪ pending)", async () => {
-    const { started } = await funnelMissionWheres();
-    const startedPred = intPredicate(started.durationSec); // 무필터 → 항상 true
-    const completedDur = await recordedDurationSec("manual_done", 95);
-    const skippedDur = await recordedDurationSec("skipped", 88);
-    // 시작 단계는 durationSec 부호와 무관하게 둘 다 카운트.
-    expect(startedPred(completedDur)).toBe(true);
-    expect(startedPred(skippedDur)).toBe(true);
   });
 });

@@ -959,6 +959,17 @@ export type AnalyticsEvent =
       properties: {
         variant: "resume" | "streak" | "weekly_goal";
       };
+    }
+  // === MON-001 후속 (AnalyticsEvent 재연결) — funnel 진입/시작 단계 서버 영속 ===
+  | {
+      // recordFunnelStep Server Action 이 trackServerEvent 로 AnalyticsEvent INSERT.
+      // funnel.ts 가 name='funnel_step_reached' + properties.step 으로 distinct userId 집계.
+      // 진입/시작 3단계만 본 이벤트로 영속(완료 단계는 도메인 테이블이 authoritative).
+      // R4 보호: step 라벨 + userId(부모 id/익명 쿠키) 만 — 자녀 식별 정보 0건.
+      name: "funnel_step_reached";
+      properties: {
+        step: "landing" | "diagnose_started" | "mission_started";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];

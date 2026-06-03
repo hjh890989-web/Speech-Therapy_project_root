@@ -15,22 +15,25 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const evalCountMock = vi.fn();
+// AnalyticsEvent 재연결 후 — 6단계 모두 findMany(distinct userId).
+const analyticsFindManyMock = vi.fn();
 const evalFindManyMock = vi.fn();
-const sessionLogCountMock = vi.fn();
-const rewardLogCountMock = vi.fn();
+const sessionFindManyMock = vi.fn();
+const rewardFindManyMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
+    analyticsEvent: {
+      findMany: (...args: unknown[]) => analyticsFindManyMock(...args),
+    },
     evaluationResult: {
-      count: (...args: unknown[]) => evalCountMock(...args),
       findMany: (...args: unknown[]) => evalFindManyMock(...args),
     },
     sessionLog: {
-      count: (...args: unknown[]) => sessionLogCountMock(...args),
+      findMany: (...args: unknown[]) => sessionFindManyMock(...args),
     },
     rewardLog: {
-      count: (...args: unknown[]) => rewardLogCountMock(...args),
+      findMany: (...args: unknown[]) => rewardFindManyMock(...args),
     },
   },
 }));
@@ -47,10 +50,10 @@ import {
 } from "@/lib/analytics/funnel";
 
 beforeEach(() => {
-  evalCountMock.mockReset();
+  analyticsFindManyMock.mockReset();
   evalFindManyMock.mockReset();
-  sessionLogCountMock.mockReset();
-  rewardLogCountMock.mockReset();
+  sessionFindManyMock.mockReset();
+  rewardFindManyMock.mockReset();
 });
 
 afterEach(() => {
@@ -103,10 +106,10 @@ describe("addKstDays — KST 일 단위 가산", () => {
 
 describe("aggregateFunnel — date label KST", () => {
   it("[FTZ5] from = UTC 15:00 (KST 다음날 00:00) → date label = KST 일자", async () => {
+    analyticsFindManyMock.mockResolvedValue([]);
     evalFindManyMock.mockResolvedValue([]);
-    evalCountMock.mockResolvedValue(0);
-    sessionLogCountMock.mockResolvedValue(0);
-    rewardLogCountMock.mockResolvedValue(0);
+    sessionFindManyMock.mockResolvedValue([]);
+    rewardFindManyMock.mockResolvedValue([]);
 
     // from = UTC 2026-05-23 15:00 (= KST 2026-05-24 00:00).
     const from = new Date("2026-05-23T15:00:00.000Z");
@@ -118,10 +121,10 @@ describe("aggregateFunnel — date label KST", () => {
 
 describe("aggregateFunnelByDay — KST 일자별 iteration", () => {
   it("[FTZ6] 입력이 UTC 자정이어도 KST 자정으로 정렬 후 iteration", async () => {
+    analyticsFindManyMock.mockResolvedValue([]);
     evalFindManyMock.mockResolvedValue([]);
-    evalCountMock.mockResolvedValue(0);
-    sessionLogCountMock.mockResolvedValue(0);
-    rewardLogCountMock.mockResolvedValue(0);
+    sessionFindManyMock.mockResolvedValue([]);
+    rewardFindManyMock.mockResolvedValue([]);
 
     // from = UTC 2026-05-19 00:00 (= KST 2026-05-19 09:00 → toDayStartKst → KST 5-19 00:00 = UTC 5-18 15:00).
     // to   = UTC 2026-05-22 00:00 (= KST 2026-05-22 09:00 → toDayStartKst → KST 5-22 00:00 = UTC 5-21 15:00).
@@ -146,10 +149,10 @@ describe("aggregateFunnelByDay — KST 일자별 iteration", () => {
   });
 
   it("[FTZ6b] KST 자정에 정확히 정렬된 from/to 입력 — boundary 그대로", async () => {
+    analyticsFindManyMock.mockResolvedValue([]);
     evalFindManyMock.mockResolvedValue([]);
-    evalCountMock.mockResolvedValue(0);
-    sessionLogCountMock.mockResolvedValue(0);
-    rewardLogCountMock.mockResolvedValue(0);
+    sessionFindManyMock.mockResolvedValue([]);
+    rewardFindManyMock.mockResolvedValue([]);
 
     // from = KST 5-19 00:00 = UTC 5-18 15:00.
     // to   = KST 5-22 00:00 = UTC 5-21 15:00.

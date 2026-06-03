@@ -24,6 +24,7 @@ import { trackEvent } from "@/lib/analytics";
 import { useMissionIntervention } from "@/lib/hooks/useMissionIntervention";
 import { useAnonymousUserId } from "@/lib/hooks/useAnonymousUserId";
 import { recordMissionCompletion } from "@/app/actions/mission";
+import { recordFunnelStep } from "@/app/actions/track-funnel";
 
 type Phase = "ready" | "running" | "completed";
 type SupportedPhoneme = "ㄱ" | "ㄴ" | "ㅅ" | "ㅈ" | "ㄹ";
@@ -231,6 +232,8 @@ function MissionRunnerInner({
         plannedDurationSec: durationSec,
       });
     }
+    // MON-001 — funnel 'mission_started' 서버 영속(distinct userId 집계용). 음소 지원 여부 무관.
+    void recordFunnelStep("mission_started");
     startTimestampRef.current = Date.now();
     setRemainingSec(durationSec);
     setPhase("running");

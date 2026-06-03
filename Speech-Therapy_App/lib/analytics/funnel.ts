@@ -114,10 +114,34 @@ export {
 //   ["funnel-aggregate", from.toISOString(), to.toISOString()]
 //   ["funnel-aggregate-by-day", ...]
 
-/// landing 정의 — distinct userId 카운트 (EvaluationResult 기준).
-/// SessionLog 의 userId 도 후보였으나, EvaluationResult 가 funnel 의 "최소 1회 진단 진입" 을
-/// 가장 정확히 표현 (mission-only session 은 funnel landing 정의 밖).
-async function countLandingDistinctUsers(from: Date, to: Date): Promise<number> {
+// ── AnalyticsEvent 재연결(2026-06-03) — 모든 단계를 distinct userId(진짜 user 퍼널)로 ──
+//   진입/시작 3단계(landing/diagnose_started/mission_started)는 AnalyticsEvent
+//   (recordFunnelStep → trackServerEvent, name='funnel_step_reached' + properties.step).
+//   완료 3단계는 도메인 테이블(authoritative). 모두 userId not null 의 distinct 카운트라
+//   '이벤트:이벤트 비율'이 아닌 *사용자 전환율*. 동일 identity space(익명 쿠키/auth uid,
+//   migrateAnonymousData 가 AnalyticsEvent 포함 병합)라 단계 간 비교가 정합.
+
+/// 진입/시작 단계 — AnalyticsEvent funnel_step_reached 의 distinct userId.
+async function countFunnelStepUsers(
+  step: "landing" | "diagnose_started" | "mission_started",
+  from: Date,
+  to: Date,
+): Promise<number> {
+  const rows = await prisma.analyticsEvent.findMany({
+    where: {
+      name: "funnel_step_reached",
+      createdAt: { gte: from, lt: to },
+      userId: { not: null },
+      properties: { path: ["step"], equals: step },
+    },
+    select: { userId: true },
+    distinct: ["userId"],
+  });
+  return rows.length;
+}
+
+/// 진단 완료(authoritative) — EvaluationResult distinct userId. (userId 는 non-null 컬럼.)
+async function countDiagnoseCompletedUsers(from: Date, to: Date): Promise<number> {
   const rows = await prisma.evaluationResult.findMany({
     where: { createdAt: { gte: from, lt: to } },
     select: { userId: true },
@@ -126,59 +150,47 @@ async function countLandingDistinctUsers(from: Date, to: Date): Promise<number> 
   return rows.length;
 }
 
-async function countDiagnoseRows(from: Date, to: Date): Promise<number> {
-  return prisma.evaluationResult.count({
-    where: { createdAt: { gte: from, lt: to } },
-  });
-}
-
-async function countMissionStarted(from: Date, to: Date): Promise<number> {
-  return prisma.sessionLog.count({
-    where: {
-      missionId: { not: null },
-      startTime: { gte: from, lt: to },
-    },
-  });
-}
-
-async function countMissionCompleted(from: Date, to: Date): Promise<number> {
-  // durationSec > 0 → 실제 mission 진행 (시작 직후 abort 가 아닌 완수 근사).
-  // 별도 status 컬럼 부재로 인한 근사 — 향후 MissionSession 모델 도입 시 status='completed' 직접 사용.
-  return prisma.sessionLog.count({
+/// 미션 완료(authoritative) — SessionLog distinct userId. durationSec>0 = 완수 근사
+/// (skipped=0 제외, mission.ts 규약·badge <=0 와 boundary 0 에서 상보).
+async function countMissionCompletedUsers(from: Date, to: Date): Promise<number> {
+  const rows = await prisma.sessionLog.findMany({
     where: {
       missionId: { not: null },
       startTime: { gte: from, lt: to },
       durationSec: { gt: 0 },
     },
+    select: { userId: true },
+    distinct: ["userId"],
   });
+  return rows.length;
 }
 
-async function countRewardGranted(from: Date, to: Date): Promise<number> {
-  // 미션 완료 보상만 — idempotencyKey 'mission-{missionId}-{KST일자}' prefix (app/actions/mission.ts).
-  // 진단 결과 별(키 'session-…', diagnose/result/RewardOnMount)을 제외해 funnel reward 단계가
-  // mission_completed 의 하위집합이 되도록(단조성 회복). 미필터 시 진단 별이 분자에 혼입돼
-  // conversion>100%·비단조가 발생했음(funnel-bottleneck-readiness 감사, 2026-06-03).
-  return prisma.rewardLog.count({
+/// 미션 보상(authoritative) — RewardLog distinct userId, 'mission-' prefix 만(진단 별 제외).
+async function countRewardGrantedUsers(from: Date, to: Date): Promise<number> {
+  const rows = await prisma.rewardLog.findMany({
     where: {
       createdAt: { gte: from, lt: to },
       idempotencyKey: { startsWith: "mission-" },
     },
+    select: { userId: true },
+    distinct: ["userId"],
   });
+  return rows.length;
 }
 
 async function fetchRawCounts(from: Date, to: Date): Promise<RawCounts> {
-  const [landing, started, completed, mStart, mComplete, reward] = await Promise.all([
-    countLandingDistinctUsers(from, to),
-    countDiagnoseRows(from, to),
-    countDiagnoseRows(from, to),
-    countMissionStarted(from, to),
-    countMissionCompleted(from, to),
-    countRewardGranted(from, to),
+  const [landing, dStart, dComplete, mStart, mComplete, reward] = await Promise.all([
+    countFunnelStepUsers("landing", from, to),
+    countFunnelStepUsers("diagnose_started", from, to),
+    countDiagnoseCompletedUsers(from, to),
+    countFunnelStepUsers("mission_started", from, to),
+    countMissionCompletedUsers(from, to),
+    countRewardGrantedUsers(from, to),
   ]);
   return {
     landingDistinctUsers: landing,
-    diagnoseStarted: started,
-    diagnoseCompleted: completed,
+    diagnoseStarted: dStart,
+    diagnoseCompleted: dComplete,
     missionStarted: mStart,
     missionCompleted: mComplete,
     rewardGranted: reward,

@@ -21,6 +21,10 @@ const classFindManyMock = vi.fn();
 const evaluationFindManyMock = vi.fn();
 const rewardCountMock = vi.fn();
 const sessionLogCountMock = vi.fn();
+// AnalyticsEvent 재연결 후 — funnel 은 analyticsEvent/sessionLog/rewardLog.findMany(distinct) 사용.
+const analyticsFindManyMock = vi.fn();
+const sessionLogFindManyMock = vi.fn();
+const rewardLogFindManyMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -37,11 +41,16 @@ vi.mock("@/lib/db", () => ({
       aggregate: (...args: unknown[]) => evaluationAggregateMock(...args),
       findMany: (...args: unknown[]) => evaluationFindManyMock(...args),
     },
+    analyticsEvent: {
+      findMany: (...args: unknown[]) => analyticsFindManyMock(...args),
+    },
     rewardLog: {
       count: (...args: unknown[]) => rewardCountMock(...args),
+      findMany: (...args: unknown[]) => rewardLogFindManyMock(...args),
     },
     sessionLog: {
       count: (...args: unknown[]) => sessionLogCountMock(...args),
+      findMany: (...args: unknown[]) => sessionLogFindManyMock(...args),
     },
   },
 }));
@@ -140,16 +149,22 @@ describe("Performance 감사 2차 — unstable_cache wrapper passthrough (mocked
     expect(classFindManyMock).not.toHaveBeenCalled();
   });
 
-  it("aggregateFunnel — wrapper 통과 후 본체 prisma 호출 (5종 count/findMany)", async () => {
+  it("aggregateFunnel — wrapper 통과 후 본체 prisma 호출 (distinct userId findMany)", async () => {
+    // 진입/시작 = AnalyticsEvent, 완료 = 도메인 테이블, 모두 findMany(distinct).
+    analyticsFindManyMock.mockResolvedValue([]);
+    evaluationFindManyMock.mockResolvedValue([]);
+    sessionLogFindManyMock.mockResolvedValue([]);
+    rewardLogFindManyMock.mockResolvedValue([]);
     const from = new Date("2026-05-01T00:00:00Z");
     const to = new Date("2026-05-08T00:00:00Z");
     const result = await aggregateFunnel({ from, to });
     expect(result.steps.length).toBe(6);
     expect(result.date).toBeDefined();
-    // landing distinct fetch + diagnose count + mission/reward.
+    // landing/started = AnalyticsEvent, diagnose_completed = EvaluationResult,
+    // mission_completed = SessionLog, reward = RewardLog (모두 findMany distinct).
+    expect(analyticsFindManyMock).toHaveBeenCalled();
     expect(evaluationFindManyMock).toHaveBeenCalled();
-    expect(evaluationCountMock).toHaveBeenCalled();
-    expect(rewardCountMock).toHaveBeenCalled();
-    expect(sessionLogCountMock).toHaveBeenCalled();
+    expect(sessionLogFindManyMock).toHaveBeenCalled();
+    expect(rewardLogFindManyMock).toHaveBeenCalled();
   });
 });

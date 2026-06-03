@@ -13,23 +13,25 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Prisma mock — funnel aggregator 가 호출하는 4 함수만 mock.
-const evalCountMock = vi.fn();
-const evalFindManyMock = vi.fn();
-const sessionLogCountMock = vi.fn();
-const rewardLogCountMock = vi.fn();
+// Prisma mock — AnalyticsEvent 재연결 후 funnel 은 6단계 모두 findMany(distinct userId).
+const analyticsFindManyMock = vi.fn(); // landing / diagnose_started / mission_started
+const evalFindManyMock = vi.fn(); // diagnose_completed
+const sessionFindManyMock = vi.fn(); // mission_completed
+const rewardFindManyMock = vi.fn(); // reward_granted
 
 vi.mock("@/lib/db", () => ({
   prisma: {
+    analyticsEvent: {
+      findMany: (...args: unknown[]) => analyticsFindManyMock(...args),
+    },
     evaluationResult: {
-      count: (...args: unknown[]) => evalCountMock(...args),
       findMany: (...args: unknown[]) => evalFindManyMock(...args),
     },
     sessionLog: {
-      count: (...args: unknown[]) => sessionLogCountMock(...args),
+      findMany: (...args: unknown[]) => sessionFindManyMock(...args),
     },
     rewardLog: {
-      count: (...args: unknown[]) => rewardLogCountMock(...args),
+      findMany: (...args: unknown[]) => rewardFindManyMock(...args),
     },
   },
 }));
@@ -40,74 +42,54 @@ const ORIGINAL_CRON_SECRET = process.env.CRON_SECRET;
 const ORIGINAL_SLACK_URL = process.env.SLACK_WEBHOOK_URL;
 const ORIGINAL_FETCH = globalThis.fetch;
 
-/// aggregateFunnel 호출 sequence 를 시뮬레이션하는 helper.
+/// aggregateFunnel 호출을 시뮬레이션하는 helper (AnalyticsEvent 재연결 후).
 ///
-/// aggregateFunnel(yesterday) + aggregateFunnel(dayBefore) 가 Promise.all 로 동시 호출됨.
-/// 두 호출 모두 다음 sequence 를 사용:
-///   1. evaluationResult.findMany (landing distinct userId)
-///   2. evaluationResult.count (diagnose_started)
-///   3. evaluationResult.count (diagnose_completed)
-///   4. sessionLog.count (mission_started)
-///   5. sessionLog.count (mission_completed)
-///   6. rewardLog.count (reward_granted)
-///
-/// 두 일자 입력 ([yesterday, dayBefore]) 을 받아 mock 을 순차 세팅.
+/// aggregateFunnel(yesterday) + aggregateFunnel(dayBefore) 동시 호출. 각 단계 소스:
+///   - landing/diagnose_started/mission_started = analyticsEvent.findMany (step + day 분기)
+///   - diagnose_completed = evaluationResult.findMany (day)
+///   - mission_completed  = sessionLog.findMany (day, startTime)
+///   - reward_granted     = rewardLog.findMany (day)
+/// 모두 distinct userId rows 배열 반환(length = 카운트). 일자 분기는 where.createdAt/startTime.gte.
+function userRows(n: number): { userId: string }[] {
+  return Array.from({ length: n }, (_, i) => ({ userId: `u-${i}` }));
+}
+
 function setupFunnelMocks(
   yesterday: { landing: number; dStart: number; dComplete: number; mStart: number; mComplete: number; reward: number },
   dayBefore: { landing: number; dStart: number; dComplete: number; mStart: number; mComplete: number; reward: number },
 ) {
-  // Promise.all 의 호출 순서는 보장되지만 mock 의 호출 순서는 실행 시점에 결정.
-  // findMany / count 모두 호출 순서대로 결과 큐에 push.
-  // aggregateFunnel(yesterday) 와 aggregateFunnel(dayBefore) 가 동시 호출되더라도
-  // 각자 내부 Promise.all 의 호출 순서는 결정적 — yesterday 가 먼저 push, dayBefore 이후.
-  // 단, Promise.all 의 두 aggregator 자체는 동시 시작 → mock call ordering 은
-  // 결정적이지 않을 수 있음. 안전하게 mockImplementation 으로 분기.
-  //
-  // 본 mock 은 호출 인자 (where.createdAt.gte) 로 일자 분기.
-  const yesterdayMatcher = (call: { where: { createdAt: { gte: Date } } }) => {
-    // yesterday 호출인지 from 기준 UTC date 로 판별.
-    const gte = call.where.createdAt.gte;
-    return gte.getUTCDate() === Y_GTE.getUTCDate();
-  };
-  evalFindManyMock.mockImplementation((arg) => {
-    return Promise.resolve(
-      Array.from(
-        { length: yesterdayMatcher(arg) ? yesterday.landing : dayBefore.landing },
-        (_, i) => ({ userId: `u-${i}` }),
-      ),
-    );
+  const isYesterday = (gte: Date) => gte.getUTCDate() === Y_GTE.getUTCDate();
+
+  // 진입/시작 = AnalyticsEvent funnel_step_reached, step(properties.equals) + day 분기.
+  analyticsFindManyMock.mockImplementation(
+    (arg: { where: { createdAt: { gte: Date }; properties: { equals: string } } }) => {
+      const day = isYesterday(arg.where.createdAt.gte) ? yesterday : dayBefore;
+      const step = arg.where.properties.equals;
+      const n =
+        step === "landing"
+          ? day.landing
+          : step === "diagnose_started"
+            ? day.dStart
+            : step === "mission_started"
+              ? day.mStart
+              : 0;
+      return Promise.resolve(userRows(n));
+    },
+  );
+  // diagnose_completed = EvaluationResult, day 분기.
+  evalFindManyMock.mockImplementation((arg: { where: { createdAt: { gte: Date } } }) => {
+    const day = isYesterday(arg.where.createdAt.gte) ? yesterday : dayBefore;
+    return Promise.resolve(userRows(day.dComplete));
   });
-  // EvaluationResult.count 는 startedCount + completedCount 두 번 호출 (같은 from~to 로).
-  // 호출 순서대로 yesterday.dStart / yesterday.dComplete / dayBefore.dStart / dayBefore.dComplete
-  // 가 들어오므로 호출 인자 분기.
-  let yEvalCalls = 0;
-  let dEvalCalls = 0;
-  evalCountMock.mockImplementation((arg: { where: { createdAt: { gte: Date } } }) => {
-    if (yesterdayMatcher(arg)) {
-      const val = yEvalCalls === 0 ? yesterday.dStart : yesterday.dComplete;
-      yEvalCalls += 1;
-      return Promise.resolve(val);
-    }
-    const val = dEvalCalls === 0 ? dayBefore.dStart : dayBefore.dComplete;
-    dEvalCalls += 1;
-    return Promise.resolve(val);
+  // mission_completed = SessionLog, day 분기(startTime).
+  sessionFindManyMock.mockImplementation((arg: { where: { startTime: { gte: Date } } }) => {
+    const day = isYesterday(arg.where.startTime.gte) ? yesterday : dayBefore;
+    return Promise.resolve(userRows(day.mComplete));
   });
-  let ySessionCalls = 0;
-  let dSessionCalls = 0;
-  sessionLogCountMock.mockImplementation((arg: { where: { startTime: { gte: Date } } }) => {
-    const yesterdayMatch = arg.where.startTime.gte.getUTCDate() === Y_GTE.getUTCDate();
-    if (yesterdayMatch) {
-      const val = ySessionCalls === 0 ? yesterday.mStart : yesterday.mComplete;
-      ySessionCalls += 1;
-      return Promise.resolve(val);
-    }
-    const val = dSessionCalls === 0 ? dayBefore.mStart : dayBefore.mComplete;
-    dSessionCalls += 1;
-    return Promise.resolve(val);
-  });
-  rewardLogCountMock.mockImplementation((arg: { where: { createdAt: { gte: Date } } }) => {
-    if (yesterdayMatcher(arg)) return Promise.resolve(yesterday.reward);
-    return Promise.resolve(dayBefore.reward);
+  // reward_granted = RewardLog, day 분기.
+  rewardFindManyMock.mockImplementation((arg: { where: { createdAt: { gte: Date } } }) => {
+    const day = isYesterday(arg.where.createdAt.gte) ? yesterday : dayBefore;
+    return Promise.resolve(userRows(day.reward));
   });
 }
 
@@ -117,10 +99,10 @@ function setupFunnelMocks(
 const Y_GTE = new Date("2026-05-21T00:00:00Z");
 
 beforeEach(() => {
-  evalCountMock.mockReset();
+  analyticsFindManyMock.mockReset();
   evalFindManyMock.mockReset();
-  sessionLogCountMock.mockReset();
-  rewardLogCountMock.mockReset();
+  sessionFindManyMock.mockReset();
+  rewardFindManyMock.mockReset();
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-05-22T12:00:00Z"));
   vi.unstubAllEnvs();

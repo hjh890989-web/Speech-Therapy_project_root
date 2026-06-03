@@ -15,22 +15,25 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const evalCountMock = vi.fn();
+// AnalyticsEvent 재연결 후 — 6단계 모두 distinct userId(findMany + distinct).
+const analyticsFindManyMock = vi.fn();
 const evalFindManyMock = vi.fn();
-const sessionLogCountMock = vi.fn();
-const rewardLogCountMock = vi.fn();
+const sessionLogFindManyMock = vi.fn();
+const rewardLogFindManyMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
+    analyticsEvent: {
+      findMany: (...args: unknown[]) => analyticsFindManyMock(...args),
+    },
     evaluationResult: {
-      count: (...args: unknown[]) => evalCountMock(...args),
       findMany: (...args: unknown[]) => evalFindManyMock(...args),
     },
     sessionLog: {
-      count: (...args: unknown[]) => sessionLogCountMock(...args),
+      findMany: (...args: unknown[]) => sessionLogFindManyMock(...args),
     },
     rewardLog: {
-      count: (...args: unknown[]) => rewardLogCountMock(...args),
+      findMany: (...args: unknown[]) => rewardLogFindManyMock(...args),
     },
   },
 }));
@@ -51,10 +54,10 @@ import {
 } from "@/lib/analytics/funnel";
 
 beforeEach(() => {
-  evalCountMock.mockReset();
+  analyticsFindManyMock.mockReset();
   evalFindManyMock.mockReset();
-  sessionLogCountMock.mockReset();
-  rewardLogCountMock.mockReset();
+  sessionLogFindManyMock.mockReset();
+  rewardLogFindManyMock.mockReset();
 });
 
 afterEach(() => {
@@ -64,18 +67,33 @@ afterEach(() => {
 // =============================================================================
 // [시나리오 1] aggregateFunnel 정상 흐름
 // =============================================================================
-describe("aggregateFunnel — 정상 6단계 카운트 + conversion", () => {
+describe("aggregateFunnel — 정상 6단계 카운트 + conversion (모두 distinct userId)", () => {
   it("[시나리오 1] landing 100 / d_start 80 / d_complete 70 / m_start 50 / m_complete 30 / reward 25 → 정합", async () => {
-    // landing distinct userId = 100 (findMany 의 row 수)
-    evalFindManyMock.mockResolvedValue(
-      Array.from({ length: 100 }, (_, i) => ({ userId: `u-${i}` })),
+    // 진입/시작 3단계 = AnalyticsEvent funnel_step_reached distinct userId (step 분기).
+    const stepCounts: Record<string, number> = {
+      landing: 100,
+      diagnose_started: 80,
+      mission_started: 50,
+    };
+    analyticsFindManyMock.mockImplementation(
+      (arg: { where?: { properties?: { equals?: string } } }) => {
+        const step = arg?.where?.properties?.equals ?? "";
+        const n = stepCounts[step] ?? 0;
+        return Promise.resolve(
+          Array.from({ length: n }, (_, i) => ({ userId: `u-${step}-${i}` })),
+        );
+      },
     );
-    // diagnose_started = diagnose_completed = 80 (current MVP 매핑)
-    evalCountMock.mockResolvedValue(80);
-    sessionLogCountMock
-      .mockResolvedValueOnce(50) // mission_started
-      .mockResolvedValueOnce(30); // mission_completed
-    rewardLogCountMock.mockResolvedValue(25);
+    // 완료 3단계 = 도메인 테이블 distinct userId (findMany row 수).
+    evalFindManyMock.mockResolvedValue(
+      Array.from({ length: 70 }, (_, i) => ({ userId: `u-dc-${i}` })),
+    ); // diagnose_completed
+    sessionLogFindManyMock.mockResolvedValue(
+      Array.from({ length: 30 }, (_, i) => ({ userId: `u-mc-${i}` })),
+    ); // mission_completed
+    rewardLogFindManyMock.mockResolvedValue(
+      Array.from({ length: 25 }, (_, i) => ({ userId: `u-r-${i}` })),
+    ); // reward_granted
 
     const from = new Date("2026-05-21T00:00:00Z");
     const to = new Date("2026-05-22T00:00:00Z");
@@ -92,25 +110,48 @@ describe("aggregateFunnel — 정상 6단계 카운트 + conversion", () => {
     expect(byName.get("landing")?.cumulativeConversion).toBe(1);
     expect(byName.get("diagnose_started")?.count).toBe(80);
     expect(byName.get("diagnose_started")?.conversionFromPrev).toBeCloseTo(0.8, 5);
+    expect(byName.get("diagnose_completed")?.count).toBe(70);
     expect(byName.get("mission_started")?.count).toBe(50);
+    expect(byName.get("mission_completed")?.count).toBe(30);
     expect(byName.get("reward_granted")?.count).toBe(25);
     expect(byName.get("reward_granted")?.cumulativeConversion).toBeCloseTo(0.25, 5);
 
-    // EvaluationResult.findMany 가 distinct userId option 으로 호출됐는지.
-    const findArg = evalFindManyMock.mock.calls[0][0] as {
+    // 진입/시작 = AnalyticsEvent funnel_step_reached, distinct userId, userId not null, step 분기.
+    const landingArg = analyticsFindManyMock.mock.calls.find(
+      (c) =>
+        (c[0] as { where?: { properties?: { equals?: string } } }).where
+          ?.properties?.equals === "landing",
+    )?.[0] as {
+      where: {
+        name: string;
+        createdAt: { gte: Date; lt: Date };
+        userId: { not: null };
+        properties: { path: string[]; equals: string };
+      };
       distinct: string[];
-      where: { createdAt: { gte: Date; lt: Date } };
     };
-    expect(findArg.distinct).toContain("userId");
-    expect(findArg.where.createdAt.gte.getTime()).toBe(from.getTime());
-    expect(findArg.where.createdAt.lt.getTime()).toBe(to.getTime());
+    expect(landingArg.where.name).toBe("funnel_step_reached");
+    expect(landingArg.where.properties.path).toEqual(["step"]);
+    expect(landingArg.where.userId).toEqual({ not: null });
+    expect(landingArg.distinct).toContain("userId");
+    expect(landingArg.where.createdAt.gte.getTime()).toBe(from.getTime());
+    expect(landingArg.where.createdAt.lt.getTime()).toBe(to.getTime());
 
-    // reward_granted 는 미션 보상만 — idempotencyKey 'mission-' prefix 필터 (진단 별 제외).
-    // funnel reward 단계가 mission_completed 의 하위집합이 되도록 단조성 회복(2026-06-03 감사).
-    const rewardArg = rewardLogCountMock.mock.calls[0][0] as {
+    // mission_completed = SessionLog distinct userId, durationSec>0.
+    const sessArg = sessionLogFindManyMock.mock.calls[0][0] as {
+      where: { durationSec: { gt: number }; missionId: { not: null } };
+      distinct: string[];
+    };
+    expect(sessArg.where.durationSec).toEqual({ gt: 0 });
+    expect(sessArg.distinct).toContain("userId");
+
+    // reward_granted = RewardLog distinct userId, 'mission-' prefix (진단 별 제외 — 단조성).
+    const rewardArg = rewardLogFindManyMock.mock.calls[0][0] as {
       where: { idempotencyKey?: { startsWith?: string } };
+      distinct: string[];
     };
     expect(rewardArg.where.idempotencyKey?.startsWith).toBe("mission-");
+    expect(rewardArg.distinct).toContain("userId");
   });
 });
 
@@ -284,10 +325,10 @@ describe("pickAlertSteps — |Δpp| > 20 or |Δrel| > 20% 임계", () => {
 describe("aggregateFunnelByDay — 다일 range", () => {
   it("[시나리오 11] 3일 range → 3개 FunnelSummary + 각 일자 KST boundary 정합 (TZ 통일 PR 후)", async () => {
     // 모든 prisma 호출 빈 결과 (집계 0)
+    analyticsFindManyMock.mockResolvedValue([]);
     evalFindManyMock.mockResolvedValue([]);
-    evalCountMock.mockResolvedValue(0);
-    sessionLogCountMock.mockResolvedValue(0);
-    rewardLogCountMock.mockResolvedValue(0);
+    sessionLogFindManyMock.mockResolvedValue([]);
+    rewardLogFindManyMock.mockResolvedValue([]);
 
     // 본 테스트 입력 from/to (UTC 자정) 은 KST 09:00 instant — toDayStartKst 가 KST 5-19 00:00 으로 정렬.
     // 따라서 3개 KST 일자 (5-19, 5-20, 5-21) 의 summary 가 생성됨.

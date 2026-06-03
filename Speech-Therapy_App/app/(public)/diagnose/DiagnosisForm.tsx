@@ -20,6 +20,7 @@ import { useSplMeter } from "@/lib/audio/useSplMeter";
 import { MicStreamProvider } from "@/lib/audio/MicStreamProvider";
 import { SplToast } from "@/components/SplToast";
 import { analyzeDiagnosis } from "@/app/actions/diagnosis";
+import { recordFunnelStep } from "@/app/actions/track-funnel";
 import { trackEvent } from "@/lib/analytics";
 
 // Sprint 3 §2 A 핫픽스 (2026-05-15) → §2 A-2 재설계 (2026-05-19, 옵션 A):
@@ -614,6 +615,8 @@ function DiagnosisFormInner({
                     targetPhoneme,
                     childAgeMonths,
                   });
+                  // MON-001 — funnel 'diagnose_started' 서버 영속(distinct userId 집계용).
+                  void recordFunnelStep("diagnose_started");
                   // §2 A-2 옵션 A — 1단계 (STT 단독 mic 점유).
                   // audio analyzer 는 STT 완료 후 사용자 추가 발화 시 별도 활성화.
                   start();

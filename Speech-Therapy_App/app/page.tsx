@@ -3,9 +3,13 @@
 
 import Link from "next/link";
 
+import { LandingBeacon } from "./LandingBeacon";
+
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-full max-w-2xl flex-col px-4 py-10 sm:py-16">
+      {/* MON-001 — funnel 'landing' 진입 1회 영속(browser mount). */}
+      <LandingBeacon />
       {/* Disclaimer 1중 */}
       <p
         data-testid="disclaimer"

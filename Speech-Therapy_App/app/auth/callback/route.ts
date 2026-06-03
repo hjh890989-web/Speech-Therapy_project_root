@@ -121,6 +121,9 @@ async function migrateAnonymousData(anonymousUserId: string, authUserId: string)
         data: { userId: authUserId },
       });
       await tx.rewardLog.updateMany({ where: { userId: anonymousUserId }, data: { userId: authUserId } });
+      // MON-001 — funnel distinct userId 정합: 익명 시점 진입/시작 이벤트도 auth 로 병합
+      // (미병합 시 로그인 전후가 distinct 2명으로 이중계수돼 funnel 전환율 왜곡).
+      await tx.analyticsEvent.updateMany({ where: { userId: anonymousUserId }, data: { userId: authUserId } });
 
       // RewardProgress 는 @unique(userId) 라 단순 update 가 충돌 가능 — 합산 후 익명 row 삭제.
       const anonymousProgress = await tx.rewardProgress.findUnique({ where: { userId: anonymousUserId } });

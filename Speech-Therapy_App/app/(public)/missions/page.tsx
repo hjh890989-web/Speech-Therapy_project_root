@@ -10,10 +10,8 @@
 // CON-04: 실패/X표시 어휘 금지. 격려 카피만 사용.
 
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { ANONYMOUS_USER_COOKIE } from "@/lib/anonymous-user";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveUserId } from "@/lib/auth/resolve-user-id";
 import { type MissionFixture } from "@/lib/mocks/missions";
 import { getMissionCards } from "@/lib/missions/card-repo";
 import { getMissionStreak } from "@/lib/missions/streak";
@@ -151,20 +149,6 @@ async function computeRecommendation(
     console.error("missions: 추천 계산 실패", err);
     return fallback;
   }
-}
-
-async function resolveUserId(): Promise<string | undefined> {
-  // 1순위: 인증된 Supabase 사용자.
-  try {
-    const supabase = await getSupabaseServerClient();
-    const { data } = await supabase.auth.getUser();
-    if (data.user?.id) return data.user.id;
-  } catch {
-    // env 미설정 시 익명 폴백.
-  }
-  // 2순위: 익명 cookie.
-  const cookieStore = await cookies();
-  return cookieStore.get(ANONYMOUS_USER_COOKIE)?.value;
 }
 
 export default async function MissionsPage() {

@@ -36,38 +36,38 @@ import { FunnelDailyChart } from "./FunnelChart";
 
 export const dynamic = "force-dynamic";
 
-// MON-001 후속 (funnel-bottleneck-readiness 감사, 2026-06-03) — 단계별 *측정 신뢰도*.
-//   이 dashboard 는 도메인 테이블 역산이라 일부 '직전 대비' 셀이 구조적 아티팩트다.
-//   owner 가 가장 낮은 셀을 기계적으로 병목으로 오독하지 않도록, 각 단계의 conversionFromPrev
-//   신뢰도를 표에 명시한다(display-only — 집계 로직 불변).
+// MON-001 후속 (AnalyticsEvent 재연결, 2026-06-03) — 단계별 *측정 신뢰도*.
+//   진입/시작(landing/diagnose_started/mission_started)은 AnalyticsEvent distinct 사용자,
+//   완료(diagnose_completed/mission_completed/reward_granted)는 도메인 테이블 distinct 사용자 —
+//   모두 *사용자 전환율*로 실측화됨. 잔여 한계(landing=홈 진입만, reward 멱등 비대칭)만 표에 명시.
 type ReliabilityLevel = "base" | "reliable" | "directional" | "artifact";
 const STEP_RELIABILITY: Record<
   FunnelStepName,
   { level: ReliabilityLevel; note: string }
 > = {
   landing: {
-    level: "base",
-    note: "기준 단계(진단 1회+ distinct 사용자). 진짜 랜딩 페이지 진입은 미계측.",
+    level: "reliable",
+    note: "홈(/) 진입 distinct 사용자(AnalyticsEvent). 광고 등 /diagnose 직진입은 미포함 — landing<시작이면 직진입 유입.",
   },
   diagnose_started: {
-    level: "artifact",
-    note: "주의: landing(distinct user) 대비 row count라 100% 초과 가능. '재진단 강도'이지 유입→진단 전환 아님.",
+    level: "reliable",
+    note: "발음 확인 시작 distinct 사용자(AnalyticsEvent). 완료와 별개 신호 → 시작→완료 이탈이 실측됨.",
   },
   diagnose_completed: {
-    level: "artifact",
-    note: "주의: 시작과 동일 소스(EvaluationResult)를 두 번 세어 항상 100%. 정보량 0 — 병목 판정에 쓰지 말 것.",
+    level: "reliable",
+    note: "발음 확인 완료 distinct 사용자(EvaluationResult, authoritative).",
   },
   mission_started: {
-    level: "directional",
-    note: "방향성: 'started'는 완료+스킵 합(진짜 시작 아님) + 멀티데이·코호트 부재. 추이 참고용.",
+    level: "reliable",
+    note: "미션 시작 distinct 사용자(AnalyticsEvent, MissionRunner running 진입) — 진짜 시작 신호.",
   },
   mission_completed: {
     level: "reliable",
-    note: "상대적 신뢰: 동일 SessionLog 풀(분자/분모) → 오염 적음. 단 의미는 '비-스킵 완주율'.",
+    note: "미션 완료 distinct 사용자(SessionLog durationSec>0, 스킵 제외 완수).",
   },
   reward_granted: {
     level: "directional",
-    note: "방향성: 미션 보상만 필터(진단 별 제외). 재완수=별 1회 멱등이라 반복 완수 시 저평가 가능.",
+    note: "방향성: 미션 보상 distinct 사용자(키 'mission-'). 재완수=별 1회 멱등이라 반복 완수 시 저평가 가능.",
   },
 };
 
@@ -245,16 +245,20 @@ export default async function FunnelDashboardPage({ searchParams }: PageProps) {
       >
         <p className="mb-1 font-semibold text-slate-800">데이터 소스 정책</p>
         <ul className="ml-4 list-disc space-y-1">
-          <li>client trackEvent → Vercel Analytics, 서버 이벤트 → AnalyticsEvent 테이블(trackServerEvent).</li>
-          <li>본 dashboard 는 그와 별개로 기존 도메인 테이블 (EvaluationResult / SessionLog / RewardLog) 역산.</li>
-          <li>자녀 식별 정보 0건 — 모든 표시값은 집계 카운트 + 비율.</li>
-          <li>오늘 데이터는 진행중이라 기본 range 에서 제외됩니다.</li>
-          <li className="text-rose-700">
-            <strong>측정 한계(병목 판정 시 필수)</strong>: &lsquo;발음 확인 시작↔완료&rsquo;는 동일
-            소스를 두 번 세어 <strong>항상 100%</strong>(정보량 0). &lsquo;유입→발음 확인 시작&rsquo;은
-            distinct user 대비 row count라 <strong>100% 초과 가능</strong>(재진단 강도이지 진입 전환
-            아님). 진짜 유입 이탈·미션 열람 후 미시작은 row 자체가 없어 <strong>비가시</strong>.
-            &lsquo;측정 신뢰도&rsquo; 열에서 <strong>신뢰/방향성</strong> 단계만 병목 후보로 볼 것.
+          <li>
+            <strong>진입/시작</strong>(유입·발음 확인 시작·미션 시작) = AnalyticsEvent
+            <strong> distinct 사용자</strong>(recordFunnelStep 서버 영속).
+          </li>
+          <li>
+            <strong>완료</strong>(발음 확인 완료·미션 완료·보상) = 도메인 테이블
+            (EvaluationResult / SessionLog durationSec&gt;0 / RewardLog &lsquo;mission-&rsquo;)
+            <strong> distinct 사용자</strong>(authoritative).
+          </li>
+          <li>모든 단계 distinct userId → <strong>사용자 전환율</strong>(이벤트:이벤트 비율 아님). 자녀 식별 정보 0건.</li>
+          <li>오늘 데이터는 진행중이라 기본 range 제외 + 최대 5분 캐시(stale) 지연.</li>
+          <li>
+            <strong>landing = 홈(/) 진입만</strong> — 광고 등 /diagnose 직진입은 미포함이라
+            landing &lt; 발음 확인 시작이면 직진입 유입을 뜻함(이상 아님).
           </li>
           <li>
             북극성 <strong>W-AUR(주 4회 미션 완료)은 본 funnel 밖</strong>(weekly-aggregator).
