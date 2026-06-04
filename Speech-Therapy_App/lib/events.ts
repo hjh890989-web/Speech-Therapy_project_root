@@ -982,6 +982,17 @@ export type AnalyticsEvent =
         bonusStars: number;
         treeGranted: boolean;
       };
+    }
+  // === FR-LANDING — 마케팅 랜딩(`/`) CTA 클릭 (전환 측정) ===
+  | {
+      // components/landing/LandingCtaLink 가 클릭 시 1회 발송 (client trackEvent).
+      // 결과 페이지 'cta_clicked'(result 전용)와 분리 — surface/placement 차원 보존.
+      // R4: cta/placement enum 라벨만 — userId/email/자녀 식별 정보 0건 (PII 불가능 shape).
+      name: "landing_cta_clicked";
+      properties: {
+        cta: "diagnose" | "missions" | "rewards" | "reports" | "signup" | "continue";
+        placement: "hero" | "how_it_works" | "urgency" | "value_props" | "faq" | "final";
+      };
     };
 
 export type AnalyticsEventName = AnalyticsEvent["name"];
