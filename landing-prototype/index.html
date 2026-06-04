@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>말 - 우리 아이 발음 확인</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --emerald: #10b981;
+            --emerald-dark: #059669;
+            --emerald-light: #d1fae5;
+            --amber: #f59e0b;
+            --amber-light: #fef3c7;
+            --sky: #38bdf8;
+            --violet: #8b5cf6;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --white: #ffffff;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --radius-xl: 1.5rem;
+            --radius-lg: 1rem;
+            --radius-md: 0.5rem;
+        }
+
+        /* Dark mode */
+        .dark {
+            --gray-50: #111827;
+            --gray-100: #1f2937;
+            --gray-200: #374151;
+            --gray-300: #4b5563;
+            --gray-400: #9ca3af;
+            --gray-500: #d1d5db;
+            --gray-600: #e5e7eb;
+            --gray-700: #f3f4f6;
+            --gray-800: #f9fafb;
+            --gray-900: #ffffff;
+            --white: #1f2937;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--gray-50);
+            color: var(--gray-800);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Container */
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                max-width: 720px;
+                padding: 0 2rem;
+            }
+        }
+
+        /* Header */
+        header {
+            position: sticky;
+            top: 0;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            z-index: 50;
+            padding: 0.75rem 0;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--emerald);
+        }
+
+        .nav-links {
+            display: none;
+            gap: 1.5rem;
+        }
+
+        .nav-links a {
+            color: var(--gray-600);
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+
+        @media (min-width: 768px) {
+            .nav-links {
+                display: flex;
+            }
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: var(--radius-lg);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 44px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--emerald);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--emerald-dark);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--gray-600);
+        }
+
+        .btn-secondary:hover {
+            color: var(--gray-800);
+        }
+
+        .btn-compact {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        /* Sections */
+        section {
+            padding: 3rem 0;
+        }
+
+        @media (min-width: 768px) {
+            section {
+                padding: 4rem 0;
+            }
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--white) 0%, var(--emerald-light) 100%);
+            padding-top: 3rem;
+        }
+
+        .hero-content {
+            text-align: center;
+        }
+
+        .hero-pill {
+            display: inline-flex;
+            align-items: center;
+            background: var(--amber-light);
+            color: var(--amber);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-pill.hidden {
+            display: none;
+        }
+
+        .hero h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--gray-900);
+        }
+
+        @media (min-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        .hero-subcopy {
+            font-size: 1.125rem;
+            color: var(--gray-600);
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-cta {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .hero-cta {
+                flex-direction: row;
+                justify-content: center;
+            }
+        }
+
+        .trust-microcopy {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .hero-illustration {
+            margin-top: 3rem;
+            font-size: 6rem;
+        }
+
+        /* Section Headings */
+        .section-heading {
+            font-size: 1.75rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--gray-900);
+        }
+
+        @media (min-width: 768px) {
+            .section-heading {
+                font-size: 2rem;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: var(--radius-xl);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .card-grid-3 {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .card-grid-2 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* How It Works */
+        .step-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--emerald);
+            margin-bottom: 0.5rem;
+        }
+
+        .step-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--gray-900);
+        }
+
+        .step-desc {
+            color: var(--gray-600);
+            font-size: 0.9375rem;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .chip {
+            background: var(--emerald-light);
+            color: var(--emerald-dark);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+        }
+
+        /* Wait Section */
+        .wait-section {
+            background: var(--emerald-light);
+        }
+
+        .wait-content {
+            text-align: center;
+        }
+
+        .wait-content h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--gray-900);
+        }
+
+        @media (min-width: 768px) {
+            .wait-content h2 {
+                font-size: 2rem;
+            }
+        }
+
+        .wait-content p {
+            color: var(--gray-700);
+            margin-bottom: 1rem;
+            font-size: 1.125rem;
+        }
+
+        .wait-reassurance {
+            font-weight: 500;
+            color: var(--emerald-dark);
+            margin-bottom: 2rem;
+        }
+
+        /* Value Props */
+        .benefit-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .benefit-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--gray-900);
+        }
+
+        .benefit-desc {
+            color: var(--gray-600);
+            font-size: 0.9375rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .benefit-link {
+            color: var(--emerald);
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .coming-soon-badge {
+            display: inline-block;
+            background: var(--amber-light);
+            color: var(--amber);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Trust Section */
+        .trust-pillar {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+        }
+
+        .trust-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .trust-content h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--gray-900);
+        }
+
+        .trust-content p {
+            color: var(--gray-600);
+            font-size: 0.9375rem;
+        }
+
+        /* FAQ */
+        .faq-item {
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: var(--white);
+        }
+
+        .faq-question {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            text-align: left;
+            background: var(--white);
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--gray-900);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faq-toggle {
+            font-size: 1.25rem;
+            transition: transform 0.2s;
+        }
+
+        .faq-item.open .faq-toggle {
+            transform: rotate(180deg);
+        }
+
+        .faq-answer {
+            padding: 0 1.25rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            color: var(--gray-600);
+            background: var(--white);
+        }
+
+        .faq-item.open .faq-answer {
+            padding: 0 1.25rem 1rem 1.25rem;
+            max-height: 300px;
+        }
+
+        /* Final CTA */
+        .final-cta {
+            background: linear-gradient(135deg, var(--emerald) 0%, var(--emerald-dark) 100%);
+            color: var(--white);
+            text-align: center;
+        }
+
+        .final-cta h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .final-cta h2 {
+                font-size: 2rem;
+            }
+        }
+
+        .final-cta p {
+            margin-bottom: 2rem;
+            opacity: 0.95;
+        }
+
+        .final-cta .btn-primary {
+            background: var(--white);
+            color: var(--emerald);
+        }
+
+        .final-cta .btn-primary:hover {
+            background: var(--gray-100);
+        }
+
+        .final-cta .btn-secondary {
+            color: var(--white);
+            border: 2px solid var(--white);
+        }
+
+        /* Disclaimer */
+        .disclaimer-bar {
+            background: var(--amber-light);
+            padding: 1.5rem 0;
+            text-align: center;
+        }
+
+        .disclaimer-bar p {
+            color: var(--amber);
+            font-weight: 500;
+        }
+
+        .inquiry-section {
+            padding: 1.5rem 0;
+            text-align: center;
+        }
+
+        .inquiry-link {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            text-decoration: none;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--gray-100);
+            padding: 1.5rem 0;
+        }
+
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        @media (min-width: 768px) {
+            .footer-content {
+                flex-direction: row;
+                justify-content: space-between;
+            }
+        }
+
+        .footer-disclaimer {
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            text-align: center;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .footer-links a {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+            text-decoration: none;
+        }
+
+        /* Dark Mode Toggle */
+        .dark-mode-toggle {
+            background: transparent;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: var(--radius-md);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        @media (min-width: 768px) {
+            .modal-overlay {
+                align-items: center;
+            }
+        }
+
+        .modal {
+            background: var(--white);
+            width: 100%;
+            max-width: 500px;
+            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+            padding: 2rem;
+            animation: slideUp 0.3s ease;
+        }
+
+        @media (min-width: 768px) {
+            .modal {
+                border-radius: var(--radius-xl);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .modal h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--gray-900);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            background: var(--white);
+            color: var(--gray-900);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--gray-800);
+            color: var(--white);
+            padding: 1rem 2rem;
+            border-radius: var(--radius-lg);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 200;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Section CTA */
+        .section-cta {
+            text-align: center;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container header-content">
+            <div class="logo">말</div>
+            <nav class="nav-links">
+                <a href="#how-it-works">사용법</a>
+                <a href="#trust">신뢰</a>
+                <a href="#faq">자주 묻는 질문</a>
+            </nav>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button class="dark-mode-toggle" onclick="toggleDarkMode()" aria-label="다크 모드">🌙</button>
+                <a href="#" class="btn btn-primary btn-compact">5분 발음 확인</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="container hero-content">
+            <div class="hero-pill hidden" id="returning-pill">
+                이어서 계속하기 → 오늘의 미션
+            </div>
+            <h1>우리 아이 발음, 회원가입 없이 5분 안에 또래와 비교해 확인해요</h1>
+            <p class="hero-subcopy">월령과 음소를 고르고 한 단어만 들려주면, 또래와 비교한 발음 발달 단계를 바로 안내해 드려요.</p>
+            <div class="hero-cta">
+                <a href="#" class="btn btn-primary">5분 발음 확인 시작하기</a>
+                <a href="#how-it-works" class="btn btn-secondary">서비스가 어떻게 도와주는지 보기 ↓</a>
+            </div>
+            <div class="trust-microcopy">
+                <span>🎙️ 음성 원본 미저장</span>
+                <span>🌟 무가입</span>
+                <span>⏱️ 약 5분</span>
+            </div>
+            <div class="hero-illustration">
+                🎙️👨‍👩‍👧
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works">
+        <div class="container">
+            <h2 class="section-heading">이렇게 진행돼요</h2>
+            <div class="card-grid card-grid-3">
+                <div class="card">
+                    <div class="step-number">1️⃣</div>
+                    <h3 class="step-title">월령·음소 고르기</h3>
+                    <p class="step-desc">아이 개월 수와 확인하고 싶은 소리(ㄱ·ㄴ·ㅅ·ㅈ·ㄹ)를 한 번만 골라요.</p>
+                </div>
+                <div class="card">
+                    <div class="step-number">2️⃣</div>
+                    <h3 class="step-title">한 단어만 들려주기</h3>
+                    <p class="step-desc">아이가 단어 하나를 말하면 그 소리를 텍스트로 바꿔 발달 단계를 살펴봐요. 음성 원본은 저장하지 않아요.</p>
+                </div>
+                <div class="card">
+                    <div class="step-number">3️⃣</div>
+                    <h3 class="step-title">또래 비교 결과 받기</h3>
+                    <p class="step-desc">'또래와 비슷한 수준이에요' 같은 안내와 함께, 이어서 할 수 있는 짧은 미션을 추천해 드려요.</p>
+                </div>
+            </div>
+            <div class="chip-row">
+                <span class="chip">🌟 또래와 비슷한 발음 수준이에요</span>
+                <span class="chip">👍 조금 더 연습하면 더 또렷해질 거예요</span>
+                <span class="chip">🌱 미션으로 꾸준히 함께 연습하면 도움이 돼요</span>
+            </div>
+            <div class="section-cta">
+                <a href="#" class="btn btn-primary">지금 5분 발음 확인 해보기</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Wait Section -->
+    <section class="wait-section">
+        <div class="container wait-content">
+            <h2>센터 예약을 기다리는 두세 달, 그냥 흘려보내지 않아도 돼요</h2>
+            <p>상담이나 예약을 기다리는 동안에도 가정에서 할 수 있는 일이 있어요. 하루 1~3분, 아이와 함께 짧은 발음 놀이 미션을 이어가면 매일의 작은 변화가 쌓여요. 부담 없이 오늘부터 시작해 보세요.</p>
+            <p class="wait-reassurance">🌱 무엇을 해야 할지 막막했다면, 오늘 5분이 그 시작이 될 수 있어요.</p>
+            <a href="#" class="btn btn-primary">오늘 5분 미션 시작하기</a>
+        </div>
+    </section>
+
+    <!-- Value Props -->
+    <section>
+        <div class="container">
+            <h2 class="section-heading">5분 확인 그 다음, 매일 즐겁게 이어가요</h2>
+            <div class="card-grid card-grid-2">
+                <div class="card">
+                    <div class="benefit-icon">🎯</div>
+                    <h3 class="benefit-title">하루 1~3분 발음 미션</h3>
+                    <p class="benefit-desc">짧고 즐거운 발음 놀이예요. 아이 발달 단계에 맞춰 미션이 자동으로 조정돼요.</p>
+                    <a href="#" class="benefit-link">오늘의 미션 보기 →</a>
+                </div>
+                <div class="card">
+                    <div class="benefit-icon">🌟🌳🎨</div>
+                    <h3 class="benefit-title">별·나무·AI 그림 모으기</h3>
+                    <p class="benefit-desc">미션을 완료할 때마다 별을 모으고 나무를 키워요. 아이의 동기를 자연스럽게 이어가요.</p>
+                    <a href="#" class="benefit-link">보상 도감 보기 →</a>
+                </div>
+                <div class="card">
+                    <div class="benefit-icon">🔥</div>
+                    <h3 class="benefit-title">함께한 날들이 쌓여요</h3>
+                    <p class="benefit-desc">매일 이어가면 연속 기록이 쌓이고, 다음 보너스까지의 진행도를 한눈에 볼 수 있어요. 🎁</p>
+                </div>
+                <div class="card">
+                    <div class="benefit-icon">📈</div>
+                    <h3 class="benefit-title">지난 한 주의 발달 추이</h3>
+                    <p class="benefit-desc">발음 발달 추이를 또래 비교와 함께 그래프로 정리해 드려요. 가족과 함께 변화를 확인하기 좋아요.</p>
+                    <a href="#" class="benefit-link">주간 리포트 살펴보기 →</a>
+                </div>
+                <div class="card">
+                    <span class="coming-soon-badge">곧 만나요</span>
+                    <div class="benefit-icon">💬</div>
+                    <h3 class="benefit-title">이야기 친구</h3>
+                    <p class="benefit-desc">아이와 자연스럽게 대화하며 발음을 연습하는 AI 친구를 준비하고 있어요.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trust Section -->
+    <section id="trust">
+        <div class="container">
+            <h2 class="section-heading">안심하고 사용할 수 있도록</h2>
+            <div class="card">
+                <div class="trust-pillar">
+                    <div class="trust-icon">🤝</div>
+                    <div class="trust-content">
+                        <h3>AI 분석에 전문가 검수를 더했어요</h3>
+                        <p>발음 분석은 AI가 빠르게 처리하고, 판단이 어려운 경우에는 전문가가 한 번 더 살펴봐요. 부모님께 더 신뢰할 수 있는 안내를 드리기 위해서예요.</p>
+                    </div>
+                </div>
+                <div class="trust-pillar">
+                    <div class="trust-icon">🔒</div>
+                    <div class="trust-content">
+                        <h3>아이 목소리 원본은 저장하지 않아요</h3>
+                        <p>음성은 텍스트로 바뀐 뒤 그 텍스트와 점수만 안전하게 다뤄요. 음성 원본은 서버에 저장하지 않아요. <a href="#" class="benefit-link">개인정보 처리방침 보기</a></p>
+                    </div>
+                </div>
+                <div class="trust-pillar">
+                    <div class="trust-icon">📊</div>
+                    <div class="trust-content">
+                        <h3>느낌이 아니라 또래 비교로 안내해요</h3>
+                        <p>막연한 걱정 대신, 같은 월령 또래와 비교한 발달 단계로 안내해 드려요.</p>
+                    </div>
+                </div>
+                <div class="trust-pillar">
+                    <div class="trust-icon">🌱</div>
+                    <div class="trust-content">
+                        <h3>의료적 평가가 아닌, 부모님을 돕는 보조 도구예요</h3>
+                        <p>본 서비스는 의료적 평가를 제공하지 않으며, 부모님께 발달 확인 정보를 안내하기 위한 보조 도구입니다. 발달이 우려되는 경우 전문가 상담을 권장해 드려요.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq">
+        <div class="container">
+            <h2 class="section-heading">자주 묻는 질문</h2>
+            <div class="card-grid" style="gap: 0.75rem;">
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        이건 의료적 평가인가요?
+                        <span class="faq-toggle">▼</span>
+                    </button>
+                    <div class="faq-answer">
+                        아니에요. 만 2~7세 자녀의 발음 발달을 부모님께서 또래와 비교해 직접 확인하실 수 있도록 돕는 보조 도구예요. 발달이 우려되는 경우에는 전문가 상담을 권장해 드려요.
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        아이 목소리는 저장되나요?
+                        <span class="faq-toggle">▼</span>
+                    </button>
+                    <div class="faq-answer">
+                        음성 원본은 서버에 저장하지 않아요. 음성은 텍스트로 변환된 뒤, 그 텍스트와 발달 점수만 안전하게 다뤄요.
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        비용이 드나요? 가입해야 하나요?
+                        <span class="faq-toggle">▼</span>
+                    </button>
+                    <div class="faq-answer">
+                        5분 발음 확인은 회원가입 없이 무료로 바로 시작할 수 있어요. 가입은 선택이며, 가입하시면 무가입으로 모은 별과 결과가 새 계정에 그대로 옮겨져요.
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        결과가 정확한가요?
+                        <span class="faq-toggle">▼</span>
+                    </button>
+                    <div class="faq-answer">
+                        발음 분석은 AI가 처리하고, 판단이 어려운 경우에는 전문가가 한 번 더 살펴봐요. 같은 월령 또래와 비교한 발달 단계로 안내해 드리며, 이는 의료적 평가가 아닌 부모님을 위한 참고 정보예요.
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        몇 살부터 할 수 있나요?
+                        <span class="faq-toggle">▼</span>
+                    </button>
+                    <div class="faq-answer">
+                        만 2세부터 7세(약 24~84개월) 자녀를 위한 서비스예요. 시작할 때 아이의 개월 수를 입력하면 그에 맞춰 안내해 드려요.
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFaq(this)">
+                        매일 얼마나 해야 하나요?
+                        <span class="faq-toggle">▼</span>
+                    </button>
+                    <div class="faq-answer">
+                        하루 1~3분이면 충분해요. 짧고 즐거운 발음 미션을 아이와 함께 이어가면 매일의 작은 변화가 쌓여요.
+                    </div>
+                </div>
+            </div>
+            <div class="section-cta">
+                <a href="#" class="btn btn-primary">궁금증이 풀렸다면, 5분 발음 확인 시작하기</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="final-cta">
+        <div class="container">
+            <h2>오늘 5분이면 충분해요</h2>
+            <p>회원가입 없이 바로 시작하고, 마음에 들면 그때 가입해도 돼요. 가입하면 무가입으로 모은 별과 결과가 새 계정에 그대로 옮겨져요.</p>
+            <div class="hero-cta">
+                <a href="#" class="btn btn-primary">무료로 5분 발음 확인 시작하기</a>
+                <a href="#" class="btn btn-secondary">이메일로 가입하고 기록 이어가기</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Disclaimer -->
+    <div class="disclaimer-bar">
+        <p>본 서비스는 의료적 평가가 아닌, 부모님께 발달 확인 정보를 안내하는 보조 도구입니다.</p>
+    </div>
+
+    <!-- Inquiry -->
+    <div class="inquiry-section">
+        <a href="#" class="inquiry-link" onclick="openModal(event)">어린이집·유치원 등 기관에서 단체 도입이 궁금하신가요? 기관 문의하기 →</a>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container footer-content">
+            <p class="footer-disclaimer">본 서비스는 의료적 평가가 아닌, 부모님께 발달 확인 정보를 안내하는 보조 도구입니다.</p>
+            <div class="footer-links">
+                <a href="#">개인정보 처리방침</a>
+                <a href="#">이용약관</a>
+                <a href="#" onclick="openModal(event)">기관 도입 문의</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="inquiry-modal">
+        <div class="modal">
+            <h3>기관 문의하기</h3>
+            <form onsubmit="submitInquiry(event)">
+                <div class="form-group">
+                    <label for="institution">기관명</label>
+                    <input type="text" id="institution" name="institution" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">이메일</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">문의 보내기</button>
+            </form>
+            <button onclick="closeModal()" class="btn btn-secondary btn-full" style="margin-top: 0.75rem;">닫기</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">문의가 접수되었어요.</div>
+
+    <script>
+        // Dark Mode Toggle
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark');
+            const toggle = document.querySelector('.dark-mode-toggle');
+            if (document.body.classList.contains('dark')) {
+                toggle.textContent = '☀️';
+            } else {
+                toggle.textContent = '🌙';
+            }
+        }
+
+        // FAQ Toggle
+        let openFaqItem = null;
+        function toggleFaq(button) {
+            const faqItem = button.parentElement;
+            if (openFaqItem && openFaqItem !== faqItem) {
+                openFaqItem.classList.remove('open');
+            }
+            faqItem.classList.toggle('open');
+            openFaqItem = faqItem.classList.contains('open') ? faqItem : null;
+        }
+
+        // Modal
+        function openModal(event) {
+            event.preventDefault();
+            document.getElementById('inquiry-modal').classList.add('open');
+        }
+
+        function closeModal() {
+            document.getElementById('inquiry-modal').classList.remove('open');
+        }
+
+        document.getElementById('inquiry-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Submit Inquiry
+        function submitInquiry(event) {
+            event.preventDefault();
+            closeModal();
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href !== '#') {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
