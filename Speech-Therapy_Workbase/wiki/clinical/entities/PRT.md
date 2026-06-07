@@ -45,8 +45,8 @@ tags: [ASD, NDBI, 자연주의발달행동중재, 동기, 선행자극, MVP회�
 
 - PRT = 임상가 직접 지도 표준 (8 컴포넌트)
 - 학령전 ASD 위주
-- ADR-04 회피
-- → 단, 선행자극 전략 = MVP 자연 발화 유도 (F15 챗봇 prompt 설계) 임상 영감 가능
+- [[product/concepts/architecture-decisions]] § ADR-04 회피
+- → 단, 선행자극 전략 = MVP 자연 발화 유도 ([[product/concepts/F15-clinical-consultation-checklist]] 챗봇 prompt 설계) 임상 영감 가능
 
 ## 보강 필요
 

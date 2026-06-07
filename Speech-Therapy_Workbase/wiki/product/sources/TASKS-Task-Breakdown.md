@@ -10,7 +10,7 @@ source_type: task_breakdown
 authors: []
 year: 2026
 ingested: 2026-05-09
-tags: [Task, Sprint1, Descope, CQRS, 88개태스크, 22Epic, 클러스터TASKS]
+tags: [Task, Sprint1, Descope, CQRS, 88개태스크, 21Epic, 클러스터TASKS]
 ---
 
 # Task Breakdown — 통합 요약 (TASKS/01 + 03 + 02 + 04)
@@ -244,7 +244,7 @@ DB-001 → DB-005 → API-001 → MOCK-001
 
 ## 관련 product 페이지
 
-- [[product/concepts/task-breakdown-overview]] — **22 Epic ↔ 88 Task 매핑 정본** (본 source의 인덱스)
+- [[product/concepts/task-breakdown-overview]] — **21 Epic ↔ 88 Task 매핑 정본** (본 source의 인덱스)
 - [[product/concepts/MVP-feature-spec]] — 21 Epic + 4 Phase + 7 KPI
 - [[product/concepts/MVP-descope-plan]] — 8 Descope 권고의 정본 (67 + 02 통합)
 - [[product/concepts/tech-architecture]] — C-TEC + 4 Layer

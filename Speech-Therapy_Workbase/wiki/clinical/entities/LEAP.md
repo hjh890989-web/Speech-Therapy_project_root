@@ -41,7 +41,7 @@ tags: [ASD, 종합치료모델, CTM, 통합환경, 또래매개, MVP회피]
 
 - LEAP = 학령전 통합 환경 (4 시간+ × 주 5일) 종합 모델
 - MVP "≤ 5분" + 자가 학습 모델 X
-- ASD 진단·중재 영역 = ADR-04 회피
+- ASD 진단·중재 영역 = [[product/concepts/architecture-decisions]] § ADR-04 회피
 - → MVP **명시적 회피**. 임상 토대 인지용.
 
 ## 보강 필요

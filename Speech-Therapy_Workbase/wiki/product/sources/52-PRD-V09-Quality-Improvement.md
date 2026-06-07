@@ -1,6 +1,7 @@
 ---
 type: source
 pillar: product
+source_type: prd
 category: PRD-evolution
 aliases: [PRD V09 Quality, raw 52, 18 결함 반영, Measurability Testability 검증]
 tags: [PRD, V09, V0.9, quality-improvement, measurability, testability, 18-findings, ADR, NFR, CJM-KPI, HITL-재학습, 클러스터52]
@@ -220,7 +221,7 @@ V09 Quality (52) → PRD V10 Final (54)에서 추가:
 
 1. **6 SRS Readiness Gate** 100% 달성 (44 4 LLM 매트릭스 검증)
 2. **R7/R8 추가** (Vercel Timeout / Supabase 무료 한도 — 이는 V05 → V06 SRS 단계에서 강화)
-3. **21 Epic의 SP 분배** (230 SP / 24 sprints)
+3. **21 Epic의 SP 분배** (230 SP / 24 sprints; ⚠️ Epic 실제 합 219 — [[product/sources/54-PRD-V10-Final]] § 4.4 합계행 +11 오차)
 4. **Detailed Sprint 1 Backlog** (88 Task 분해)
 
 V09 Quality는 **마지막 기술 중립 PRD**. V10에서 본격적 SRS 변환.

@@ -81,7 +81,7 @@ tags: [경쟁사, 포지셔닝맵, 화이트스페이스, DTx, 클러스터1-9]
 | [[product/entities/에이치투케이]] | 한글 파닉스 특화 + KAIST 기술 + AI 자동화 85%+ | "특화 니치 + 자동화"의 모범 사례 |
 | [[product/entities/캐치잇플레이]] | 게이미피케이션 + 다국어 확장 | 본 시장 직접 경쟁 강도 낮음 |
 | [[product/entities/와우키키]] | 멀티모달 AI + 부모·교사·아동 삼자 연동 | **삼자 연동 모델은 모방 가능** |
-| [[product/entities/네오폰스]] | 식약처 DTx 임상승인 + 음성 AI | 규제 해자 사례, 우리는 회피 |
+| [[product/entities/네오폰스]] | 식약처 DTx 임상시험 계획 승인 + 음성 AI | 규제 해자 사례, 우리는 회피 |
 | [[product/entities/말과학놀이터]] | 장애음성 특화 STT + 의료기관 협력 | 의료 영역 한정, B2C 경쟁 약함 |
 | [[product/entities/두부]] | 시리즈B 210억 + 메타버스 + 병원 연계 | **자본력 격차 — 직접 경쟁 회피** |
 | [[product/entities/에듀템]] | ELA 음성인식·발음평가 API SaaS | **API 외주 후보** (자체 vs 외부 결정 포인트) |

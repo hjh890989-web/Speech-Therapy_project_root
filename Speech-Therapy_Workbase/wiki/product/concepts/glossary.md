@@ -58,7 +58,7 @@ raw 53 § 선택적 보강 § "용어 사전 (Glossary)" 권고 직접 실행. *
 | **AAC** | Augmentative & Alternative Communication | 보완대체의사소통. PECS 등 (MVP 회피 영역) | [[clinical/entities/PECS]] |
 | **MIT** | Melodic Intonation Therapy | 멜로디 억양 치료. 실어증 따라말하기 훈련 | [[clinical/concepts/실어증]] |
 | **ASD** | Autism Spectrum Disorder | 자폐 스펙트럼 장애. MVP 회피 (단, ASD 경계선 군 = 황보름 페르소나 = HITL confidence 60% 가설) | [[clinical/concepts/자폐-화용중재]] |
-| **DTx** | Digital Therapeutics | 디지털 치료기기. 식약처 임상승인 영역. **MVP 회피** (ADR-04) |
+| **DTx** | Digital Therapeutics | 디지털 치료기기. 식약처 인허가 영역. **MVP 회피** (ADR-04) |
 
 ### 평가 도구 (Standardized Tests)
 
@@ -114,7 +114,7 @@ raw 53 § 선택적 보강 § "용어 사전 (Glossary)" 권고 직접 실행. *
 
 | 약어 | 풀이 | 정의 | 본 위키 정본 |
 |---|---|---|---|
-| **ADR** | Architecture Decision Record | 아키텍처 결정 기록. ADR-01~12 (12 ADR 정본) | [[product/concepts/architecture-decisions]] |
+| **ADR** | Architecture Decision Record | 아키텍처 결정 기록. ADR-01~15 (15 ADR 정본) | [[product/concepts/architecture-decisions]] |
 | **CR** | Change Request | 변경 요청. 3-Tier (Minor/Major/Strategic) + 7단계 워크플로 | [[product/concepts/change-management-process]] |
 | **RACI** | Responsible·Accountable·Consulted·Informed | 책임 매트릭스 (R 실행 / A 책임 / C 자문 / I 통보) |
 | **CTO** | Chief Technology Officer | 기술 총괄 (HITL 재학습 시작 승인 권한) |
@@ -210,7 +210,7 @@ raw 53 § 선택적 보강 § "용어 사전 (Glossary)" 권고 직접 실행. *
 2. [[product/concepts/MVP-feature-spec]] § 21 Epic 정본 읽기 (제품 그림)
 3. [[product/concepts/requirements-traceability-matrix]] RTM (전체 매핑 인덱스)
 4. [[product/sources/65-SRS-V06-Final]] § REQ-FUNC 65 정독
-5. [[product/concepts/architecture-decisions]] § 12 ADR 읽기 (왜 이렇게 결정?)
+5. [[product/concepts/architecture-decisions]] § 15 ADR 읽기 (왜 이렇게 결정?)
 6. [[product/concepts/task-breakdown-overview]] § 88 Task 매핑 (Sprint 1 코어 8)
 
 ### 임상 자문가 온보딩 순서
@@ -239,7 +239,7 @@ raw 53 § 선택적 보강 § "용어 사전 (Glossary)" 권고 직접 실행. *
 - [[product/concepts/change-management-process]] — raw 53 보강 권고 1건 (변경 관리)
 - [[product/concepts/requirements-traceability-matrix]] — RTM 정본 (REQ-FUNC ID 빠른 조회)
 - [[product/concepts/MVP-feature-spec]] — 21 Epic + Phase 0/1/2
-- [[product/concepts/architecture-decisions]] — 12 ADR 정본
+- [[product/concepts/architecture-decisions]] — 15 ADR 정본
 - [[product/sources/PRD-Intermediate-Reviews-Meta]] — 5단계 PRD 진화 사이클
 
 ## 보강 필요

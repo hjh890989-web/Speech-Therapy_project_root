@@ -1,6 +1,7 @@
 ---
 type: source
 pillar: product
+source_type: vps
 category: VPS-evolution
 aliases: [VPS V01-V06, raw 24-30, 멀티 LLM 사이클, BMC 정합 사이클]
 tags: [VPS, V01, V02, V03, V04, V05, V06, BMC, Sonnet, Gemini, Merged, multi-llm-workflow, 클러스터24-30]

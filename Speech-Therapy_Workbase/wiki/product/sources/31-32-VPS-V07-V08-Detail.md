@@ -1,6 +1,7 @@
 ---
 type: source
 pillar: product
+source_type: vps
 category: VPS-evolution
 aliases: [VPS V07, VPS V08, 31, 32, VPS Restructured, VPS Detailed]
 tags: [VPS, V07, V08, sub-feature-tree, BMC, ROI-simulator, traceability, 클러스터31-32]
@@ -124,7 +125,7 @@ V07 6부 → V08 7부. **신규 E (ROI 시뮬레이터)** + 기존 F→G 시프�
 | **Seg D-1 (원장)** | 기관 신뢰도 + 학부모 민원/퇴소 방어 | F9 + ROI 시뮬레이터 | 비용 부담 → 1,100% ROI 재무 논리 |
 | **Seg D-2 (보육 교사)** | 학부모 감정 소모 + 업무 과중 방지 | F9.2 Zero-touch + F9.3 자동 PDF | 업무 과중 반발 → "마이크만 켜두면 끝" |
 
-→ V07까지 Seg D 단일 → V08에서 **D-1 결제권자 + D-2 실무 운영자** 분리. 각자 다른 Job/Pain/완화 전략. Persona spectrum 정본은 [[product/concepts/customer-segmentation]] / DMU 분리 entity는 [[product/entities/persona-오한솔]] (D-1) + [[product/entities/persona-김민지]] (D-2).
+→ V07까지 Seg D 단일 → V08에서 **D-1 결제권자 + D-2 실무 운영자** 분리. 각자 다른 Job/Pain/완화 전략. Persona spectrum 정본은 [[product/concepts/customer-segmentation]] / DMU 분리 entity는 [[product/entities/persona-오한솔]] (D-1) + [[product/entities/persona-보육교사]] (D-2).
 
 ## V08 핵심 진화 ④ — §13-2 B2B 영업 시퀀스 강화
 
@@ -208,7 +209,7 @@ V07 §3에서 5번째 세그먼트 **Seg E** 명시 추가:
 - [[product/concepts/jtbd-insights]] — JTBD H-A/H-C/H-B 검증 (§3 Proof 근거)
 - [[product/sources/39-VPS-V09-Final]] — V08 → V09 진화
 - [[product/entities/persona-오한솔]] — Seg D-1 원장
-- [[product/entities/persona-김민지]] — Seg D-2 교사
+- [[product/entities/persona-보육교사]] — Seg D-2 보육 교사 (실무 운영자)
 
 ## 보강 필요
 - raw 30 (VPS V06) 정독 — V06 → V07 4단계 구조 도입 직전 상태 비교.

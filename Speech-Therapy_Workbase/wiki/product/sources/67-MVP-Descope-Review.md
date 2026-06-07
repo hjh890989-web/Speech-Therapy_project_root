@@ -97,7 +97,7 @@ tags: [MVP, Descope, 바이브코딩, 비용효율, 난이도, 1주차Action, �
 
 - **MVP 1주차 텍스트 모드** = 음성 STT 우회 → **임상적 정합성 일시 후퇴**. 진단 정확도가 [[clinical/entities/U-TAP]] (조음음운) 표준에 못 미치는 상태로 출시되므로 **KSF #2 효과 검증 시 이 단계를 명시적으로 제외**해야 함.
 - **Zero-touch 보류** = [[clinical/concepts/한국-언어치료-트랙비교]] § 트랙 2 의 일상 환경 평가 기능 후순위 → MVP 후 보강.
-- **Capacitor 보류** → 농촌·저사양 환경 ([[product/entities/persona-강지방]] 미생성, Extreme-2) 전면 미지원 단계 — Phase 2 이후 재개.
+- **Capacitor 보류** → 농촌·저사양 환경 ([[product/entities/persona-강지방]], Extreme-2) 전면 미지원 단계 — Phase 2 이후 재개.
 
 ## 관련 product 페이지
 - [[product/concepts/MVP-descope-plan]] — 본 source의 정본 페이지 (1주차 Action Item + Descope 우선순위)

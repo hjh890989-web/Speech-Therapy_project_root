@@ -2,6 +2,7 @@
 type: concept
 pillar: product
 category: synthesis
+aliases: [Sprint 1 의존성 그래프, Dependency Graph, Critical Path]
 tags: [sprint-1, MVP-P0, dependency-graph, critical-path, task-planning]
 ---
 
@@ -89,7 +90,7 @@ DB-001 → DB-002 → DB-004 → DB-005 → DB-009 → DB-011 → API-010 → FR
 | API-003 | API | getWeeklyReport DTO | L |
 | API-005 | API | HITL queue Route Handler | M |
 | **DB-011** | DB | RLS + Audit Log | H |
-| **FR-C-001** | FR-C | 3축 스코어링 (핵심) | H |
+| **FR-C-001** | FR-C | 3축 스코어링 (핵심 · 임상 [[clinical/entities/U-TAP]]·[[clinical/concepts/조음장애]]) | H |
 | FR-Q-001 | FR-Q | 5분 진단 SSR 페이지 | M |
 | FR-Q-003 | FR-Q | 데일리 미션 카드 홈 | M |
 | **MOCK-001** | MOCK | analyzeDiagnosis 3종 응답 | L |

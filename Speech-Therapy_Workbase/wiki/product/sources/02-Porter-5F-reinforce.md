@@ -48,7 +48,7 @@ LTV ≥ CAC × 3   AND   M3 유지율 ≥ 40%   AND   전문가 1인당 커버�
 | LTV | 299,000 | **538,650** | 998,000 |
 | **LTV:CAC** | **3.7x** | **9.0x** | **20.0x** |
 
-→ [[product/concepts/Unit-Economics]] (없음, KSF/Problem-Definition에 inline)
+→ [[product/concepts/Unit-Economics]] (stub — 정본화 후보, 핵심 지표는 KSF/Problem-Definition에 inline)
 
 ## 전환 트리거 공식
 

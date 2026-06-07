@@ -27,3 +27,4 @@ tags: [pilot, KSF-검증, 100가정-파일럿]
 - [[product/concepts/Key-Success-Factors]] — 검증할 KSF 정의
 - [[product/concepts/MVP-feature-spec]] — 파일럿 범위와의 정합성
 - [[product/concepts/HITL-operations-policy]] — 운영 정책
+- [[clinical/entities/U-TAP]] · [[clinical/entities/REVT]] — KSF #2 효과 검증 임상 표준 도구

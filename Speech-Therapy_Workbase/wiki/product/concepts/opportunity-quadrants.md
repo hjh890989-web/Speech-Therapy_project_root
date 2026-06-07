@@ -44,7 +44,7 @@ Pain 중요도 5점 × 대체 솔루션 만족도 1~2점 = **즉시 전환 가�
 | **이지수** | 5 | 2 | [[product/entities/persona-이지수]] |
 | **박민정** | 5 | 2 | [[product/entities/persona-박민정]] |
 | **최수현** | 5 | 2 | [[product/entities/persona-최수현]] |
-| **이미란** | 5 | 1 | (Adjacent-3, entity 미생성) |
+| **이미란** | 5 | 1 | [[product/entities/persona-이미란]] (Adjacent-3) |
 
 → 100가정 파일럿 모집 시 **이 4명 페르소나가 첫 우선** ([[product/concepts/Key-Success-Factors]] § KSF #2 효과 검증의 모집단).
 
@@ -133,5 +133,5 @@ Pain 중요도 5점 × 대체 솔루션 만족도 1~2점 = **즉시 전환 가�
 
 ## 보강 필요
 - 17_Customer_Journey_Map_Others ingest로 Adjacent·Extreme·Non-user 8명 여정 디테일 보강.
-- 이미란(Adjacent-3) entity 페이지 미생성. Q1·Q2 핵심이지만 MVP 4명 황금 교차점에 포함되므로 우선 생성 가치 있음.
+- 이미란(Adjacent-3) = [[product/entities/persona-이미란]] (Q1·Q2 핵심 + MVP 4명 황금 교차점 — 다문화 임상 토대 [[clinical/concepts/다문화-언어발달]]).
 - AOS·DOS 가중치(Market Relevance 0.1~1.0) 추정 근거 미명시 — 실제 도달 가능 시장 규모 검증 필요.

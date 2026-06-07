@@ -246,6 +246,6 @@ F16 = PWA Service Worker 필수 → **D5 Descope 부활 시점에 동시 활성*
 - 사용자 확정 후 신규 15 task 등록 (88 → 103 + F9.4 5 = 108).
 - F11 윤리 화이트리스트 ADR-XX 정식 등록.
 - F16 D5 PWA 부활 의존성 Descope plan 명시.
-- ✅ F15 KOPLAC 영감 임상 자문 가이드라인 — [[product/concepts/F15-clinical-consultation-checklist]] (9 자문 체크리스트 + ASD 회피 경계 + 연령 적응 + KOPLAC 저작권 + 자문 일정 4주 + 비용 ~56만/1회).
+- ✅ F15 KOPLAC 영감 임상 자문 가이드라인 — [[product/concepts/F15-clinical-consultation-checklist]] (13 자문 체크리스트 + ASD 회피 경계 + 연령 적응 + KOPLAC 저작권 + 자문 일정 4주 + 비용 ~82만/1회).
 - ElevenLabs Free → 유료 전환 시점 결정 (Premium 구독자 N명 이상).
 - TEST-NEW-F18-1 EXP-2 검증 자동화 — Amplitude 통합 별도 OPS task 검토.

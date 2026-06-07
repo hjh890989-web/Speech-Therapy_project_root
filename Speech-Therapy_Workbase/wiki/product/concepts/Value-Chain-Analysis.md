@@ -75,7 +75,7 @@ Porter's Value Chain 프레임워크로 5개 주요 경쟁사를 분해하고, �
 | 위치 | 교육+치료 | 진단+교육 | 치료+교육 | **진단 특화** | **교육 특화** |
 | AI 자동화 | 70% | 80%+ | 60% | **90%+** | 85%+ |
 | 자본력 | 낮음 | 낮음 | **210억** | 낮음 | 25억 |
-| 규제 해자 | DTx 임상승인 | — | 추진 중 | 의료기기 추진 | — |
+| 규제 해자 | DTx 임상시험계획승인 | — | 추진 중 | 의료기기 추진 | — |
 
 상세는 [[product/sources/06-Competitive-Value-Chain]] 또는 각 경쟁사 entity 페이지 ([[product/concepts/competitive-landscape]] 참조).
 

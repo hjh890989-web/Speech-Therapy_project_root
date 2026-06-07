@@ -93,6 +93,7 @@ Core 5 페르소나의 5단계 여정(인식→탐색→의사결정→사용→
 
 ## 출처
 - [[product/sources/16-Customer-Journey-Map-Core]] (Core 5 상세)
+- [[product/sources/17-Customer-Journey-Map-Others]] (Adjacent 3 + Extreme 2 + Non-user 3 여정)
 - [[product/sources/15-Persona-Spectrum]] (페르소나 정의)
 - [[product/sources/14-Market-Segmentation]] (Phase 매핑)
 

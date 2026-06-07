@@ -104,7 +104,7 @@ flowchart LR
 
 **Sprint 1 합격**: 진단→DB→그래프 코어 루프 + Vercel 라이브 + 월 $20 + Disclaimer 100%.
 
-> ⭐ **개별 Task 상세** (G/W/T·Files·Build·Verify·Constraints·DOD·Dependencies): [[product/sources/TASKS-Sprint-1-Core-Detail.md]]
+> ⭐ **개별 Task 상세** (G/W/T·Files·Build·Verify·Constraints·DOD·Dependencies): [[product/sources/TASKS-Sprint-1-Core-Detail]]
 >
 > 정독 결과 핵심 발견:
 > - **FR-C-001이 Sprint 1 최복잡** (1.5d, 8단계 비즈니스 로직: 입력 검증 → Gemini → 백분위 → 쿠션 텍스트 → 금칙어 → INSERT → HITL → 출력 검증)
@@ -332,6 +332,7 @@ TASKS/03 (Sprint 1 8 코어 + 8 Descope + 88 Task 상태 재배치)
 - [[product/concepts/tech-architecture]] — C-TEC + 4 Layer + 9 API
 - [[product/concepts/SRS-evolution]] — V01-V06 timeline (Task가 의존하는 SRS의 진화)
 - [[product/concepts/PRD-evolution]] — V01-V10 (SRS의 직접 기반)
+- [[product/concepts/Sprint-1-Dependency-Graph]] — P0 MVP 46 태스크 위상 정렬 + Critical Path 9 레벨
 
 ## Clinical 기둥 cross-link
 - [[product/concepts/MVP-clinical-foundation]] — 88 Task 임상 토대 통합본 (F1-a·F11·F15 임상 근거)
@@ -341,6 +342,6 @@ TASKS/03 (Sprint 1 8 코어 + 8 Descope + 88 Task 상태 재배치)
 ## 보강 필요
 - 88개 개별 TASK_*.md 정독 — 각 80-100줄로 G/W/T·Files·Build·Verify 등 상세 명세 포함. 개별 ingest는 비효율적이라 본 인덱스로 대체.
 - F11 (부모 클로닝) + F15 (LLM 챗봇) + F16 (푸시) Task 추출 — Phase 1 후순위로 의도적 제외. 차기 스프린트 진입 시 추가.
-- 88 Task 의 SP(Story Point) 추정 — TASKS/01에는 없음. PRD V10 §4.4 (230 SP / 24 sprint)와의 매핑 가능.
+- 88 Task 의 SP(Story Point) 추정 — TASKS/01에는 없음. PRD V10 §4.4 (230 SP 표기 / 21 Epic 실제 합 219 / 24 sprint)와의 매핑 가능.
 - Sprint 2~4 (P0 후반) + Sprint 5+ (P1) 의 Task 묶음 가이드 — TASKS/03은 Sprint 1만 명시.
 - TASK 카테고리별 책임자 (FE / BE / SRE / QA) 매핑 — 1인 개발 가정이라 미명시.

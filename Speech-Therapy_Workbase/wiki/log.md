@@ -4887,3 +4887,42 @@ clinical 8 stub 중 **7개 본문 1차 보강 완료**:
   - 신경인지장애-노인의사소통.md (Product 기둥 cross-link 4건 추가)
 - 메모: Lint 결과 — 내러티브-담화·단순언어장애-SLI 2 페이지는 이미 product cross-link 존재 (Lint 보고서 과대 추정). 신경인지장애 1 페이지만 실제 누락 → 보강. **Lint 작업 완료**: 9 신규 페이지 (sources 4 + entities 5) + 7 페이지 cross-link 보강. 양 기둥 100% cross-pillar 정합.
 
+## [2026-06-07] ingest | 55차 — NISE-B·ACT 검사도구 실물 batch (검사 책자 스캔 + 개정 연구보고서)
+- pillar: clinical
+- 원자료: `raw/언어치료 자료2/`
+  - `기초학습능력검사(일기_쓰기_검사방법)/` — JPG 300장(IMG_2450~2749, 약 1.3GB). 2017 원판 실물 검사 책자(읽기·쓰기) + 기록지 + 검사요강. 표본 판독(약 26장) — 저작권상 문항 자극은 미전사, 구조·방법만 추출.
+  - `기초학습능력검사+개정+연구(2／4년)+보고서.pdf` — 625쪽 (다운로드 완료 확인 + 정독). 국립특수교육원 2025 위탁연구(이태수 외).
+- 추가 (raw 파생 텍스트):
+  - raw/ocr_output/nise-bact-개정연구보고서-2-4년차-2025.txt (PDF 텍스트레이어 추출, 747KB, PyMuPDF)
+- 추가 (clinical/sources 2):
+  - wiki/clinical/sources/2026-06-07-NISE-BACT-읽기-쓰기-검사방법.md (2017 원판 실물 — 읽기 5영역·쓰기 3소검사·실시순서·채점)
+  - wiki/clinical/sources/2026-06-07-NISE-BACT-개정연구보고서-2-4년차.md (2025 개정안 — 구성 개편·예비검사 통계·표준화 계획)
+- 추가 (clinical/entities 1):
+  - wiki/clinical/entities/RAN-빠른자동이름대기.md (음운 인출 자동화 + 난독증 예측 지표)
+- 갱신 (clinical/concepts 1):
+  - wiki/clinical/concepts/NISE-B-ACT-학습장애검사.md — § 검사 도구 실물 구조(읽기 5·쓰기 3·수학 4·실시방법·채점) + § 2025 개정안 변경점 신설, 구조표 "미정독" 해소, 출처·관련·보강 갱신
+- 갱신: wiki/index.md (clinical sources 7→9 / entities 24→25 / 전체 132→135 + 마지막 갱신 + NISE-B 요약)
+- cross-link: ⚠️ **원판(2017) ↔ 개정안(2025) 진화** 표기 (음운처리→음운과 음절·철자하기→맞춤법·수학 전면재편). RAN↔[[clinical/concepts/학습장애-언어재활]], 읽기이해 4수준↔[[clinical/concepts/내러티브-담화-추론-중재]], 편향배제↔[[clinical/concepts/다문화-언어발달]]. Product: F1-a·F3-b·F15·ADR-04·HITL·F10 정합 (각 source § "다른 기둥 cross-link").
+- 메모: 로컬 OCR 도구(tesseract/imagemagick) 부재 → 이미지는 Read 비전 표본 판독, PDF는 PyMuPDF 텍스트레이어 추출로 처리. 저작권 표준화 검사도구 → 문항 자극 미전사, 구조·실시·채점·통계만 요약(위키 자체 정책 정합). 후속: 2026 표준화(3년차) 보고서 발간 시 규준·신뢰도·타당도 확정값 갱신 + 1년차 수요조사 보고서 미확보.
+
+## [2026-06-07] lint | 55차 Lint — 다중 에이전트 감사 + 적대적 검증 + 승인 자동수정
+- pillar: 양 기둥
+- 방법: 결정론적 구조 스캔(링크 그래프·고아·cross-pillar·프론트매터·통계) + 다중 에이전트 워크플로(11 클러스터 + 4 타깃 + 21 claim 적대적 검증, reject 0) + 종합. 깨진 링크 raw 42건 = **전부 거짓양성**(log vault-relative `[[wiki/...]]` 등) → 실제 0건.
+- 발견(고유 47): catalog/통계 드리프트 12 · cross-pillar 18 · 고아 7 · 프론트매터 4 · 모순/무효화 12 · 누락 페이지 3 · 임상근거 2.
+- 자동수정 적용(§4 전체 + §5 일부 승인):
+  - **카탈로그 정합**: index.md 미등재 18페이지 등재 (clinical/entities 8 권위자 + clinical/sources 6 STT + 연하장애 + product/concepts 3) + 통계표 실측 보정 (전체 135→**145**, product 35/22/30=87, clinical 19/28/11=58).
+  - **고아 해소(7)**: 역링크 추가 — task-breakdown-overview→Sprint-1-Dependency-Graph, customer-journey→17-Customer-Journey-Map-Others, 언어발달지연→{Tomblin·Fey·Bloom-Lahey·Scarborough}, 인공와우→Erber, 지적장애→{언어문제해결력-검사·K-ABC-II}, 자폐→ADOS-2.
+  - **모순·stale 정정(12)**: Epic 22→21(TASKS) · ADR 12→15(glossary) · F15 9→13(F15·Phase-1) · 음성장애 50→51분 · persona "미생성" 4건(이미란·황보름·강지방 + Unit-Economics "없음") 실재 반영 · 연하장애/ADOS-2 "신규 후보" stale 제거 · DLD-NISE NISE-B 구조 ⚠️갱신 노트 · index "100% cross-link" 문구 완화.
+  - **임상근거/cross-pillar(E)**: 에듀템→U-TAP·조음장애, 와우키키→언어발달지연·조음장애, 학습장애-언어재활→RAN, K-ABC-II·K-CTONI-2·LEAP·TEACCH·PRT→ADR-04·F15 위키링크, STT-신경(2)(3)→competitive-landscape, Sprint-1/pilot-design→U-TAP.
+  - **프론트매터**: 24-30·31-32-VPS `source_type: vps` / 52-PRD `source_type: prd` + aliases 4(연하장애·인공와우-청능재활·Sprint-1·Unit-Economics).
+  - **네오폰스 규제표현 통일**: "DTx 임상승인 보유"(과장) → "임상시험 계획 승인" — 6파일+index 7곳.
+  - **신규 페이지(1)**: product/entities/persona-보육교사.md (Seg D-2 — 31-32-VPS가 워킹맘 persona-김민지로 오귀속한 모순 해소 + L128·L212 repoint).
+- 보류(§5 미승인): MVP 230 SP vs 219(PRD V10 §4.4 정본 대조 필요) · STT-음성장애-1 source stub · AAIDD 12판 웹검색 · MVP-descope Phase 매핑 · F10 누적 태스크 산식.
+- 갱신: wiki/index.md (카탈로그 18행 + persona-보육교사 + 통계 + 55차 lint 노트), 약 30개 페이지 본문.
+- 메모: 적대적 검증 21/21 confirmed(reject 0) — 발견이 대부분 file:line 기계적 사실 불일치라 검증 통과율 높음. 잔여 단방향 cross-pillar(권위자·OCR stub)는 부모 개념 bridge 보유로 의도적 허용.
+
+## [2026-06-07] note | MVP 230 SP 정합 (55차 lint 보류 1건 해소)
+- 발견: raw PRD V10 §5(21 Epic MoSCoW)·§4.4(스프린트 분해) 모두 Phase 0/1/2 = 70/91/58 = **219 SP**인데, raw §4.4 합계행(L411)만 **230** 표기 — 동일 21 Epic·동일 SP인데 +11 산술 오차(스프린트 수 컬럼 합 ~24.5 × 10 역산 추정). 즉 230은 다른 granularity가 아니라 단순 합산 오류.
+- 조치: raw 불변(§7) 유지. 위키 7개 페이지에 **219(21 Epic 실제 합) 명기 + 230 = §4.4 합계행 표기 오차** 플래그 — MVP-feature-spec, 54-PRD-V10-Final(×2 + 요약), index(×2), PRD-evolution, VPS-evolution, task-breakdown-overview, 52-PRD-V09. 24 sprint·28주 Gantt 추정은 PRD 명시 230 기반임을 병기(silently 219로 덮지 않음).
+- 잔여: raw §4.4 합계행 자체 정정은 PRD 차기 개정 시 원저자가 반영(위키는 불변 raw 미수정).
+

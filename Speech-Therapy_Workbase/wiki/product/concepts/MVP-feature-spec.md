@@ -85,7 +85,7 @@ tags: [MVP, Epic, KPI, NFR, HITL, Phase, MoSCoW, 클러스터40-54]
 - 교정 훈련에 부모 음성 클로닝 (① 원칙)
 - 일반 성인 발음 교정
 
-**총 230 SP / 24 sprints (병렬 시 12-14 = 28주)** — Gantt 정합.
+**21 Epic SP 합 = 219** (P0 70 / P1 91 / P2 58). ⚠️ PRD V10 §4.4 합계행은 **230**으로 표기하나 동일 21 Epic·동일 SP의 실제 합은 **219** (**+11 산술 오차**, [[product/sources/54-PRD-V10-Final]] § 4.4). 24 sprints·28주 Gantt 추정은 §4.4의 230 기준.
 
 ## 4대 Extremes (가치 선언)
 

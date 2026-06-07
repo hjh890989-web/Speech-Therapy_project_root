@@ -12,7 +12,7 @@ tags: [PRD, MVP, Epic, KPI, NFR, HITL, 4Phase, 클러스터40-54]
 
 # PRD V10 Final (Golden Master) — 요약
 
-> **한 줄 요약.** SRS Readiness Gate 6대 기준 100% PASS 달성한 SRS 전환용 최종 확정판. **21 Epic / 4 Phase / 7대 KPI / 230 SP** + HITL 안전 프로토콜 + 4 Extremes + 4중 Lock-in 메커니즘 정의.
+> **한 줄 요약.** SRS Readiness Gate 6대 기준 100% PASS 달성한 SRS 전환용 최종 확정판. **21 Epic / 4 Phase / 7대 KPI / 230 SP** (§4.4 표기; Epic 실제 합 219) + HITL 안전 프로토콜 + 4 Extremes + 4중 Lock-in 메커니즘 정의.
 
 기반: V0.1(Gemini 초안) → V0.2 리스크/AC → V0.3 21 Epic + Gantt → V0.4 NFR → V0.5 ERD/API → V0.6 KPI 수치화 → V0.7 SRS Master → V0.8 VPS 결함 패치 → V0.9 18건 결함 반영 → V1.0 Final.
 
@@ -99,7 +99,7 @@ tags: [PRD, MVP, Epic, KPI, NFR, HITL, 4Phase, 클러스터40-54]
 - 교정 훈련에 부모 음성 클로닝 (윤리적 딥페이크)
 - 일반 성인 발음 교정 (타겟 이탈)
 
-**총 230 SP / 24 sprints (병렬 시 12-14 sprints = 28주)**
+**총 230 SP / 24 sprints (병렬 시 12-14 sprints = 28주)** — raw §4.4 합계행 기준. ⚠️ 단, 위 21 Epic SP 실제 합 = **219** (70+91+58); raw §4.4 합계행이 +11 산술 오차(동일 Epic·동일 SP). 24 sprint·28주 추정은 230 기준.
 
 ## 6. 4대 Extremes (가치 선언)
 

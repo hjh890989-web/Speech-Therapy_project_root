@@ -80,7 +80,7 @@ V09 → PRD V10 추가 요소:
 - 4중 Lock-in 메커니즘 명문화
 - 4 Experiment (EXP-1~4)
 - R6 Plan B (Seg B 피벗 시나리오)
-- 230 SP / 24 sprints 분해
+- 230 SP / 24 sprints 분해 (⚠️ 21 Epic 실제 합 219; §4.4 합계행 +11 오차)
 
 ## 타임라인 그래프
 

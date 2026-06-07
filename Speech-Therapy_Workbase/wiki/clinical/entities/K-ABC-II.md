@@ -33,8 +33,8 @@ tags: [지능검사, 비언어, 인지, 아동, 학령전, 학령기, 한국표�
 
 ## MVP 회피 영역 ⛔
 
-- 임상가 시행 (~60분)
-- → 본 entity는 임상 토대 인지용
+- 임상가 시행 (~60분) → [[product/concepts/Key-Success-Factors]] KSF #1 "≤5분" 위배
+- [[product/concepts/architecture-decisions]] § ADR-04 (비의료·진단 용어 배제) 정합. 본 entity는 임상 토대 인지용
 
 ## 보강 필요
 

@@ -2,6 +2,7 @@
 type: concept
 pillar: product
 category: synthesis
+aliases: [유닛 이코노믹스, Unit Economics, LTV-CAC]
 tags: [unit-economics, LTV, CAC, payback]
 ---
 

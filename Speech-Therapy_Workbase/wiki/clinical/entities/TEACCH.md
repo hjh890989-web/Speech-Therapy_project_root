@@ -47,7 +47,7 @@ tags: [ASD, 종합치료모델, CTM, 구조화된환경, 시각단서, MVP회피
 
 - TEACCH = 구조화 환경 + 직접 교사 지도 표준 모델
 - MVP 자가 학습 모델 X
-- ASD 진단·중재 영역 = ADR-04 회피
+- ASD 진단·중재 영역 = [[product/concepts/architecture-decisions]] § ADR-04 회피
 - → **임상 토대 인지용**. 단, TEACCH의 시각 단서 원리는 F15 자문 시 부분 영감 가능.
 
 ## 보강 필요
