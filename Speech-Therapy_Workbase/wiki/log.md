@@ -4960,3 +4960,11 @@ clinical 8 stub 중 **7개 본문 1차 보강 완료**:
 - 갱신: NISE-B·ACT 개념 Product 정합 역링크, index (product concepts 35→36 / 전체 146→147).
 - 메모: 사용자 요청 "전수 문항 전사"는 저작권 + 위키 자체 정책(§7, 자극 직접 사용 X)상 **미수행**. 대신 구조·채점·구인을 완비하여 **앱 원본 기능을 합법적으로 설계**할 수 있는 형태로 마무리.
 
+## [2026-06-08] ingest+note | AAIDD 12판 갱신 + 수학 4수준 심화 + 1/3년차 외부입수 대기
+- pillar: clinical
+- **AAIDD**: 11판(2010·18세) → **12판(2021, Schalock·Luckasson·Tassé) 발현연령 "22세 이전"** 신규 섹션 (뇌 발달 20대초 근거 — AJIDD 126(6)·AAIDD FAQ 웹 확인). [[clinical/concepts/지적장애-언어중재]] § K에 12판 개정 플래그. AAIDD "보강 필요" 자가-플래그 해소.
+- **수학 심화**: [[clinical/concepts/NISE-B-ACT-학습장애검사]] § 수학 — 4 하위검사(초기수학·수와연산·도형과측정·수학적탐구) + **4 수준 위계 정의**(기초적이해/기능적수행/개념적이해/응용과추론, TIMSS·NCTM·OECD·Findell 2001 근거) + 채점(0/1·문항당 1-2분). 개정보고서 §Ⅲ.5(추출 텍스트) 정독.
+- **1/3년차 보고서**: raw 미보유 확인 → NISE-B·ACT 보강필요에 **외부 입수 대기** 명시(파일 raw 추가 시 ingest).
+- 갱신: clinical/entities/AAIDD.md · clinical/concepts/지적장애-언어중재.md · clinical/concepts/NISE-B-ACT-학습장애검사.md (신규 페이지 없음 → 통계 불변).
+- 메모: 외부 데이터 backlog 중 **위키 내부 처리 가능분(AAIDD·수학) 완료**. 잔여 = 1/3년차 = 사용자 문서 제공 대기.
+
