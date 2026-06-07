@@ -51,6 +51,8 @@ V05 Merged Master Final (64)
 = 99 요구사항 + 10 다이어그램 + 8 API
 ```
 
+> ⚠️ 위 V05/V06 "99 요구사항"(및 V01 "65 REQ-FUNC")은 raw 표기 기준 — **HITL 4 이중계상**(Phase 1 "23"에 HITL 4가 이미 포함된 "65 묶음"에 HITL 4를 재가산). 실 distinct = 61 REQ-FUNC + 4 HITL + 30 REQ-NF = **95** ([[product/concepts/requirements-traceability-matrix]]).
+
 ### Phase 3: 기술 스택 전면 전환 (V06) ⭐
 ```
 V05 (전통 FE/BE 분리)
@@ -100,7 +102,7 @@ VPS V01-V09 (raw 25-32, 39)
 PRD V01-V10 (raw 40-54)
    ↓ 21 Epic + 7 KPI + HITL + Phase 0/1/2
 SRS V01-V06 (raw 55-65)
-   ↓ ISO 29148 + 99 요구사항 + Next.js Full-stack
+   ↓ ISO 29148 + 95 요구사항 (61 REQ-FUNC + 4 HITL + 30 REQ-NF; raw 표기 99 = HITL 이중계상) + Next.js Full-stack
 [Implementation Ready]
    ↓
 TASKS/ 100+ (별도 인덱스 page 필요)

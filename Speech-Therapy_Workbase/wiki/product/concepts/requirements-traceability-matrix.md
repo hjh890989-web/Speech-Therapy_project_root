@@ -8,7 +8,7 @@ tags: [RTM, Traceability, REQ-FUNC, REQ-NF, Epic, Task, 매핑인덱스, 추적�
 
 # Requirements Traceability Matrix — REQ-FUNC ↔ Epic ↔ Task 3축 매핑
 
-ISO 29148 표준 추적성 매트릭스. **65 REQ-FUNC + 4 REQ-FUNC-HITL + 30 REQ-NF = 99 요구사항** ([[product/sources/65-SRS-V06-Final]]) ↔ **21 Epic** ([[product/concepts/MVP-feature-spec]]) ↔ **88 Task** ([[product/concepts/task-breakdown-overview]]) ↔ **Persona/Pain/ADR** 4축 통합 인덱스.
+ISO 29148 표준 추적성 매트릭스. **61 REQ-FUNC + 4 REQ-FUNC-HITL + 30 REQ-NF = 95 요구사항** ([[product/sources/65-SRS-V06-Final]] — raw 표기 "99"는 HITL 4 이중계상) ↔ **21 Epic** ([[product/concepts/MVP-feature-spec]]) ↔ **88 Task** ([[product/concepts/task-breakdown-overview]]) ↔ **Persona/Pain/ADR** 4축 통합 인덱스.
 
 ## 통합 매핑 (Phase 0 MVP — 6 Epics, 26 REQ-FUNC)
 
@@ -101,8 +101,8 @@ ISO 29148 표준 추적성 매트릭스. **65 REQ-FUNC + 4 REQ-FUNC-HITL + 30 RE
 
 | 차원 | 합계 | 매핑 완료 | 미매핑 |
 |---|---|---|---|
-| REQ-FUNC | 65 + HITL 4 = 69 | **69** ✅ (Phase 0/1/2 100%) | 0 |
-| REQ-NF | 30 | **30** ✅ (성능/SLA/신뢰성/보안/모니터링/KPI) | 0 |
+| REQ-FUNC | 61 + HITL 4 = 65 | **65** ✅ (Phase 0/1/2 100%) | 0 |
+| REQ-NF | 30 | **24** ⚠️ (성능/SLA/보안 등) | **6** (NF-002·013·015·025·026·030 측정책임 분산·미추출) |
 | 21 Epic | 21 | **21** ✅ (Phase 0: 6 / Phase 1: 10 / Phase 2: 5) | 0 |
 | 88 Task | 88 | **88** ✅ (DB 11 + API 12 + MOCK 3 + FR-Q 14 + FR-C 18 + TEST 14 + NFR 16) | 0 |
 | 13 Persona | 13 | **13** ✅ (Core 5 + Adjacent 3 + Extreme 2 + Non-user 3) | 0 |
@@ -110,7 +110,7 @@ ISO 29148 표준 추적성 매트릭스. **65 REQ-FUNC + 4 REQ-FUNC-HITL + 30 RE
 | 8 Descope | 8 (+1 검토) | **9** ✅ (D1-D8 + 추가 E2) | 0 |
 | 4 Pain Cluster | 4 | **4** ✅ (P1-P4) | 0 |
 
-→ ⭐ **5축 추적성 100% 완성** (REQ ↔ Epic ↔ Task ↔ Persona ↔ ADR/Descope).
+→ ⭐ **5축 추적성** (REQ-FUNC ↔ Epic ↔ Task ↔ Persona ↔ ADR/Descope) **100%**. 단 **REQ-NF → Task는 24/30** — NF-002·013·015·025·026·030 6종은 측정책임 분산/미추출(전용 task 0건, 보강 필요).
 
 ## REQ-FUNC ID → 빠른 조회 Lookup
 
@@ -141,7 +141,7 @@ HITL-001~004  HITL 4 원칙   │ ADR-02 + REQ-NF-012 + ML Ops (model_retraining
 
 | 시사 | 의미 |
 |---|---|
-| **REQ-FUNC ID 65 → 21 Epic 평균 ≈ 3.1 REQ/Epic** | Epic 단위 응집도 균등 (특정 Epic만 비대해지지 않음) |
+| **REQ-FUNC ID 61 → 21 Epic 평균 ≈ 2.9 REQ/Epic** (+HITL 4 별도 트랙) | Epic 단위 응집도 균등 (특정 Epic만 비대해지지 않음) |
 | **HITL 4 원칙 = 별도 ID 공간** (HITL-001~004) | Cross-cutting concern 명시. ADR-02 + 4 원칙 + REQ-NF-012의 통합 트랙 |
 | **Phase 0 26 REQ → 13 Task (Sprint 1 핵심 8 + 의존 5)** | Phase 0 26 REQ 중 약 50%가 Sprint 1 직접 의존 |
 | **REQ-FUNC-005 + 037**: 2 단계 안전 게이트 | 음성 7일 폐기 (R4) + 부모 음성 클로닝 교정 차단 (윤리) |

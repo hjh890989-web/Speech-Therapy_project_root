@@ -13,7 +13,7 @@ tags: [SRS, ISO29148, REQ-FUNC, REQ-NF, ERD, ADR, Nextjs, Supabase, Vercel, Gemi
 
 # SRS V06 Next.js Full-stack Final — 요약 (전체 정독)
 
-> **한 줄 요약.** ISO/IEC/IEEE 29148:2018 기반 SRS. **65 REQ-FUNC + 30 REQ-NF + Traceability Matrix (Story↔REQ↔TC)** + **Next.js App Router 풀스택 모놀리스로 아키텍처 전환** (FE/BE 분리 폐기, Server Actions/Route Handlers, Supabase, Vercel AI SDK + Gemini, PWA + Capacitor) + **§6 부록 (ERD 7 엔티티 / 5 클래스 / 5 시퀀스 / 14 Tech Stack / Gantt / 4 EXP / R6 Plan B / 7 ADR)**.
+> **한 줄 요약.** ISO/IEC/IEEE 29148:2018 기반 SRS. **61 REQ-FUNC + 4 HITL + 30 REQ-NF (=95) + Traceability Matrix (Story↔REQ↔TC)** + **Next.js App Router 풀스택 모놀리스로 아키텍처 전환** (FE/BE 분리 폐기, Server Actions/Route Handlers, Supabase, Vercel AI SDK + Gemini, PWA + Capacitor) + **§6 부록 (ERD 7 엔티티 / 5 클래스 / 5 시퀀스 / 14 Tech Stack / Gantt / 4 EXP / R6 Plan B / 7 ADR)**.
 
 > ✅ **전체 정독 완료** (2026-05-09 8차 ingest 후 9차 §6 보강). 966줄 — §1-§5 + §6 부록 모두 정독. §7 (없음) 통합.
 
@@ -94,7 +94,7 @@ tags: [SRS, ISO29148, REQ-FUNC, REQ-NF, ERD, ADR, Nextjs, Supabase, Vercel, Gemi
 | `grantReward()` | Server Action | ≤500ms |
 | `app/api/audio/stream` | Route Handler (Edge) | Edge Runtime |
 
-## 7. ⭐ 65 REQ-FUNC + 30 REQ-NF
+## 7. ⭐ 61 REQ-FUNC + 4 HITL + 30 REQ-NF
 
 ### Phase 0 MVP (REQ-FUNC-001~026, 26개)
 
@@ -131,7 +131,8 @@ tags: [SRS, ISO29148, REQ-FUNC, REQ-NF, ERD, ADR, Nextjs, Supabase, Vercel, Gemi
 | F9-d AI 알림장 | 056~058 | Vercel AI SDK 쿠션어 스트리밍, 무수정 승인 ≥90%, 키즈노트 발송 |
 | F10 전자서명 | 059~061 | 카카오톡 링크, D+3 리마인더 Vercel Cron, 7일 만료 알림 |
 
-> **합계: REQ-FUNC 65개 + HITL 4개 + REQ-NF 30개 = 99개 요구사항**
+> **합계: REQ-FUNC 61개 + HITL 4개 + REQ-NF 30개 = 95개 요구사항**
+> ⚠️ raw SRS 본문은 Phase 합산 "26+23+16=65"(P1의 23 = 19 REQ-FUNC + HITL 4를 이미 포함)에 HITL 4를 재가산해 "99"로 표기 — **HITL 4 이중계상**. 실 distinct = **61 REQ-FUNC + 4 HITL + 30 REQ-NF = 95**.
 
 ## 8. NFR 30개 핵심 (REQ-NF-001~030)
 
@@ -263,10 +264,10 @@ ADR-01 Zero-touch / ADR-02 HITL / ADR-03 7일 폐기 / ADR-04 의료 용어 배�
 
 | 항목 | 수 |
 |---|---:|
-| Functional Requirements (REQ-FUNC) | 65 |
+| Functional Requirements (REQ-FUNC) | 61 |
 | HITL Cross-cutting (REQ-FUNC-HITL) | 4 |
 | Non-Functional (REQ-NF) | 30 |
-| **총 Requirements** | **99** |
+| **총 Requirements** | **95** |
 | 시퀀스 다이어그램 | 5 |
 | 구조 다이어그램 | 5 |
 | Entity (Supabase) | 7 |
@@ -277,6 +278,6 @@ ADR-01 Zero-touch / ADR-02 HITL / ADR-03 7일 폐기 / ADR-04 의료 용어 배�
 | Tech Stack 컴포넌트 | **14** (V05 신규) |
 
 ## 보강 필요
-- 65 REQ-FUNC ID와 [[product/concepts/MVP-feature-spec]] 21 Epic의 1:1 자동 매핑 인덱스 — [[product/concepts/task-breakdown-overview]] 에서 88 Task로 매핑 완료. REQ-FUNC ↔ Task 직접 매핑은 별도 페이지 후보.
+- 61 REQ-FUNC ID와 [[product/concepts/MVP-feature-spec]] 21 Epic의 1:1 자동 매핑 인덱스 — [[product/concepts/task-breakdown-overview]] 에서 88 Task로 매핑 완료. REQ-FUNC ↔ Task 직접 매핑은 별도 페이지 후보.
 - §5 Traceability Matrix 후반 (TC ID 일부) 정독 — 현재는 S1-S6 Story 단위 매핑만 정확.
 - ADR 거부 시나리오 분석 ([[product/concepts/architecture-decisions]] § 보강 필요와 동일).

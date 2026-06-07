@@ -38,7 +38,7 @@ Speech-Therapy 지식베이스의 전체 페이지 카탈로그. **두 기둥(Pr
 | [[product/concepts/architecture-decisions]] | framework | ⭐ **15 ADR 정본** — ADR-01~04 (비즈니스·규제) + V05 신규 ADR-05~07 (기술 스택) + 🆕 위키 합성 1차 ADR-08~12 (F9.4·F11·F16·HITL 재학습·변경 관리) + 🆕🆕 위키 합성 2차 ADR-13~15 (system_config·F15 안전 게이트·IRB 자문위원회) + V09 §4-3 4 모순 원칙 통합 |
 | [[product/concepts/multi-llm-workflow]] | framework | ⭐ **Multi-LLM Best-of-Breed 작성 패턴 정본** — 7 단계 (호환성·프롬프트·병렬·검토·비교·통합·후속변환). VPS·PRD·SRS 공통 적용 |
 | [[product/concepts/HITL-system-flow]] | synthesis | ⭐ **HITL 시스템 흐름 정본** — 4 원칙 + 9 단계 흐름 (AI 1차 → API-005 큐 → API-006 Studio → PostgreSQL 트리거 → Resend → Cron 24h/48h → 어뷰징 방어 → 루프백 0.5%/500건/0.3%). 운영비 $0/월 + 임상 안전망 |
-| [[product/concepts/requirements-traceability-matrix]] | synthesis | ⭐⭐ **RTM 정본** — 99 REQ × 21 Epic × 88 Task × 13 Persona × 7 ADR × 9 Descope = **5축 추적성 100% 완성**. REQ-FUNC ID 빠른 조회 Lookup + Phase 0/1/2 통합 매핑 |
+| [[product/concepts/requirements-traceability-matrix]] | synthesis | ⭐⭐ **RTM 정본** — 95 REQ (61 REQ-FUNC + 4 HITL + 30 REQ-NF) × 21 Epic × 88 Task × 13 Persona × 7 ADR × 9 Descope = **5축 추적성 100%** (단 REQ-NF→Task 24/30). REQ-FUNC ID 빠른 조회 Lookup + Phase 0/1/2 통합 매핑 |
 | [[product/concepts/F9.4-ROI-simulator]] | synthesis | ⭐ **F9.4 ROI 시뮬레이터 매핑 + UI 설계** — VPS V08 신규 영업 무기 (1,100% ROI 산식). F9-a 흡수 vs 독립 Epic 분석 + 5 신규 task 분해 (88→93) + UI 3-Step 설계 + ADR-XX 무로그인 분리 후보 |
 | [[product/concepts/Phase-1-future-tasks-decomposition]] | synthesis | ⭐ **F11/F15/F16/F17/F18 task 분해 제안** — RTM 미추출 5 Epic의 13 신규 task / 21 SP 분해. F11 윤리 차단 (REQ-037) + F15 KOPLAC 영감 + F16 D5 부활 의존성 + F17/F18 보강. 88 → 108 Task 후보 |
 | [[product/concepts/HITL-retraining-pipeline]] | synthesis | ⭐ **HITL 루프백 재학습 파이프라인** — model_retraining_data 스키마 (자동 INSERT 트리거) + 3단계 게이트 운영 흐름 (0.5%·500건·0.3%) + RACI 책임 매트릭스 + 3 신규 task / 5.5 SP + ADR-XX 후보 |
@@ -102,7 +102,7 @@ Speech-Therapy 지식베이스의 전체 페이지 카탈로그. **두 기둥(Pr
 | [[product/sources/33-37-Competitor-UX-Analysis]] | competitive_analysis | 4 그룹 14개 경쟁사 + **4대 UX 모순 해결 원칙** + 21 Epic UX 매핑 |
 | [[product/sources/39-VPS-V09-Final]] | vps | VPS Final (부분 정독). DMU 5분리 + 21 Sub-feature + "홈 랭귀지 코칭" 카테고리 명명 |
 | [[product/sources/54-PRD-V10-Final]] | prd | **PRD Golden Master** — 21 Epic + 4 Phase + 7 KPI + HITL + 4 Extremes + 4중 Lock-in + 230 SP (§4.4 표기; Epic 합 219) |
-| [[product/sources/65-SRS-V06-Final]] | srs | **SRS Implementation-Ready** — ISO 29148 + 65 REQ-FUNC + 30 REQ-NF + Traceability Matrix + Next.js Full-stack (C-TEC) |
+| [[product/sources/65-SRS-V06-Final]] | srs | **SRS Implementation-Ready** — ISO 29148 + 61 REQ-FUNC + 4 HITL + 30 REQ-NF (=95) + Traceability Matrix + Next.js Full-stack (C-TEC) |
 | [[product/sources/66-PRD-to-SRS-Mapping-Review]] | review | PRD V10 ↔ SRS V05/V06 9 항목 검증 = **전체 PASS**. Implementation-Ready 인증 |
 | [[product/sources/67-MVP-Descope-Review]] | review | 바이브 코딩 관점 Descope. 1주차 텍스트 모드 + 카톡/키즈노트 우회 + 운영비 $30/월 |
 | [[product/sources/TASKS-Task-Breakdown]] | task_breakdown | **88 Task 인덱스** (DB 11+API 12+MOCK 3+FR-Q 14+FR-C 18+TEST 14+NFR/Infra/Sec/Mon/Ops 16) + Sprint 1 + 8 Descope (TASKS/01+03+02+04 통합) |

@@ -4926,3 +4926,12 @@ clinical 8 stub 중 **7개 본문 1차 보강 완료**:
 - 조치: raw 불변(§7) 유지. 위키 7개 페이지에 **219(21 Epic 실제 합) 명기 + 230 = §4.4 합계행 표기 오차** 플래그 — MVP-feature-spec, 54-PRD-V10-Final(×2 + 요약), index(×2), PRD-evolution, VPS-evolution, task-breakdown-overview, 52-PRD-V09. 24 sprint·28주 Gantt 추정은 PRD 명시 230 기반임을 병기(silently 219로 덮지 않음).
 - 잔여: raw §4.4 합계행 자체 정정은 PRD 차기 개정 시 원저자가 반영(위키는 불변 raw 미수정).
 
+## [2026-06-08] lint | PRD↔SRS 트레이서빌리티 정합 감사 + REQ 카운트 정정 (99→95)
+- pillar: product
+- 방법: 6차원 다중 에이전트 감사(REQ count·REQ→Epic·REQ→Task·REQ-NF→Task·66-mapping 9항목·전역 앵커) + 적대적 검증(27 confirmed / 2 rejected) + raw PRD V10·SRS V06 정본 대조.
+- ✅ 정합 확인: REQ-FUNC→Epic 100% 커버, 21 Epic·7 KPI·30 REQ-NF·88 Task·SP 219·66-mapping 9항목 PASS 전부 일치.
+- ⚠️ 정정 1 — REQ 총계 "99" = HITL 4 이중계상: raw SRS "26+23+16=65"에서 P1의 23 = 19 REQ-FUNC + HITL 4(이미 포함)인데 HITL 4를 재가산해 99. 실 distinct = **61 REQ-FUNC + 4 HITL + 30 REQ-NF = 95**. 위키 95-lead + raw 99-flag (SP 219/230과 동일 처리). 정정: 65-SRS-V06-Final·RTM·index·task-breakdown·F9.4·SRS-evolution·Phase-1·HITL-system-flow·glossary·TASKS-Task-Breakdown (live 카운트만; V01/V05 historical draft·multi-llm-workflow raw 63 전사는 무손상).
+- ⚠️ 정정 2 — RTM "REQ-NF→Task 30/30 ✅" 과장 → 실제 **24/30** (미추출 6: NF-002·013·015·025·026·030, 측정책임 분산). RTM:105 카운트 + :113 "5축 100%" 단서 보정.
+- 보류(low/hedged): RTM:54·57 NF 매핑행 내부 재매핑(보고서 자체 hedge), REQ-FUNC-043 micro-orphan(측정전용 KPI req·raw-side), 66-mapping V05→V06 버전 drift(9항목 결론 불변).
+- raw 불변(§7): raw SRS/PRD 합계 오차는 차기 개정 시 원저자 반영.
+

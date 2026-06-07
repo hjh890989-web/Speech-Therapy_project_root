@@ -8,7 +8,7 @@ tags: [Task, Epic, Sprint, MVP, Descope, CQRS, 클러스터TASKS]
 
 # Task Breakdown Overview — 21 Epic ↔ 88 Task 매핑 정본
 
-[[product/concepts/MVP-feature-spec]] 의 21 Epic이 [[product/sources/65-SRS-V06-Final]] 의 99 요구사항을 거쳐 **88 원자 태스크**로 분해되는 전체 매핑 인덱스.
+[[product/concepts/MVP-feature-spec]] 의 21 Epic이 [[product/sources/65-SRS-V06-Final]] 의 95 요구사항(61 REQ-FUNC + 4 HITL + 30 REQ-NF)을 거쳐 **88 원자 태스크**로 분해되는 전체 매핑 인덱스.
 
 ## 88 Task 카테고리 분포
 
@@ -284,7 +284,7 @@ graceful degradation:
 ```
 PRD V10 §4.1-4.2 (21 Epic + KPI + AC)
   ↓
-SRS V06 §4.1-4.2 (99 요구사항: 65 REQ-FUNC + HITL 4 + 30 REQ-NF)
+SRS V06 §4.1-4.2 (95 요구사항: 61 REQ-FUNC + HITL 4 + 30 REQ-NF)
   ↓
 TASKS/01 (88 원자 태스크: DB→API→MOCK→FR-Q→FR-C→TEST→INFRA…)
   ↓
@@ -311,7 +311,7 @@ TASKS/03 (Sprint 1 8 코어 + 8 Descope + 88 Task 상태 재배치)
 
 ## SRS 무손상 원칙 ⭐
 
-> SRS V06 본문(99 요구사항·30 NFR·6 다이어그램·Traceability) **단 한 줄도 수정하지 않음**.
+> SRS V06 본문(95 요구사항·30 NFR·6 다이어그램·Traceability) **단 한 줄도 수정하지 않음**.
 > 88 Task ID도 보존.
 > Task 레이어에서만 **Phase·모드 재배치**.
 

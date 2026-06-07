@@ -144,7 +144,7 @@ P1 Phase 1 합격 게이트의 핵심 (가장 상세 100줄):
 | **REQ-FUNC-HITL-004** | 루프백 재학습 (model_retraining_data) | TEST-014 §7 |
 | REQ-NF-012 | HITL 피드백 ≤ 48h | API-006 + Cron |
 
-→ SRS V06 정본 [[product/sources/65-SRS-V06-Final]] § REQ-FUNC 65종 + REQ-NF 30종.
+→ SRS V06 정본 [[product/sources/65-SRS-V06-Final]] § REQ-FUNC 61종 + HITL 4종 + REQ-NF 30종.
 
 ## 데이터 모델 — DB-009 hitl_queue 핵심 컬럼
 

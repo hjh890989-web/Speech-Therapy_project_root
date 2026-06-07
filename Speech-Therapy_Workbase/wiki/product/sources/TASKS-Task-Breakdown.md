@@ -178,7 +178,7 @@ tags: [Task, Sprint1, Descope, CQRS, 88개태스크, 21Epic, 클러스터TASKS]
 - 🔴 **P2 Defer** — B2B 진입 후 (5개월+)
 - 🔵 **Replace** — SRS 명세 → 단순 대체안
 
-> **SRS 무손상 원칙**: SRS V06 본문(99 요구사항·30 NFR·6 다이어그램·Traceability) **단 한 줄도 수정하지 않음**. 88 Task ID도 보존. Task 레이어에서만 Phase·모드 재배치.
+> **SRS 무손상 원칙**: SRS V06 본문(95 요구사항·30 NFR·6 다이어그램·Traceability) **단 한 줄도 수정하지 않음**. 88 Task ID도 보존. Task 레이어에서만 Phase·모드 재배치.
 
 ## Phase별 진입 관문
 

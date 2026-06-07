@@ -87,7 +87,7 @@ raw 53 § 선택적 보강 § "용어 사전 (Glossary)" 권고 직접 실행. *
 | **AC** | Acceptance Criteria | 수용 기준. GWT (Given-When-Then) 형식 + 정량 임계 |
 | **GWT** | Given-When-Then | AC 표준 형식 (시나리오 명세) |
 | **Neg AC** | Negative AC | 실패 케이스 AC (각 Story 2건+ 강제) |
-| **REQ-FUNC** | Functional Requirement | 기능 요구사항 (65개 + HITL 4 cross-cutting) | [[product/sources/65-SRS-V06-Final]] |
+| **REQ-FUNC** | Functional Requirement | 기능 요구사항 (61개 + HITL 4 cross-cutting = 65) | [[product/sources/65-SRS-V06-Final]] |
 | **REQ-NF** | Non-Functional Requirement | 비기능 요구사항 (30개: 성능·SLA·신뢰성·보안·모니터링·KPI) |
 | **MoSCoW** | Must·Should·Could·Won't | 우선순위 4단계 (Must=Phase 0, Should=Phase 1, Could=Phase 2, Won't=명시적 제외) |
 | **RTM** | Requirements Traceability Matrix | 요구사항 추적 매트릭스 (5축: REQ × Epic × Task × Persona × ADR) | [[product/concepts/requirements-traceability-matrix]] |
@@ -209,7 +209,7 @@ raw 53 § 선택적 보강 § "용어 사전 (Glossary)" 권고 직접 실행. *
 1. **본 Glossary** 한 번 훑기 → 약어 익숙해지기
 2. [[product/concepts/MVP-feature-spec]] § 21 Epic 정본 읽기 (제품 그림)
 3. [[product/concepts/requirements-traceability-matrix]] RTM (전체 매핑 인덱스)
-4. [[product/sources/65-SRS-V06-Final]] § REQ-FUNC 65 정독
+4. [[product/sources/65-SRS-V06-Final]] § REQ-FUNC 61 (+HITL 4) 정독
 5. [[product/concepts/architecture-decisions]] § 15 ADR 읽기 (왜 이렇게 결정?)
 6. [[product/concepts/task-breakdown-overview]] § 88 Task 매핑 (Sprint 1 코어 8)
 
