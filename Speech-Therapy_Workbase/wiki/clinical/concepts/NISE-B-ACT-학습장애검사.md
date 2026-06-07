@@ -202,6 +202,7 @@ NISE-B·ACT 시행 자격 = 특수교사 · 임상심리사 · 언어재활사 (
 ## Product 정합
 
 - [[product/concepts/MVP-feature-spec]] § F1-a 3축 — 만 5-7세 음운인식·해독 영감
+- [[product/concepts/F1a-F4-임상설계-reference]] — 본 검사 구인 기반 **앱 원본 기능 설계 가이드** (전수 구조·채점 + 저작권 경계: 문항·규준·명칭 미사용, 영감만)
 - [[product/concepts/architecture-decisions]] § ADR-04 — "학습장애" 단어 차단
 - [[product/concepts/HITL-operations-policy]] § Expert pool — 트랙 3 자격자 별도 풀 (Phase 2+)
 - [[product/concepts/F10-research-consent]] § T4-c — NISE-B 학술 협력 가능 영역

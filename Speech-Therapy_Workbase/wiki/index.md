@@ -54,6 +54,7 @@ Speech-Therapy 지식베이스의 전체 페이지 카탈로그. **두 기둥(Pr
 | [[product/concepts/Sprint-1-Dependency-Graph]] | synthesis | Sprint 1 P0 MVP **46 태스크 의존성 위상 정렬** — 시작 순서 + 병렬 가능 묶음 + Critical Path. [[product/concepts/task-breakdown-overview]] 88 태스크 분해 |
 | [[product/concepts/Unit-Economics]] | synthesis | ⚠️ **stub** — CAC/LTV/Payback/LTV:CAC. 현재 [[product/concepts/Key-Success-Factors]]·problem-definition에 inline. 별도 정본화 후보 |
 | [[product/concepts/pilot-design]] | product_decision | ⚠️ **stub** — 100가정 파일럿로 5 KSF 가설 검증 설계. KSF #2 효과검증 = 임상 표준 연계 후보 |
+| [[product/concepts/F1a-F4-임상설계-reference]] | synthesis | 🆕 NISE-B·ACT 구인 기반 **F1-a/F4/F15 원본 기능 설계 가이드** — 전수 구조·채점(읽기 0/1·쓰기 0/1/2·수학 0/1) + 구인→자체 콘텐츠 제작 지침. ⚠️ 저작권 경계(문항·규준·명칭 미사용, 영감만) |
 
 ### product/entities — 경쟁사 · 페르소나 · 이해관계자
 
@@ -260,9 +261,9 @@ Speech-Therapy 지식베이스의 전체 페이지 카탈로그. **두 기둥(Pr
 
 | 영역 | concepts | entities | sources | 합계 |
 |---|---:|---:|---:|---:|
-| product  | 35 | 22 | 30 | **87** |
+| product  | 36 | 22 | 30 | **88** |
 | clinical | 19 | **28** | **12** | **59** |
-| **전체** | **54** | **50** | **42** | **146** |
+| **전체** | **55** | **50** | **42** | **147** |
 
 > 54차 ingest 12단계 + Lint (2026-05-12): 5대 영역 STT 정본 완전 통합 + Lint 자동 수정 18 항목. clinical entities 19→24 (Tomblin·Fey·Bloom-Lahey·Scarborough·Erber 5 권위자 추가), clinical sources 3→7 (2026-05-11 STT stub 4 추가). product 6 페이지 + clinical 1 페이지 cross-pillar 보강. **주요 페이지 cross-link 정합** (일부 권위자·OCR stub entity는 단방향 잔존 — 55차 lint에서 일부 보강).
 
