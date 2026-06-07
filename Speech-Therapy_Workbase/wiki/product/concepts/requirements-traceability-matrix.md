@@ -40,7 +40,7 @@ ISO 29148 표준 추적성 매트릭스. **61 REQ-FUNC + 4 REQ-FUNC-HITL + 30 RE
 | Epic | REQ-FUNC | FR-Q | FR-C | API | DB | TEST | Pain | Persona | ADR/Descope |
 |---|---|---|---|---|---|---|---|---|---|
 | **F9-a** 원장 대시보드 | **046~048** | FR-Q-009, 010, 011 | — | API-010 | DB-003 | (별도 미정) | **P4** B2B | 오한솔 (D-1, DOS 1위) | — |
-| **F9-b** Zero-touch ⭐ | **049~053** | — | FR-C-015 | API-009 | DB-004 | TEST-013 (Hold) | P4 (교사 거부권 R3) | 김민지 (D-2 게이트키퍼) | **ADR-01**, D3+D7 |
+| **F9-b** Zero-touch ⭐ | **049~053** | — | FR-C-015 | API-009 | DB-004 | TEST-013 (Hold) | P4 (교사 거부권 R3) | 보육교사 (D-2 게이트키퍼) | **ADR-01**, D3+D7 |
 | **F9-c** 일괄등록 | **054~055** | — | FR-C-016 | — | DB-003 | TEST-012 | P4 | 오한솔 (행정 0) | — |
 | **F9-d** AI 알림장 | **056~058** | — | FR-C-017 (쿠션어) | API-007, 011, 012 | DB-003 | (별도 미정) | P4 (Lock-in #4) | 오한솔 (1,100% ROI) | **D8** (키즈노트 → 클립보드) |
 | **F10** 전자서명 | **059~061** | — | FR-C-018 | API-008, 012 | DB-010 | (별도 미정) | P4 (R4 동의) | (학부모 합법 데이터) | **검토 §2.2 [추가 E2]** (카카오 → 일반 웹) |
@@ -49,12 +49,12 @@ ISO 29148 표준 추적성 매트릭스. **61 REQ-FUNC + 4 REQ-FUNC-HITL + 30 RE
 
 | REQ-NF 영역 | ID 범위 | Task 카테고리 | 핵심 |
 |---|---|---|---|
-| **성능** | 001~006 | 모든 FR-Q/FR-C/API + PERF-001/002 | p95 ≤800ms / 오디오 ≤300ms / Cold Start ≤1.5초 |
+| **성능** | 001~006 | 모든 FR-Q/FR-C/API + PERF-001/002 (NF-002 오디오 전송 ≤300ms = D1 클라이언트측 STT로 충족 → 전용 task 불요) | p95 ≤800ms / 오디오 ≤300ms / Cold Start ≤1.5초 |
 | **SLA** | 007~012 | NFR-INFRA + OPS-001 | Uptime ≥99.9% / RPO <1h / **HITL <48h** (REQ-NF-012) |
-| **신뢰성** | 013~015 | TEST-002, 003 (재시도) + 화자분리 (TEST-013 Hold) | 오디오 오류 ≤0.5% / STT 재시도 ≥98% / 화자분리 ≥85% |
+| **신뢰성** | 013~015 | NF-013·014 → **FR-C-003 + TEST-003** (STT 재시도) / NF-015 화자분리 → **F9-b** (FR-C-015·TEST-013 **Hold**, Phase 2) | 오디오 오류 ≤0.5% / STT 재시도 ≥98% / 화자분리 ≥85% |
 | **보안** | 016~019 | **SEC-001~004** | 음성 ≤7일 폐기 (ADR-03) / TLS 1.3 + AES-256 / **RBAC = Middleware + RLS** |
 | **모니터링** | 020~024 | **MON-001~004** | 퍼널±20% / STT 5분 3% / LTV:CAC<3.0 / HITL 24h+ 3건+ / 외부 API 1h 5%+ |
-| **Business KPI** | 025~030 | (PERF + 측정 책임 분산) | W-AUR ≥60% (북극성) / M3 ≥40% / CVR ≥8% / Zero-touch ≥90% / 오진 <0.5% / Churn ≤5% |
+| **Business KPI** | 025~030 | NF-026·030 → **MON-003** (LTV 산식 입력) / 027 → MON-001 / 028 → TEST-013 / 029 → API-006·FR-C-013 / **NF-025 W-AUR → 전용 계측 task 없음 (잔여 갭)** | W-AUR ≥60% (북극성) / M3 ≥40% / CVR ≥8% / Zero-touch ≥90% / 오진 <0.5% / Churn ≤5% |
 
 → 88 Task = DB 11 + API 12 + MOCK 3 + FR-Q 14 + FR-C 18 + TEST 14 + INFRA 5 + PERF 2 + SEC 4 + MON 4 + OPS 1 = 88. REQ-NF 30 → INFRA + PERF + SEC + MON + OPS = **16 task** 매핑.
 
@@ -102,7 +102,7 @@ ISO 29148 표준 추적성 매트릭스. **61 REQ-FUNC + 4 REQ-FUNC-HITL + 30 RE
 | 차원 | 합계 | 매핑 완료 | 미매핑 |
 |---|---|---|---|
 | REQ-FUNC | 61 + HITL 4 = 65 | **65** ✅ (Phase 0/1/2 100%) | 0 |
-| REQ-NF | 30 | **24** ⚠️ (성능/SLA/보안 등) | **6** (NF-002·013·015·025·026·030 측정책임 분산·미추출) |
+| REQ-NF | 30 | **29** ◐ (NF-013→FR-C-003·TEST-003 / 026·030→MON-003 / 002 D1 아키텍처 충족 / 015 F9-b Phase 2 이연) | **1** (NF-025 W-AUR 전용 계측 task 없음) |
 | 21 Epic | 21 | **21** ✅ (Phase 0: 6 / Phase 1: 10 / Phase 2: 5) | 0 |
 | 88 Task | 88 | **88** ✅ (DB 11 + API 12 + MOCK 3 + FR-Q 14 + FR-C 18 + TEST 14 + NFR 16) | 0 |
 | 13 Persona | 13 | **13** ✅ (Core 5 + Adjacent 3 + Extreme 2 + Non-user 3) | 0 |
@@ -110,7 +110,7 @@ ISO 29148 표준 추적성 매트릭스. **61 REQ-FUNC + 4 REQ-FUNC-HITL + 30 RE
 | 8 Descope | 8 (+1 검토) | **9** ✅ (D1-D8 + 추가 E2) | 0 |
 | 4 Pain Cluster | 4 | **4** ✅ (P1-P4) | 0 |
 
-→ ⭐ **5축 추적성** (REQ-FUNC ↔ Epic ↔ Task ↔ Persona ↔ ADR/Descope) **100%**. 단 **REQ-NF → Task는 24/30** — NF-002·013·015·025·026·030 6종은 측정책임 분산/미추출(전용 task 0건, 보강 필요).
+→ ⭐ **5축 추적성** (REQ-FUNC ↔ Epic ↔ Task ↔ Persona ↔ ADR/Descope) **100%**. **REQ-NF → Task는 29/30** (NF-013→FR-C-003·TEST-003 / NF-026·030→MON-003 산식 / NF-002 D1 아키텍처 충족 / NF-015 F9-b Phase 2 이연). **잔여 1 = NF-025 W-AUR 전용 주간 계측 task 미추출** → 신규 task 후보 **MON-005 (W-AUR 주간 계측 + funnel 표면화)**. ([[product/concepts/MVP-feature-spec]] 북극성 W-AUR ≥60% 측정 책임)
 
 ## REQ-FUNC ID → 빠른 조회 Lookup
 

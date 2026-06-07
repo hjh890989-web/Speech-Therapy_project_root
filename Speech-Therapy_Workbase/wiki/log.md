@@ -4935,3 +4935,15 @@ clinical 8 stub 중 **7개 본문 1차 보강 완료**:
 - 보류(low/hedged): RTM:54·57 NF 매핑행 내부 재매핑(보고서 자체 hedge), REQ-FUNC-043 micro-orphan(측정전용 KPI req·raw-side), 66-mapping V05→V06 버전 drift(9항목 결론 불변).
 - raw 불변(§7): raw SRS/PRD 합계 오차는 차기 개정 시 원저자 반영.
 
+## [2026-06-08] note | REQ-NF → Task 갭 세분 분석 (24/30 → 29/30, 잔여 NF-025)
+- pillar: product
+- 트레이서빌리티 감사의 "REQ-NF→Task 6 미추출"을 raw SRS·TASKS 대조로 세분 판정:
+  - NF-026(M3)·NF-030(Churn) → **MON-003** LTV:CAC 산식 입력으로 계산 (TASK_MON-003:35,41 — ID-link만 누락 → RTM 매핑 추가)
+  - NF-013(인코딩 오류 ≤0.5%) → **FR-C-003 + TEST-003** (NF-014 STT 재시도와 동일 경로, TASK_FR-C-003:19-20)
+  - NF-002(전송지연 ≤300ms) → **D1 클라이언트측 STT**로 아키텍처 충족 (서버 전송 0 → 전용 task 불요)
+  - NF-015(화자분리 ≥85%) → **F9-b Zero-touch** (FR-C-015·TEST-013 Hold, D3+D7 Phase 2 이연)
+  - **NF-025(W-AUR ≥60%) → 전용 주간 계측 task 없음 = 유일한 실질 잔여 갭** (MON-003은 LTV:CAC NF-022/023만) → 신규 task 후보 **MON-005** 제안
+- RTM 보정: REQ-NF 완성도 행 24/30→**29/30**, 신뢰성(013-015)·Business KPI(025-030) 매핑행 정정, 5축 단서 보강, index RTM 요약 동기화.
+- 보너스 정정: RTM:43 "F9-b 게이트키퍼 = 김민지(D-2)" → **보육교사(D-2)** — 55차 persona-보육교사 신설과 동일 오귀속(plain text라 link-lint 미포착분).
+- 잔여: NF-025 MON-005 신설은 제품 결정 영역 → 문서 후보 표기만(빌드는 보류).
+
