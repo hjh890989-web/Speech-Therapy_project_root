@@ -1,5 +1,7 @@
 # 강의/학습 자산 (동영상·PDF·ZIP 등 — git에 두지 않음. 디스크에는 보존)
 Speech-Therapy_Workbase/raw/assets/
+# 검사도구 실물 스캔 (이미지 1.3GB + PDF — git 제외, 디스크 보존. OCR 텍스트만 ocr_output/에 추적)
+Speech-Therapy_Workbase/raw/언어치료 자료2/
 
 # Obsidian 개인 작업 상태 (창 레이아웃 등)
 Speech-Therapy_Workbase/.obsidian/workspace.json
