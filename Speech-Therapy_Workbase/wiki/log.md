@@ -4947,3 +4947,9 @@ clinical 8 stub 중 **7개 본문 1차 보강 완료**:
 - 보너스 정정: RTM:43 "F9-b 게이트키퍼 = 김민지(D-2)" → **보육교사(D-2)** — 55차 persona-보육교사 신설과 동일 오귀속(plain text라 link-lint 미포착분).
 - 잔여: NF-025 MON-005 신설은 제품 결정 영역 → 문서 후보 표기만(빌드는 보류).
 
+## [2026-06-08] ingest | STT 음성장애(1) source stub 신설 (Lint §4.1 보강)
+- pillar: clinical
+- 추가: wiki/clinical/sources/2026-05-11-STT-음성장애-1.md — raw/stt_output/20210625_음성장애_1_STT.txt (40분·310 segment) source 페이지. 내용은 54차에 [[clinical/concepts/음성장애]] § 본문 보강 1차로 이미 정독·통합됨 → "raw 1개 = source 1개"(§4.1) 위배 해소.
+- 갱신: wiki/index.md (clinical sources 11→12 / 전체 145→146).
+- 메모: STT raw 13개 전부 source 페이지 보유 완료. 위키 내부에서 닫을 수 있는 잔여 갭 소진(나머지 backlog = 외부 데이터·제품 결정 영역).
+

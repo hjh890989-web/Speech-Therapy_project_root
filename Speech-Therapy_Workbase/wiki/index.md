@@ -189,6 +189,7 @@ Speech-Therapy 지식베이스의 전체 페이지 카탈로그. **두 기둥(Pr
 | [[clinical/sources/2026-06-07-NISE-BACT-개정연구보고서-2-4년차]] | paper | 2025 | 🆕 **55차** — 개정 연구(2/4년) 예비검사 보고서 (이태수 외, 625쪽). 음운처리→음운과음절·철자하기→맞춤법·수학 4영역 재편 + 예비검사(425명) 신뢰도·난이도·변별도·IRT + 2026 표준화(2,000명) 계획 |
 | [[clinical/sources/2026-05-11-STT-조음음운장애-2]] | lecture | 2021 | 51분 — 음절·옹알이·자음 발달·발달적 vs 비발달적 오류 (한국 자격시험) |
 | [[clinical/sources/2026-05-11-STT-조음음운-3]] | lecture | 2021 | 43분 — 독립분석 vs 관계분석·음운인식 단위·명료도 vs 자음정확도 |
+| [[clinical/sources/2026-05-11-STT-음성장애-1]] | lecture | 2021 | 40분 — 음성 산출 4시스템·음성장애 분류 4(기능·기질·신경·공명)·평가 2(GRBAS·기기) (한국 자격시험) |
 | [[clinical/sources/2026-05-11-STT-음성장애-2]] | lecture | 2021 | 51분 — 정상 음성 5요소·음성 스펙트럼 (한국 자격시험) |
 | [[clinical/sources/2026-05-11-STT-유창성장애-2-1]] | lecture | 2021 | 45분 — 청각장애 마무리 + WHO 말더듬·빙산 모델·정상 vs 병리 |
 | [[clinical/sources/2026-05-11-STT-신경언어장애-2]] | lecture | 2021 | ⚠️ stub — 51분, 실어증·마비말장애·연하 |
@@ -260,8 +261,8 @@ Speech-Therapy 지식베이스의 전체 페이지 카탈로그. **두 기둥(Pr
 | 영역 | concepts | entities | sources | 합계 |
 |---|---:|---:|---:|---:|
 | product  | 35 | 22 | 30 | **87** |
-| clinical | 19 | **28** | **11** | **58** |
-| **전체** | **54** | **50** | **41** | **145** |
+| clinical | 19 | **28** | **12** | **59** |
+| **전체** | **54** | **50** | **42** | **146** |
 
 > 54차 ingest 12단계 + Lint (2026-05-12): 5대 영역 STT 정본 완전 통합 + Lint 자동 수정 18 항목. clinical entities 19→24 (Tomblin·Fey·Bloom-Lahey·Scarborough·Erber 5 권위자 추가), clinical sources 3→7 (2026-05-11 STT stub 4 추가). product 6 페이지 + clinical 1 페이지 cross-pillar 보강. **주요 페이지 cross-link 정합** (일부 권위자·OCR stub entity는 단방향 잔존 — 55차 lint에서 일부 보강).
 
