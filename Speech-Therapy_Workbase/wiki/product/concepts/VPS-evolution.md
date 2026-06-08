@@ -26,6 +26,7 @@ Value Proposition Sheet의 9차례 진화 과정. **V09가 [[product/sources/54-
 | **V07** | 31 | Restructured ⭐ | **4단계 Part Ⅰ-Ⅳ 구조 신설** + KSF Top 4 + AOS/DOS 사분면 정량화 + Seg E 비타겟 추가. §6 자체 명시: "Sub-feature 트리 미완" → V08에 인계 |
 | **V08** | 32 | Detailed ⭐ | V07 4단계 유지. **§6 Sub-feature 트리 (F1.1~F10.1)** + **§11-E ROI 시뮬레이터 (1,100% ROI)** + **F9.4 ROI 계산기** + **§9 페르소나 커버리지 (Seg D-1/D-2 분리)** + **§14-4 BMC 9-Block** + **부록 26 보고서 Traceability** |
 | **V09 final** | 39 | UX Reinforce | **B2B2C DMU 5분리 + 21 Sub-feature + 카테고리 명명 + 26 보고서 통합** |
+| **V10 후보** 🆕 | (미작성) | CR-2026-007 | **읽기 발달 선행지표 가치 확장** — F1-a 를 "조음·TTR·MLU" → **"만 5-7세 읽기 준비도(음운인식·해독·RAN) 측정"** 으로 확장(새 JTBD "학교 가기 전 읽기 준비됐나?") + F4.1 음소 핀셋에 음운인식 축 + F15.1 추론 4수준 위계. 델타 정본 = `Speech-Therapy_App/tasks/11_Literacy_Constructs_Expansion_Design.md` §6-B. 실 VPS V10 raw 작성은 owner 결정 |
 
 ## V09 핵심 진화 (vs V07/V08)
 

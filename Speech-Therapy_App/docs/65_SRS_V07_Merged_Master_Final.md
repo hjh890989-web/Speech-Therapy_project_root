@@ -641,7 +641,7 @@ sequenceDiagram
 
 | REQ ID | 요구사항 | Source | AC |
 |:---|:---|:---:|:---|
-| **REQ-FUNC-001** | 16kHz 오디오 스트림을 수신하여 3축(Linguistic, Articulation, Acoustic) 점수를 산출 | S1 | Given: 유아 발화 입력, When: `/analyze` 호출, Then: 3축 float 반환, 실패율 `< 2%` |
+| **REQ-FUNC-001** | 16kHz 오디오 스트림을 수신하여 3축(Linguistic, Articulation, Acoustic) 점수를 산출 (**CR-2026-007 확장: 만 5-7세 음운인식/해독/RAN 선행지표 → REQ-FUNC-CL-08~10**) | S1 | Given: 유아 발화 입력, When: `/analyze` 호출, Then: 3축 float 반환, 실패율 `< 2%` |
 | **REQ-FUNC-002** | 3축 점수 기반 동월령 또래 대비 백분위(peer_percentile) 산출 | S1 | Given: 3축+월령, When: 계산, Then: 0~100 float, K-CDI/REVT 차용 (**V07.1 보강: 표준화 검사 절단점 정합 → REQ-FUNC-CL-03**) |
 | **REQ-FUNC-003** | AI Confidence Score(0~100) 산출, 70 미만 시 HITL 큐 자동 이관 트리거 | S1, S6 | Given: 분석완료, When: Confidence<70, Then: HITL 큐 자동 이관 |
 | **REQ-FUNC-004** | STT 처리 실패 시 백그라운드 자동 재시도 1회 수행 | S1-AC2 | Given: STT 오류, When: 최초 실패, Then: 재시도 1회, 성공률 `≥ 98%` |
@@ -737,6 +737,30 @@ sequenceDiagram
 - **우선순위**: CL-05(6단계 위계, 콘텐츠 — 즉시 착수 가능) + CL-01(음운변동 false positive, 채점 — 임상 자문 후) 가 최우선.
 - **RTM 영향(≥5)**: REQ-FUNC-001/002(진단 엔진), REQ-FUNC-021/022(난이도), REQ-FUNC-037(음성 역할분리), SP3_2D(백분위 보정), §10 KOPLAC #3 난이도 위계 / #4 MLU·TTR.
 - **ADR-17 후보**: "임상 정밀도 채점 원칙(정상 변동 정규화 · 발달 위계 연령 보정 · 표준화 절단점)" — 승인 시 §6.8 에 정식 등재.
+
+### 읽기 발달 선행지표 요구사항 (CR-2026-007 — Phase 0/1 cross-cutting) 🆕 설계 승인 대기 (2026-06-08)
+
+> **배경**: 55차 NISE-B·ACT ingest(2026-06-07) + wiki 신규 브릿지 `product/concepts/F1a-F4-임상설계-reference` 가 도입한 임상 구인(**음운인식 · 해독 · RAN · 추론 4수준**)을 F1-a/F4/F15 의 정식 추가 구인으로 채택. 현 MVP(조음 패러다임, 만 2-7세)와 **인접하나 별개**인 읽기 발달 선행지표(literacy precursor, 만 5-7세) 패러다임. 통합 설계 = [`tasks/11_Literacy_Constructs_Expansion_Design.md`](../tasks/11_Literacy_Constructs_Expansion_Design.md).
+> **Tier 3 (Strategic)**: 제품 임상 표면 확장(만 5-7세 읽기 준비도) → §8.1 RACI 위원회 승인 대상. **ADR-18 후보**(읽기 발달 선행지표 원본 콘텐츠 원칙).
+> **⚠️ 저작권·원본성 하드 제약 (위반 금지)**: ① NISE-B·ACT 문항·지문·자극·단어목록·정답 복제 금지, ② "NISE-B·ACT" 명칭·규준·타당도 주장 금지, ③ 진단 도구 표시 금지. ✅ 허용 = 측정 **구인**(분야 표준 지식) 근거로 **자체 문항·자체 척도** 직접 제작. 출시 전 원본성 법률검토 필수(`OPS-LIT-01`).
+> **ID 규칙**: CR-2026-006 의 `REQ-FUNC-CL-NN` 네임스페이스 연속 — CL-08 ~ CL-12. Task 는 `*-LIT-NN` 네임스페이스.
+> **구현 게이트**: CL-08/09/10(채점 신규) = **KOPLAC 임상 자문으로 음운인식/해독/RAN 채점 규칙 검증 후 wiring**(CR-2026-006 의 CL-01~04 정책 준용). CL-11(F15 추론) = ADR-14 F15 안전 게이트(§6.9)에 추론 위계 항목 추가 후 활성. CL-12 = 즉시 적용.
+
+#### D. 읽기 발달 선행지표 (Phase 0 — F1-a / F4 확장, 만 5-7세 조건부)
+
+| REQ ID | 요구사항 | Source | AC |
+|:---|:---|:---:|:---|
+| **REQ-FUNC-CL-08** ⭐ | F1-a 진단에 **음운 인식 사전과제**(음절 합성·탈락·대치) 추가. 자체 제작 한국어 고빈도 2-3음절 단어 풀 기반 미니게임. 점수는 F4 리포트 '음운인식 축'에 반영 | wiki `F1a-F4-임상설계-reference` §2.A · `clinical/concepts/학습장애-언어재활` 음운인식↔읽기 | 만 5세+ 세션에서 음운인식 N문항 노출, **0/1 채점(자기교정 3초 내 허용)**, F4 음운인식 축 산출. **자체 문항 — NISE 단어목록·순서·지문 미사용**(CL-12) |
+| **REQ-FUNC-CL-09** | F1-a articulation 에 **해독(자소-음소 대응) 과제** — 자체 **무의미 음절/단어 생성기**로 음운 처리 검증(통째 암기 배제). 어두/어중/어말 위치별 자체 자극 | wiki `F1a-F4-임상설계-reference` §2.B · `clinical/entities/U-TAP` §음운변동 | 무의미음절 생성기 자체 구현, **0/1 채점 + 실 오반응 기록(중재용)**, 오반응 패턴을 F4 음소 핀셋/음운변동(CL-01 · `FR-C-LIT-02`)에 연결 |
+| **REQ-FUNC-CL-10** | F1-a acoustic 에 **RAN(빠른 자동 이름대기)** + (만 6-7세) **자체 1분 읽기** 부분 영감. RAN = 자체 사물·색깔 배열판, 읽기유창성 = 자체 이야기글/설명글 | wiki `F1a-F4-임상설계-reference` §2.C · `clinical/entities/RAN-빠른자동이름대기` 이중결손가설 | RAN **완료시간/개수** 측정(NISE 보드판 미복제), 읽기유창성 **1분 정확 음절 수**. 위험 신호는 **"학습장애/난독증" 용어 미사용**(ADR-04) — "읽기 준비 확인" 톤 |
+| **REQ-FUNC-CL-11** | (Phase 1) **F15 챗봇 추론 시나리오 4수준 위계**(사실 → 추론 → 비판 → 평가). 자체 짧은 시나리오 기반 추론 질문을 위계적으로 prompt 생성 | wiki `F1a-F4-임상설계-reference` §2.D · `clinical/concepts/내러티브-담화-추론-중재` | F15 시나리오가 4수준 위계로 구조화(현 자유발화 → 위계 시나리오), NISE 지문 미사용. **§10 KOPLAC 자문 통과 후 활성**(ADR-14 정합) |
+| **REQ-FUNC-CL-12** | (cross-cutting) **원본성·연령게이트·정량화 제약**: ① 모든 literacy 콘텐츠 자체 제작 + 자체 척도(상단 저작권 게이트), ② 미니게임은 **만 5-7세에만** 조건부 노출(만 2-4세 미노출), ③ 각 구인 미니게임의 **난이도 위계 + 아이템 풀 규모 정량 명세**(REQ-FUNC-CL-05 6단계 위계 프레임 재사용), ④ 상업 출시 전 원본성 법률검토 | 본 절 저작권 게이트 · ADR-18 후보 · wiki `MVP-clinical-foundation` 위계 | 연령 분기 자동 검증(만 4세 이하 = literacy 미노출 `0건`), 구인별 아이템 풀 ≥ N개·6단계 매핑 문서화, 법률검토 `OPS-LIT-01` 등록 |
+
+#### 구현 단계화 / RTM 영향 (CR-2026-007)
+- **우선순위**: REQ-FUNC-CL-08(음운인식, F1-a/F4 핵심) + **F4 음운변동 제품화**(`FR-C-LIT-02` — 기존 엔진 `lib/diagnose/clinical/*` wiring) 최우선 — 엔진 존재로 ROI 최고.
+- **재사용**: 조음 미션 6단계 위계 + 아이템 풀(`lib/mocks/mission-config.ts`) + 적응형 난이도 + F4 음운변동 엔진(현 DRAFT) → 신규 구인은 아이템 풀(JSON) + 채점 함수만 추가.
+- **RTM 영향(≥5)**: REQ-FUNC-001/002(진단 엔진), REQ-FUNC-CL-01/05(음운변동·6단계 위계), REQ-FUNC-027(F4 리포트), REQ-FUNC-038(F15), SP3_2D(백분위).
+- **별개 잔여 갭**(literacy 무관, 후속 CR 권고): Peña 데이터셋 구성 원칙(규준표본/검증 분리, ≥100명/연령) = V07 미반영(grep 0건) + F1-a 측정 단위 9종 라이브러리 미명세. wiki `MVP-clinical-foundation` 정본이 갭분석 09 §3.7 에서 reference 격하. 상세 = `tasks/11` §8.
 
 ### Phase 1 — 리텐션/바이럴 (V06 23 + **신규 13** = 36 REQ-FUNC)
 
