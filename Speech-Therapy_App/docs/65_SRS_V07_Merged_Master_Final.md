@@ -760,7 +760,26 @@ sequenceDiagram
 - **우선순위**: REQ-FUNC-CL-08(음운인식, F1-a/F4 핵심) + **F4 음운변동 제품화**(`FR-C-LIT-02` — 기존 엔진 `lib/diagnose/clinical/*` wiring) 최우선 — 엔진 존재로 ROI 최고.
 - **재사용**: 조음 미션 6단계 위계 + 아이템 풀(`lib/mocks/mission-config.ts`) + 적응형 난이도 + F4 음운변동 엔진(현 DRAFT) → 신규 구인은 아이템 풀(JSON) + 채점 함수만 추가.
 - **RTM 영향(≥5)**: REQ-FUNC-001/002(진단 엔진), REQ-FUNC-CL-01/05(음운변동·6단계 위계), REQ-FUNC-027(F4 리포트), REQ-FUNC-038(F15), SP3_2D(백분위).
-- **별개 잔여 갭**(literacy 무관, 후속 CR 권고): Peña 데이터셋 구성 원칙(규준표본/검증 분리, ≥100명/연령) = V07 미반영(grep 0건) + F1-a 측정 단위 9종 라이브러리 미명세. wiki `MVP-clinical-foundation` 정본이 갭분석 09 §3.7 에서 reference 격하. 상세 = `tasks/11` §8.
+- **별개 잔여 갭**(literacy 무관): Peña 데이터셋 구성 원칙 + F1-a 측정 단위 + F1-b 영유아 지표가 V07 미반영이던 갭 → **CR-2026-008(CL-13~15)로 반영**(아래). wiki `MVP-clinical-foundation` 정본이 갭분석 09 §3.7 에서 reference 격하됐던 것 복원. 상세 = `tasks/11` §8.
+
+### F1-a/F1-b 임상 데이터·측정 grounding (CR-2026-008 — Phase 0 cross-cutting) 🆕 2026-06-08
+
+> **배경**: wiki `product/concepts/MVP-clinical-foundation`(54차 ingest 정본)의 **actionable 임상 grounding**(Peña 데이터셋 원칙 · 측정 단위 라이브러리 · F1-b 영유아 지표)이 갭분석 09 §3.7 에서 "reference 나열"로 격하돼 SRS 본문에 미반영(grep 0건). 본 절은 그 갭을 REQ 로 명문화 — **현 live F1-a 진단의 AI false +/- 품질에 직결**(literacy/KOPLAC 무관).
+> **ID 규칙**: CR-2026-006/007 의 `REQ-FUNC-CL-NN` 연속 — CL-13~15.
+
+#### E. 데이터·측정 grounding (Phase 0 — F1-a / F1-b)
+
+| REQ ID | 요구사항 | Source | AC |
+|:---|:---|:---:|:---|
+| **REQ-FUNC-CL-13** ⭐ | **F1-a 학습/규준 데이터셋 = 정상 발달 아동 위주**(Peña, Spaulding & Plante 2006). 규준/또래비교 표본에 비정형(지연) 아동 포함 시 판별 정확도 ↓ → **학습·규준 데이터셋(정상 표본) + 검증 데이터셋(정상+비정형 분리)** 분리. 규준 표본 ≥ 100명/연령대(다양성·사회경제 배경 포함) | wiki `MVP-clinical-foundation` §2.5 · `clinical/concepts/언어발달지연` §O-P | ⚠️ **현 코드 갭**: `lib/peer-percentile.ts` 실측 경로(샘플 ≥30)가 ±6개월·동일음소 **전 표본 pooling**(정상+지연 혼재) = 원칙 위반. → 정상 발달 라벨 도입 후 규준 표본을 정상 표본으로 제한(라벨 부재 동안 모델 fallback 유지). HITL 재학습 데이터(REQ-FUNC-HITL-005)도 동일 원칙. **false +/- 양방향 방지** |
+| **REQ-FUNC-CL-14** | **F1-a 측정 단위 라이브러리** — linguistic 후처리 단위를 임상 표준으로 명세: MLU/TTR(기본), C-unit·MLC-w·MNC(대화), CIU(이야기 정보), 이야기문법·결속표지(서사). **영유아 적응**: C-unit → MLU, 이야기문법 5 → 단순 4 | wiki `MVP-clinical-foundation` §2.2 (9종) · §10 KOPLAC #4 | linguistic 점수 후처리/리포트가 단위 라이브러리 기반(현 음절 일치도 → 단계적 확장). 단위 정의 문서화. 채점 raw 불변 |
+| **REQ-FUNC-CL-15** | **F1-b 영유아 지표 + Sparks 원칙**(REQ-FUNC-008~011 grounding) — 양육자 보고식 입력 = Tye-Murray 6 연령대 지표(신생아~18개월). **Sparks 1989: "현재 강점·요구 평가, 미래 예측 X"** → ADR-04 정합("장애" 라벨 X, "발달 모니터링·의심" 톤). 3-step ≤3 항목 위계 | wiki `MVP-clinical-foundation` §1.1·§1.2·§1.5 · `clinical/concepts/인공와우-청능재활` §J | REQ-FUNC-008(입력 ≤3 항목)이 Tye-Murray 6 지표 + Sparks 원칙 반영. 결과 카피 "미래 예측"·"장애" 0건 |
+
+#### 구현 단계화 / RTM 영향 (CR-2026-008)
+- **CL-13**(데이터셋 원칙): 채점 로직이 아닌 **데이터 거버넌스** — 정상 발달 라벨링 메커니즘(신규)이 선행. 메커니즘 부재 동안 `peer-percentile.ts` 실측 경로 = Peña 미준수 placeholder로 **주석 명시**(본 CR). 라벨 도입 = 후속 task.
+- **CL-14/15**: F1-a linguistic 단위·F1-b 입력 항목 명세 — 단계적 적용(콘텐츠/리포트). **채점 raw 불변**(display/grounding 레이어).
+- **RTM 영향(≥5)**: REQ-FUNC-001/002(3축·백분위), REQ-FUNC-008~011(F1-b 입력), REQ-FUNC-HITL-005(재학습 데이터=CL-13 준수), SP3_2D(백분위 실측), §10 KOPLAC #4(측정 단위).
+- **ADR-17 후보 보강**: "임상 정밀도 채점 원칙"에 **데이터셋 구성(Peña)** 추가.
 
 ### Phase 1 — 리텐션/바이럴 (V06 23 + **신규 13** = 36 REQ-FUNC)
 

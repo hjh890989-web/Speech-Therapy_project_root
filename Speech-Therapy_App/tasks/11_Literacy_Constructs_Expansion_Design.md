@@ -143,7 +143,9 @@
 | **F1-a 측정 단위 9종 라이브러리**(C-unit/MLC-w/NDW/CIU…) | ◐ §10 KOPLAC 체크리스트 1줄(MLU/TTR)만 — F1-a spec 아님 | F1-a 후처리 단위 명세화 |
 | **F1-b 영유아 6 발달 지표**(Tye-Murray Ch14) | 미확인(추정 미반영) | REQ-FUNC-008~011 입력 항목 점검 |
 
-→ wiki [`MVP-clinical-foundation`](../../Speech-Therapy_Workbase/wiki/product/concepts/MVP-clinical-foundation.md)의 actionable 정본이 갭분석 09 §3.7에서 "reference 나열"로 격하돼 V07 본문 미흡수. **저비용 후속 CR 권고**(literacy와 병행 가능).
+→ wiki [`MVP-clinical-foundation`](../../Speech-Therapy_Workbase/wiki/product/concepts/MVP-clinical-foundation.md)의 actionable 정본이 갭분석 09 §3.7에서 "reference 나열"로 격하돼 V07 본문 미흡수였음.
+
+✅ **반영 완료 (2026-06-08, CR-2026-008)**: SRS V07 §4.1 에 **REQ-FUNC-CL-13~15** 신규 — Peña 데이터셋 원칙(CL-13) + F1-a 측정 단위 라이브러리(CL-14) + F1-b 영유아 지표·Sparks(CL-15). 더해 **코드 갭 발견·명시**: `lib/peer-percentile.ts` 실측 경로가 ±6개월·동일음소 전 표본(정상+지연 혼재) pooling = Peña 위반 → CL-13 AC + 코드 주석으로 명문화(동작 불변, 정상 발달 라벨링 = 후속 task). literacy/KOPLAC 무관·현 live 진단 품질 직결.
 
 ---
 
