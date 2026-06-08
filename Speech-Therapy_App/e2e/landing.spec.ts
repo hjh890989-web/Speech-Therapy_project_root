@@ -26,6 +26,8 @@ test.describe("랜딩 미리보기", () => {
   test("FAQ 아코디언 — 질문 클릭 시 답변 노출", async ({ page }) => {
     await page.goto(LANDING_PATH);
     await page.getByText("이건 의료적 평가인가요?").click();
-    await expect(page.getByText(/돕는 보조 도구예요/)).toBeVisible();
+    // FAQ 답변에 고유한 문구로 특정 — TrustStrip 기둥 제목도 "돕는 보조 도구예요"를 포함해
+    // /돕는 보조 도구예요/ 가 2개 매칭(strict mode 위반)이던 회귀 수정(2026-06).
+    await expect(page.getByText(/확인하실 수 있도록 돕는 보조 도구예요/)).toBeVisible();
   });
 });
