@@ -91,19 +91,19 @@
 | **DB-LIT-01** | DB | `EvaluationResult` 확장 — `phonemeAwarenessScore`/`decodingScore`/`ranTimeMs`/`readingFluencyScore`(nullable, 만 5-7세). ⚠️ **`errorPattern` JSONB 불필요로 정정** — 음운변동은 영속 단어(intended/heard)로 결정적 재계산(per-session·주간 모두) → migration·컬럼 0(R4 단어 미저장). literacy 점수 컬럼만 잔존 | CL-08~10 | DB-001 | L | 1 | 🟢 P0 (literacy 점수 컬럼만) |
 | **MOCK-LIT-01** | 콘텐츠 | **음운인식 아이템 풀** — 자체 한국어 고빈도 2-3음절 단어 + 합성/탈락/대치 미니게임(6단계 위계 매핑) | CL-08 | — | M | 2 | ✅ done (`lib/literacy/pa-content.ts` 15 items, 2026-06-08) |
 | **MOCK-LIT-02** | 콘텐츠 | **해독 무의미음절 생성기** — 한글 자소-음소 규칙 자체 생성 + 어두/어중/어말 시드 풀 | CL-09 | — | M | 2 | ✅ done (`lib/literacy/decoding-content.ts` composeSyllable/generateNonword + 12 무의미단어, 2026-06-08) |
-| **MOCK-LIT-03** | 콘텐츠 | **RAN 배열판 자극**(자체 사물·색깔) + **자체 1분 읽기 지문** | CL-10 | — | M | 2 | ✅ **RAN 배열판 done**(`lib/literacy/ran-content.ts` 색5·사물5 + 인접중복0 생성기, 2026-06-08) · ◐ 1분 읽기 지문(읽기유창성) pending |
+| **MOCK-LIT-03** | 콘텐츠 | **RAN 배열판 자극**(자체 사물·색깔) + **자체 1분 읽기 지문** | CL-10 | — | M | 2 | ✅ **done** — RAN 배열판(`ran-content.ts` 색5·사물5+인접중복0 생성기) + **1분 읽기 지문**(`reading-fluency-content.ts` 자체 4지문, 2026-06-08) |
 | **MOCK-LIT-04** | 콘텐츠 | **추론 4수준 시나리오 풀**(F15 prompt 위계 — 사실/추론/비판/평가) | CL-11 | — | M | 2 | 🟡 P1 |
 
 ### CR7-B. 로직 / UI
 
 | Task ID | 종류 | 명세 | 관련 REQ | 선행 | 복잡도 | SP | 상태 |
 |:---|:---|:---|:---|:---|:---:|:---:|:---:|
-| **FR-Q-LIT-01** | Read/UI | 음운인식·해독·RAN 미니게임 UI(**만 5-7세 조건부**) | CL-08~10/12 | MOCK-LIT-01/02/03 | H | 3 | ✅ **3종 UI done (플래그 off, 2026-06-08)**: 음운인식(`/literacy/phonological-awareness` 선택형) + 해독(`/literacy/decoding` 음독+STT) + RAN(`/literacy/ran` 배열판+타이머) |
-| **FR-C-LIT-01** | Write | literacy 채점(음운인식·해독 0/1 + 자기교정 3초 + RAN 시간/유창성 음절수) + 저장 + 연령 게이트 | CL-08~10/12 | DB-LIT-01, MOCK-LIT-* | H | 3 | ✅ **3종 채점·연령게이트·플래그 done**: 음운인식(0/1+SC 3초) + 해독(phonetic-similarity 0/1+오반응) + RAN(완료시간→속도) · ◐ 서버 저장·F1-a 연동(KOPLAC 후) pending |
+| **FR-Q-LIT-01** | Read/UI | 음운인식·해독·RAN·유창성 미니게임 UI(만 5-7세 / 유창성 6-7세) | CL-08~10/12 | MOCK-LIT-01/02/03 | H | 3 | ✅ **4종 UI done (플래그 off)**: 음운인식(`/phonological-awareness` 선택형) + 해독(`/decoding` 음독+STT) + RAN(`/ran` 배열판+타이머) + **유창성**(`/reading-fluency` 지문+타이머, 만 6-7세) |
+| **FR-C-LIT-01** | Write | literacy 채점(음운인식·해독 0/1 + 자기교정 3초 + RAN 시간/유창성 음절수) + 저장 + 연령 게이트 | CL-08~10/12 | DB-LIT-01, MOCK-LIT-* | H | 3 | ✅ **4종 채점·연령게이트·플래그 done**: 음운인식(0/1+SC 3초) + 해독(phonetic-similarity 0/1+오반응) + RAN(완료시간→속도) + **유창성(음절/분)** · ◐ 서버 저장·F1-a 연동(KOPLAC 후) pending |
 | **FR-C-LIT-02** ⭐ | Write | **F4 음운변동 제품화**(기존 엔진 wiring) — KOPLAC 검증(CR-2026-006) 해제 + `errorPattern` 저장 + 결과 페이지 **음소별 오류/핀셋 UI** 렌더(현 밴드 1줄로만 소비) | CL-01, CL-09 | DB-LIT-01 | M | 3 | ✅ 표시 done (2026-06-08) · DB영속=FR-Q-LIT-02 게이트 |
 | **FR-Q-LIT-02** | Read/UI | F4 주간 리포트 **음소 핀셋 추이** — ✅ **음운변동 주간 요약**("이번 주 발음 패턴" 카드: 빈도·발달 톤, scoreTrend errorPattern 재계산, migration 0, R4 단어 미저장) done. ◐ 음운인식/해독/RAN 축은 미니게임(FR-Q-LIT-01)+KOPLAC 게이트 후 | CL-08~10, REQ-FUNC-027 | FR-C-LIT-01 | M | 2 | ✅ 음운변동 추이 done (2026-06-08) · literacy 축=게이트 |
 | **API-LIT-01** | API | F15 `chat-system-prompt` 확장 — 추론 4수준 시나리오 위계 prompt | CL-11 | API-019 | M | 2 | 🟡 P1 |
-| **TEST-LIT-01** | TEST | literacy 채점·**연령게이트(만 4세↓ 미노출 0건)**·**원본성(NISE 미복제) lint**·RAN 시간측정 단위/통합 | CL-08~12 | FR-C-LIT-01/02 | M | 2 | ✅ 단위 done (3 test files 40건: 채점·SC·연령·원본성 lint·RAN 측정, 2026-06-08) · ◐ e2e/통합 pending |
+| **TEST-LIT-01** | TEST | literacy 채점·**연령게이트(만 4세↓ 미노출 0건)**·**원본성(NISE 미복제) lint**·RAN 시간측정 단위/통합 | CL-08~12 | FR-C-LIT-01/02 | M | 2 | ✅ 단위 done (4 test files 50건: 채점·SC·연령·원본성 lint·RAN/유창성 측정) · ◐ e2e/통합 pending |
 
 ### CR7-C. 운영
 
