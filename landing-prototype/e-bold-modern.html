@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- V2 (E) — c-bold.html(Bold/App-style) 기반 + new-landing-page.html 장점 결합:
+         · 풀블리드 그래디언트 히어로 + 디바이스 목업 + 모바일 하단 고정 CTA (c-bold)
+         · split 히어로 + 플로팅 카드 / 6기능 그리드 / 타임라인 / 스탯 카드 (new-landing)
+         · 컴플라이언스 준수(허위 수치 없음, 의료 금칙어 미사용) -->
+    <title>[E · Bold+Modern] Speech-Therapy - 우리 아이 발음 확인</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.85} }
+        .animate-bounce-custom { animation: bounce 2.4s ease-in-out infinite; }
+        .animate-pulse-custom { animation: pulse 2.4s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .animate-bounce-custom,.animate-pulse-custom{animation:none} }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-950 min-h-screen pb-20 sm:pb-0">
+    <main class="min-h-screen overflow-hidden">
+        <!-- HERO — 풀블리드 그래디언트(c-bold) + split + 플로팅 카드(new-landing) + 디바이스 목업 -->
+        <section class="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 text-white dark:from-emerald-700 dark:to-teal-800">
+            <div class="absolute inset-0 opacity-20"><div class="absolute -top-32 -left-20 h-80 w-80 rounded-full bg-white/40 blur-3xl"></div><div class="absolute -bottom-32 -right-10 h-80 w-80 rounded-full bg-white/20 blur-3xl"></div></div>
+            <div class="relative mx-auto max-w-7xl px-4 py-20 sm:py-28 lg:py-32">
+                <div class="grid gap-12 lg:grid-cols-2 lg:items-center">
+                    <div class="space-y-7">
+                        <div class="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur"><span>🎙️</span><span>무가입 · 5분 · 음성 미저장</span></div>
+                        <h1 class="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">우리 아이 발음,<br>회원가입 없이 5분 안에<br>또래와 비교해 확인해요</h1>
+                        <p class="text-lg text-emerald-50 sm:text-xl">월령과 음소를 고르고 한 단어만 들려주면, 또래와 비교한 발음 발달 단계를 바로 안내해 드려요.</p>
+                        <div class="flex flex-col gap-4 sm:flex-row">
+                            <a href="/diagnose" class="group inline-flex items-center justify-center rounded-full bg-white px-9 py-4 text-lg font-bold text-emerald-700 shadow-xl transition hover:bg-emerald-50">5분 발음 확인 시작하기
+                                <svg class="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                            </a>
+                            <a href="#features" class="inline-flex items-center justify-center rounded-full border-2 border-white/70 px-9 py-4 text-lg font-semibold text-white transition hover:bg-white/10">기능 살펴보기</a>
+                        </div>
+                        <div class="flex flex-wrap gap-2 pt-1">
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur">🤝 AI + 전문가 검수</span>
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur">🔒 음성 원본 미저장</span>
+                        </div>
+                    </div>
+                    <!-- 디바이스 목업 + 플로팅 카드 -->
+                    <div class="relative" aria-hidden="true">
+                        <div class="relative mx-auto max-w-sm">
+                            <div class="absolute -left-6 top-4 z-10 animate-bounce-custom"><div class="rounded-2xl bg-white p-4 shadow-2xl"><div class="flex items-center gap-3"><div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-2xl">🎯</div><div><p class="text-sm font-bold text-gray-900">발음 미션</p><p class="text-xs text-gray-500">하루 1~3분</p></div></div></div></div>
+                            <div class="absolute -right-4 bottom-8 z-10 animate-pulse-custom"><div class="rounded-2xl bg-white p-4 shadow-2xl"><div class="flex items-center gap-3"><div class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-2xl">📊</div><div><p class="text-sm font-bold text-gray-900">또래 비교</p><p class="text-xs text-gray-500">객관적 확인</p></div></div></div></div>
+                            <div class="mx-auto w-64 rounded-[2.5rem] border-[8px] border-gray-900/90 bg-white p-4 shadow-2xl">
+                                <div class="rounded-2xl bg-emerald-50 p-6 text-center">
+                                    <p class="text-5xl">🌟</p>
+                                    <p class="mt-3 text-base font-bold text-gray-900">또래와 비슷한 발음 수준이에요</p>
+                                    <div class="mt-4 h-2.5 w-full rounded-full bg-gray-200"><div class="h-2.5 w-3/4 rounded-full bg-emerald-500"></div></div>
+                                    <p class="mt-2 text-xs font-medium text-gray-500">또래 비교</p>
+                                </div>
+                                <div class="mt-3 rounded-xl bg-gray-900 py-3 text-center text-sm font-bold text-white">미션 이어가기 →</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Disclaimer Banner -->
+        <section class="bg-amber-50 px-4 py-4 dark:bg-amber-950/30">
+            <div class="mx-auto max-w-4xl text-center"><p class="text-sm font-medium text-amber-800 dark:text-amber-200">💡 본 서비스는 의료적 평가가 아닌, 부모님께 발달 확인 정보를 안내하는 보조 도구입니다.</p></div>
+        </section>
+
+        <!-- Features Grid (new-landing) — 볼드 아이콘 타일 -->
+        <section id="features" class="px-4 py-20 sm:py-28">
+            <div class="mx-auto max-w-6xl">
+                <div class="text-center"><p class="text-sm font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">왜 Speech-Therapy 인가요?</p><h2 class="mt-3 text-3xl font-extrabold text-gray-900 sm:text-4xl dark:text-white">아이와 함께 성장하는 경험</h2></div>
+                <div class="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                    <div class="group rounded-3xl border border-gray-100 bg-white p-8 shadow-md transition hover:shadow-xl dark:border-gray-800 dark:bg-gray-900"><div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-3xl shadow-lg shadow-emerald-500/30">⏱️</div><h3 class="mt-6 text-xl font-bold text-gray-900 dark:text-white">5분 만에 확인</h3><p class="mt-3 text-gray-600 dark:text-gray-300">복잡한 절차 없이 월령과 음소만 선택하면 바로 발음 확인을 시작할 수 있어요.</p></div>
+                    <div class="group rounded-3xl border border-gray-100 bg-white p-8 shadow-md transition hover:shadow-xl dark:border-gray-800 dark:bg-gray-900"><div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-400 to-violet-600 text-3xl shadow-lg shadow-violet-500/30">🔒</div><h3 class="mt-6 text-xl font-bold text-gray-900 dark:text-white">음성 원본 미저장</h3><p class="mt-3 text-gray-600 dark:text-gray-300">음성은 텍스트로만 처리되고 원본은 서버에 저장하지 않아요. 안심하고 사용하세요.</p></div>
+                    <div class="group rounded-3xl border border-gray-100 bg-white p-8 shadow-md transition hover:shadow-xl dark:border-gray-800 dark:bg-gray-900"><div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-3xl shadow-lg shadow-amber-500/30">📊</div><h3 class="mt-6 text-xl font-bold text-gray-900 dark:text-white">또래 비교 안내</h3><p class="mt-3 text-gray-600 dark:text-gray-300">같은 월령 또래와 비교한 발달 단계로, 막연한 걱정 대신 차분히 확인하세요.</p></div>
+                    <a href="/missions" class="group rounded-3xl border border-gray-100 bg-white p-8 shadow-md transition hover:shadow-xl dark:border-gray-800 dark:bg-gray-900"><div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-sky-600 text-3xl shadow-lg shadow-sky-500/30">🎯</div><h3 class="mt-6 text-xl font-bold text-gray-900 dark:text-white">매일 미션</h3><p class="mt-3 text-gray-600 dark:text-gray-300">하루 1~3분, 아이 발달 단계에 맞춘 짧고 즐거운 미션으로 꾸준히 연습하세요.</p><div class="mt-4 inline-flex items-center font-semibold text-emerald-600 dark:text-emerald-400">미션 보기 →</div></a>
+                    <a href="/rewards" class="group rounded-3xl border border-gray-100 bg-white p-8 shadow-md transition hover:shadow-xl dark:border-gray-800 dark:bg-gray-900"><div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-400 to-pink-600 text-3xl shadow-lg shadow-pink-500/30">🌟</div><h3 class="mt-6 text-xl font-bold text-gray-900 dark:text-white">별·나무·AI 그림</h3><p class="mt-3 text-gray-600 dark:text-gray-300">미션을 완료할 때마다 별을 모으고 나무를 키워요. 아이의 동기를 자연스럽게 이어가요.</p><div class="mt-4 inline-flex items-center font-semibold text-emerald-600 dark:text-emerald-400">보상 도감 보기 →</div></a>
+                    <a href="/reports" class="group rounded-3xl border border-gray-100 bg-white p-8 shadow-md transition hover:shadow-xl dark:border-gray-800 dark:bg-gray-900"><div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 text-3xl shadow-lg shadow-emerald-500/30">📈</div><h3 class="mt-6 text-xl font-bold text-gray-900 dark:text-white">주간 발달 추이</h3><p class="mt-3 text-gray-600 dark:text-gray-300">발음 발달 추이를 또래 비교와 함께 그래프로 정리해 드려요. 가족과 함께 확인하기 좋아요.</p><div class="mt-4 inline-flex items-center font-semibold text-emerald-600 dark:text-emerald-400">주간 리포트 보기 →</div></a>
+                </div>
+            </div>
+        </section>
+
+        <!-- "기다리는 동안" 긴급(c-bold) -->
+        <section class="bg-emerald-50 px-4 py-20 sm:py-24 dark:bg-emerald-950/20">
+            <div class="mx-auto max-w-3xl text-center">
+                <p class="text-5xl">🌱</p>
+                <h2 class="mt-4 text-3xl font-extrabold leading-snug tracking-tight text-gray-900 sm:text-4xl dark:text-white">센터 예약을 기다리는 두세 달, 그냥 흘려보내지 않아도 돼요</h2>
+                <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-gray-700 dark:text-gray-300">상담이나 예약을 기다리는 동안에도 가정에서 할 수 있는 일이 있어요. 하루 1~3분, 아이와 함께 짧은 발음 놀이 미션을 이어가면 매일의 작은 변화가 쌓여요. 부담 없이 오늘부터 시작해 보세요.</p>
+                <p class="mt-4 text-lg font-bold text-emerald-800 dark:text-emerald-200">무엇을 해야 할지 막막했다면, 오늘 5분이 그 시작이 될 수 있어요.</p>
+                <div class="mt-8"><a href="/diagnose" class="inline-flex min-h-[52px] items-center justify-center rounded-full bg-emerald-600 px-8 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-emerald-700">오늘 5분 미션 시작하기</a></div>
+            </div>
+        </section>
+
+        <!-- How It Works — Timeline (new-landing) -->
+        <section class="px-4 py-20 sm:py-28">
+            <div class="mx-auto max-w-5xl">
+                <h2 class="text-center text-3xl font-extrabold text-gray-900 sm:text-4xl dark:text-white">간단한 3단계로 확인하세요</h2>
+                <div class="relative mt-16">
+                    <div class="absolute left-8 top-0 bottom-0 hidden w-0.5 bg-gradient-to-b from-emerald-300 via-emerald-500 to-emerald-700 sm:block dark:from-emerald-700 dark:via-emerald-500 dark:to-emerald-300"></div>
+                    <div class="space-y-12">
+                        <div class="relative flex gap-8"><div class="hidden h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-2xl text-white shadow-lg ring-4 ring-emerald-100 sm:flex dark:ring-emerald-900/50">1️⃣</div><div class="flex-1 rounded-3xl bg-gray-50 p-8 shadow-sm dark:bg-gray-900"><h3 class="text-xl font-bold text-gray-900 dark:text-white">월령·음소 고르기</h3><p class="mt-2 text-gray-600 dark:text-gray-300">아이 개월 수와 확인하고 싶은 소리(ㄱ·ㄴ·ㅅ·ㅈ·ㄹ)를 한 번만 골라요.</p></div></div>
+                        <div class="relative flex gap-8"><div class="hidden h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-2xl text-white shadow-lg ring-4 ring-emerald-100 sm:flex dark:ring-emerald-900/50">2️⃣</div><div class="flex-1 rounded-3xl bg-gray-50 p-8 shadow-sm dark:bg-gray-900"><h3 class="text-xl font-bold text-gray-900 dark:text-white">한 단어만 들려주기</h3><p class="mt-2 text-gray-600 dark:text-gray-300">아이가 단어 하나를 말하면 그 소리를 텍스트로 바꿔 발달 단계를 살펴봐요. 음성 원본은 저장하지 않아요.</p></div></div>
+                        <div class="relative flex gap-8"><div class="hidden h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-2xl text-white shadow-lg ring-4 ring-emerald-100 sm:flex dark:ring-emerald-900/50">3️⃣</div><div class="flex-1 rounded-3xl bg-gray-50 p-8 shadow-sm dark:bg-gray-900"><h3 class="text-xl font-bold text-gray-900 dark:text-white">또래 비교 결과 받기</h3><p class="mt-2 text-gray-600 dark:text-gray-300">“또래와 비슷한 수준이에요” 같은 안내와 함께, 이어서 할 수 있는 짧은 미션을 추천해 드려요.</p></div></div>
+                    </div>
+                </div>
+                <!-- 결과 예시 칩 -->
+                <ul class="mt-12 flex flex-wrap items-center justify-center gap-2.5">
+                    <li class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">🌟 또래와 비슷한 발음 수준이에요</li>
+                    <li class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">👍 조금 더 연습하면 더 또렷해질 거예요</li>
+                    <li class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">🌱 미션으로 꾸준히 함께 연습하면 도움이 돼요</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Trust + Stat Cards (new-landing) -->
+        <section class="bg-gray-50 px-4 py-20 sm:py-28 dark:bg-gray-900/60">
+            <div class="mx-auto max-w-6xl">
+                <div class="grid gap-12 lg:grid-cols-2 lg:items-center">
+                    <div>
+                        <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl dark:text-white">안심하고 사용할 수 있도록</h2>
+                        <p class="mt-4 text-lg text-gray-600 dark:text-gray-300">부모님의 마음을 가장 먼저 생각합니다.</p>
+                        <div class="mt-8 space-y-6">
+                            <div class="flex gap-4"><div class="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-xl dark:bg-emerald-900/50">🤝</div><div><h3 class="font-bold text-gray-900 dark:text-white">AI 분석에 전문가 검수를 더했어요</h3><p class="mt-1 text-gray-600 dark:text-gray-300">판단이 어려운 경우 전문가가 한 번 더 살펴봐요. 더 신뢰할 수 있는 안내를 드리기 위해서예요.</p></div></div>
+                            <div class="flex gap-4"><div class="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-violet-100 text-xl dark:bg-violet-900/50">🔒</div><div><h3 class="font-bold text-gray-900 dark:text-white">아이 목소리 원본은 저장하지 않아요</h3><p class="mt-1 text-gray-600 dark:text-gray-300">음성은 텍스트로 바뀐 뒤 그 텍스트와 점수만 안전하게 다뤄요. <a href="/privacy" class="font-semibold text-emerald-600 underline underline-offset-4 dark:text-emerald-400">개인정보 처리방침 보기</a></p></div></div>
+                            <div class="flex gap-4"><div class="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-100 text-xl dark:bg-amber-900/50">🌱</div><div><h3 class="font-bold text-gray-900 dark:text-white">의료적 평가가 아닌 보조 도구예요</h3><p class="mt-1 text-gray-600 dark:text-gray-300">본 서비스는 의료적 평가를 제공하지 않으며, 발달이 우려되는 경우 전문가 상담을 권장해 드려요.</p></div></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="rounded-3xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-8 text-center text-white shadow-xl"><div class="text-5xl font-extrabold">2-7</div><p class="mt-2 text-emerald-100">대상 연령 (세)</p></div>
+                        <div class="rounded-3xl bg-gradient-to-br from-sky-500 to-sky-600 p-8 text-center text-white shadow-xl"><div class="text-5xl font-extrabold">5</div><p class="mt-2 text-sky-100">분만에 확인</p></div>
+                        <div class="rounded-3xl bg-gradient-to-br from-violet-500 to-violet-600 p-8 text-center text-white shadow-xl"><div class="text-5xl font-extrabold">1-3</div><p class="mt-2 text-violet-100">분 매일 미션</p></div>
+                        <div class="rounded-3xl bg-gradient-to-br from-amber-500 to-amber-600 p-8 text-center text-white shadow-xl"><div class="text-5xl font-extrabold">0</div><p class="mt-2 text-amber-100">원 음성 저장</p></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final CTA — 그래디언트 밴드(c-bold) -->
+        <section class="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 px-4 py-20 sm:py-28 text-white dark:from-emerald-700 dark:to-teal-800">
+            <div class="absolute inset-0 opacity-20"><div class="absolute -top-40 left-0 h-80 w-80 rounded-full bg-white/30 blur-3xl"></div><div class="absolute -bottom-40 right-0 h-80 w-80 rounded-full bg-white/20 blur-3xl"></div></div>
+            <div class="relative mx-auto max-w-4xl text-center">
+                <h2 class="text-3xl font-extrabold sm:text-4xl md:text-5xl">오늘 5분이면 충분해요</h2>
+                <p class="mx-auto mt-4 max-w-xl text-lg text-emerald-50">회원가입 없이 바로 시작하고, 마음에 들면 그때 가입해도 돼요. 가입하면 무가입으로 모은 별과 결과가 새 계정에 그대로 옮겨져요.</p>
+                <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                    <a href="/diagnose" class="inline-flex items-center justify-center rounded-full bg-white px-10 py-5 text-lg font-bold text-emerald-700 shadow-xl transition hover:bg-emerald-50">무료로 5분 발음 확인 시작하기</a>
+                    <a href="/login" class="inline-flex items-center justify-center rounded-full border-2 border-white/70 px-10 py-5 text-lg font-semibold text-white transition hover:bg-white/10">이메일로 가입하고 기록 이어가기</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="px-4 py-20 sm:py-28">
+            <div class="mx-auto max-w-3xl">
+                <h2 class="text-center text-3xl font-extrabold text-gray-900 sm:text-4xl dark:text-white">자주 묻는 질문</h2>
+                <div class="mt-12 space-y-4">
+                    <details class="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"><summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-bold text-gray-900 dark:text-white"><span>이건 의료적 평가인가요?</span><span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-600 transition-transform group-open:rotate-45 dark:bg-gray-800">+</span></summary><p class="mt-4 text-gray-600 dark:text-gray-300">아니에요. 만 2~7세 자녀의 발음 발달을 부모님께서 또래와 비교해 직접 확인하실 수 있도록 돕는 보조 도구예요. 발달이 우려되는 경우에는 전문가 상담을 권장해 드려요.</p></details>
+                    <details class="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"><summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-bold text-gray-900 dark:text-white"><span>아이 목소리는 저장되나요?</span><span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-600 transition-transform group-open:rotate-45 dark:bg-gray-800">+</span></summary><p class="mt-4 text-gray-600 dark:text-gray-300">음성 원본은 서버에 저장하지 않아요. 음성은 텍스트로 변환된 뒤, 그 텍스트와 발달 점수만 안전하게 다뤄요.</p></details>
+                    <details class="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"><summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-bold text-gray-900 dark:text-white"><span>비용이 드나요? 가입해야 하나요?</span><span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-600 transition-transform group-open:rotate-45 dark:bg-gray-800">+</span></summary><p class="mt-4 text-gray-600 dark:text-gray-300">5분 발음 확인은 회원가입 없이 무료로 바로 시작할 수 있어요. 가입은 선택이며, 가입하시면 무가입으로 모은 별과 결과가 새 계정에 그대로 옮겨져요.</p></details>
+                    <details class="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"><summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-bold text-gray-900 dark:text-white"><span>결과가 정확한가요?</span><span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-600 transition-transform group-open:rotate-45 dark:bg-gray-800">+</span></summary><p class="mt-4 text-gray-600 dark:text-gray-300">발음 분석은 AI가 처리하고, 판단이 어려운 경우에는 전문가가 한 번 더 살펴봐요. 같은 월령 또래와 비교한 발달 단계로 안내해 드리며, 이는 의료적 평가가 아닌 부모님을 위한 참고 정보예요.</p></details>
+                    <details class="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"><summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-bold text-gray-900 dark:text-white"><span>몇 살부터 할 수 있나요?</span><span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-600 transition-transform group-open:rotate-45 dark:bg-gray-800">+</span></summary><p class="mt-4 text-gray-600 dark:text-gray-300">만 2세부터 7세(약 24~84개월) 자녀를 위한 서비스예요. 시작할 때 아이의 개월 수를 입력하면 그에 맞춰 안내해 드려요.</p></details>
+                    <details class="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900"><summary class="flex cursor-pointer list-none items-center justify-between gap-4 font-bold text-gray-900 dark:text-white"><span>매일 얼마나 해야 하나요?</span><span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-600 transition-transform group-open:rotate-45 dark:bg-gray-800">+</span></summary><p class="mt-4 text-gray-600 dark:text-gray-300">하루 1~3분이면 충분해요. 짧고 즐거운 발음 미션을 아이와 함께 이어가면 매일의 작은 변화가 쌓여요.</p></details>
+                </div>
+            </div>
+        </section>
+
+        <!-- 기관 문의 -->
+        <section class="bg-gray-50 px-4 py-12 dark:bg-gray-900/60">
+            <div class="mx-auto max-w-4xl text-center"><p class="text-gray-600 dark:text-gray-400">어린이집·유치원 등 기관에서 단체 도입이 궁금하신가요? <a href="mailto:partners@speech-therapy.kr" class="font-semibold text-emerald-600 underline underline-offset-4 hover:text-emerald-700 dark:text-emerald-400">기관 문의하기 →</a></p></div>
+        </section>
+    </main>
+
+    <!-- 모바일 하단 고정 CTA (c-bold) -->
+    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 p-3 backdrop-blur sm:hidden dark:border-gray-800 dark:bg-gray-950/95">
+        <a href="/diagnose" class="flex min-h-[52px] w-full items-center justify-center rounded-full bg-emerald-600 text-lg font-bold text-white shadow-lg">5분 발음 확인 시작하기</a>
+    </div>
+</body>
+</html>

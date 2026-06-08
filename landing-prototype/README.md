@@ -8,9 +8,9 @@ Speech-Therapy 랜딩 페이지 **디자인 시안 모음(미적용 스냅샷)**
 
 ---
 
-## 📂 더블클릭으로 바로 비교 (정적 HTML 5개)
+## 📂 더블클릭으로 바로 비교 (정적 HTML 7개)
 
-브라우저에서 파일을 직접 열면 됩니다(서버 불필요). 5개를 나란히 비교하세요.
+브라우저에서 파일을 직접 열면 됩니다(서버 불필요). 나란히 비교하세요.
 
 | 파일 | 시안 | 디자인 방향 | 출처 |
 |------|------|------------|------|
@@ -19,6 +19,10 @@ Speech-Therapy 랜딩 페이지 **디자인 시안 모음(미적용 스냅샷)**
 | [`a-warm.html`](a-warm.html) | **A · Warm & Friendly** | emerald·이모지·둥근 카드, 현재 앱과 가장 일관 | React 시안 정적 스냅샷 |
 | [`b-editorial.html`](b-editorial.html) | **B · Editorial / Minimal** | 무채색+emerald 1색, 큰 타이포·여백·얇은 선, 이모지 최소 | React 시안 정적 스냅샷 |
 | [`c-bold.html`](c-bold.html) | **C · Bold / App-style** | 그래디언트 hero·디바이스 목업·모바일 하단 고정 CTA | React 시안 정적 스냅샷 |
+| [`d-modern-bold.html`](d-modern-bold.html) | **D · Modern+Bold (하이브리드)** | new-landing 모던 베이스 **+** 디바이스 목업·"기다리는 동안" 긴급 섹션·모바일 고정 CTA. 허위수치 제거 | 하이브리드(Tailwind CDN) |
+| [`e-bold-modern.html`](e-bold-modern.html) | **E · Bold+Modern (하이브리드)** | c-bold 볼드 풀블리드 베이스 **+** split 히어로·플로팅 카드·6기능 그리드·타임라인·스탯 카드 | 하이브리드(Tailwind CDN) |
+
+> **D·E 하이브리드**: D=모던(new-landing)에 볼드(c-bold) 강점을, E=볼드(c-bold)에 모던(new-landing) 강점을 결합. 둘 다 컴플라이언스 준수(금칙어·허위수치 0), CTA 실연결(/diagnose 등), 8섹션 완비. 단독 실행 HTML(Tailwind CDN — 인터넷 필요), CTA는 file://에선 미동작(시각 비교용).
 
 **정적 스냅샷(a/b/c-*.html) 주의:**
 - 실제 렌더 페이지를 그대로 떠서 **CSS를 인라인**한 자립형 파일이에요(전역 헤더·면책 푸터 포함).
