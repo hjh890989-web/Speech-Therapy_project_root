@@ -55,9 +55,15 @@ vi.mock("@/lib/reports/weekly-review-loader", () => ({
   loadWeeklyReview: (...args: unknown[]) => loadWeeklyReviewMock(...args),
 }));
 
-vi.mock("@/lib/weekly-report", () => ({
-  getCurrentWeekNumber: () => ({ year: 2026, week: 21 }),
-}));
+// FR-Q-LIT-02 — getCurrentWeekNumber 만 override, 나머지 순수 export(ScoreTrendSchema·
+//   summarizeWeeklyVariations)는 실제 구현 보존(page 가 latest.scoreTrend 를 safeParse).
+vi.mock("@/lib/weekly-report", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/weekly-report")>();
+  return {
+    ...actual,
+    getCurrentWeekNumber: () => ({ year: 2026, week: 21 }),
+  };
+});
 
 const redirectMock = vi.fn((target: string) => {
   throw new Error(`NEXT_REDIRECT:${target}`);

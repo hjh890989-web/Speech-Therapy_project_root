@@ -10,8 +10,17 @@
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { toKst } from "@/lib/timeline/tz";
+// FR-Q-LIT-02 — 주간 음운 변동 추이: 영속 단어(intended/heard)로 변동 재계산(display-only).
+import { analyzeErrorPattern } from "@/lib/diagnose/clinical";
 
 // ----- ScoreTrend JSON 스키마 (Zod) -----
+/// FR-Q-LIT-02 — 탐지된 음운 변동의 분류(부모 표시용). lib/diagnose/clinical 의 ErrorClassification 정합.
+export const VariationClassificationSchema = z.enum([
+  "developmental",
+  "developmental_delayed",
+  "atypical",
+]);
+
 export const ScoreTrendEntrySchema = z.object({
   /// ISO 8601 day (예: 2026-05-12).
   date: z.string(),
@@ -20,9 +29,45 @@ export const ScoreTrendEntrySchema = z.object({
   linguistic: z.number().min(0).max(100),
   acoustic: z.number().min(0).max(100),
   peerPercentile: z.number().min(0).max(100),
+  /// FR-Q-LIT-02 — 해당 세션에서 탐지된 단일 음운 변동(있을 때만). **추상 라벨/분류만**(단어 미저장 = R4).
+  /// 레거시 row·미탐지 세션엔 부재(optional) — 기존 데이터/테스트 비파괴.
+  errorPattern: z
+    .object({ label: z.string(), classification: VariationClassificationSchema })
+    .optional(),
 });
 export const ScoreTrendSchema = z.array(ScoreTrendEntrySchema);
 export type ScoreTrend = z.infer<typeof ScoreTrendSchema>;
+export type ScoreTrendEntry = z.infer<typeof ScoreTrendEntrySchema>;
+
+// ----- FR-Q-LIT-02 주간 음운 변동 요약 (순수 함수, display-only) -----
+//
+// scoreTrend 의 per-session errorPattern 을 부모 표시용 요약으로 집계. 채점·저장 무관 —
+// 부모 리포트 "이번 주 발음 패턴" 카드 입력. errorPattern 없는 entry 는 무시(보수적).
+export interface WeeklyVariationSummary {
+  /// errorPattern 이 탐지된 세션 수.
+  detectedSessions: number;
+  /// 라벨별 빈도 (내림차순).
+  topPatterns: Array<{ label: string; count: number }>;
+  /// developmental 외(developmental_delayed/atypical) 분류가 1건 이상 — 격려 카피 분기.
+  hasDelayed: boolean;
+}
+
+/// scoreTrend → 주간 음운 변동 요약 (결정적 순수 함수).
+export function summarizeWeeklyVariations(scoreTrend: ScoreTrend): WeeklyVariationSummary {
+  const counts = new Map<string, number>();
+  let detectedSessions = 0;
+  let hasDelayed = false;
+  for (const entry of scoreTrend) {
+    if (!entry.errorPattern) continue;
+    detectedSessions += 1;
+    counts.set(entry.errorPattern.label, (counts.get(entry.errorPattern.label) ?? 0) + 1);
+    if (entry.errorPattern.classification !== "developmental") hasDelayed = true;
+  }
+  const topPatterns = [...counts.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+  return { detectedSessions, topPatterns, hasDelayed };
+}
 
 // ----- ISO 8601 주차 계산 (KST 기준) -----
 /// 주어진 Date 의 ISO 8601 주차 번호를 반환 (1~53).
@@ -60,9 +105,9 @@ export async function aggregateWeeklyScores(
   const { start, end } = weekBounds(year, week);
 
   // Performance 감사 1차 — `select` 명시화 (이전엔 모든 컬럼 fetch).
-  //   제외 컬럼: id / sessionId / confidence / hitlReviewed / aiCushionText (큰 텍스트)
-  //   / acousticFeatures (JSON) / childAgeMonths — 본 집계에서 미사용.
-  //   기존 row.targetPhoneme / scores / peerPercentile / createdAt 만 필요.
+  //   제외 컬럼: id / sessionId / confidence / hitlReviewed / aiCushionText (큰 텍스트) / acousticFeatures (JSON).
+  //   FR-Q-LIT-02 — intendedWord/heardWord/childAgeMonths 추가: 음운 변동 재계산용. **R4: 단어는 전이적**
+  //   (analyzeErrorPattern 입력 후 버림 — scoreTrend 엔 추상 라벨/분류만, 단어 미저장).
   const results = await prisma.evaluationResult.findMany({
     where: {
       userId,
@@ -76,19 +121,35 @@ export async function aggregateWeeklyScores(
       linguisticScore: true,
       acousticScore: true,
       peerPercentile: true,
+      intendedWord: true,
+      heardWord: true,
+      childAgeMonths: true,
     },
   });
 
   if (results.length === 0) return null;
 
-  const scoreTrend: ScoreTrend = results.map((r) => ({
-    date: r.createdAt.toISOString().slice(0, 10),
-    phoneme: r.targetPhoneme,
-    articulation: r.articulationScore,
-    linguistic: r.linguisticScore,
-    acoustic: r.acousticScore,
-    peerPercentile: r.peerPercentile,
-  }));
+  const scoreTrend: ScoreTrend = results.map((r) => {
+    // FR-Q-LIT-02 — 음운 변동 재계산(per-session 결과 페이지와 동일 결정적 분석). 미탐지/단어부재 → 부재.
+    //   R4: r.intendedWord/heardWord 는 여기서만 사용하고 결과엔 담지 않는다(추상 라벨/분류만).
+    const variation = analyzeErrorPattern(
+      r.intendedWord ?? "",
+      r.heardWord ?? "",
+      r.targetPhoneme,
+      r.childAgeMonths,
+    );
+    return {
+      date: r.createdAt.toISOString().slice(0, 10),
+      phoneme: r.targetPhoneme,
+      articulation: r.articulationScore,
+      linguistic: r.linguisticScore,
+      acoustic: r.acousticScore,
+      peerPercentile: r.peerPercentile,
+      ...(variation
+        ? { errorPattern: { label: variation.label, classification: variation.classification } }
+        : {}),
+    };
+  });
 
   const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 

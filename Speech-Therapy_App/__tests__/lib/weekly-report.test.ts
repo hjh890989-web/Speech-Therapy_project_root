@@ -4,6 +4,7 @@ import { describe, it, expect } from "vitest";
 import {
   getCurrentWeekNumber,
   ScoreTrendSchema,
+  summarizeWeeklyVariations,
   assessDataSufficiency,
   computeWeekOverWeekDelta,
   previousWeek,
@@ -193,5 +194,71 @@ describe("previousWeek — ISO 주차 단순 감소", () => {
 
   it("주차 1 → 직전 해 W52 로 단순 폴백", () => {
     expect(previousWeek(2026, 1)).toEqual({ year: 2025, week: 52 });
+  });
+});
+
+describe("ScoreTrendSchema — FR-Q-LIT-02 errorPattern optional", () => {
+  const base = {
+    date: "2026-05-12",
+    phoneme: "ㅅ",
+    articulation: 80,
+    linguistic: 75,
+    acoustic: 70,
+    peerPercentile: 65,
+  };
+
+  it("errorPattern 부재 entry 통과 (레거시 비파괴)", () => {
+    expect(() => ScoreTrendSchema.parse([base])).not.toThrow();
+  });
+
+  it("errorPattern 있는 entry 통과", () => {
+    const data = [
+      { ...base, errorPattern: { label: "마찰음 파열음화", classification: "developmental" } },
+    ];
+    expect(() => ScoreTrendSchema.parse(data)).not.toThrow();
+  });
+
+  it("잘못된 classification 차단", () => {
+    const data = [{ ...base, errorPattern: { label: "x", classification: "bogus" } }];
+    expect(() => ScoreTrendSchema.parse(data)).toThrow();
+  });
+});
+
+describe("summarizeWeeklyVariations — FR-Q-LIT-02", () => {
+  const base = {
+    date: "2026-05-12",
+    phoneme: "ㅅ",
+    articulation: 80,
+    linguistic: 75,
+    acoustic: 70,
+    peerPercentile: 65,
+  };
+
+  it("errorPattern 없으면 detectedSessions 0 + 빈 요약", () => {
+    expect(summarizeWeeklyVariations([base, base])).toEqual({
+      detectedSessions: 0,
+      topPatterns: [],
+      hasDelayed: false,
+    });
+  });
+
+  it("라벨별 빈도 내림차순 + delayed 분류 → hasDelayed true", () => {
+    const trend = [
+      { ...base, errorPattern: { label: "마찰음 파열음화", classification: "developmental" } as const },
+      { ...base, errorPattern: { label: "마찰음 파열음화", classification: "developmental" } as const },
+      { ...base, errorPattern: { label: "종성 탈락", classification: "developmental_delayed" } as const },
+    ];
+    const s = summarizeWeeklyVariations(trend);
+    expect(s.detectedSessions).toBe(3);
+    expect(s.topPatterns[0]).toEqual({ label: "마찰음 파열음화", count: 2 });
+    expect(s.topPatterns[1]).toEqual({ label: "종성 탈락", count: 1 });
+    expect(s.hasDelayed).toBe(true);
+  });
+
+  it("모두 developmental → hasDelayed false", () => {
+    const trend = [
+      { ...base, errorPattern: { label: "유음 활음화", classification: "developmental" } as const },
+    ];
+    expect(summarizeWeeklyVariations(trend).hasDelayed).toBe(false);
   });
 });

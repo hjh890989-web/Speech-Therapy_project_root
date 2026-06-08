@@ -18,6 +18,8 @@ import {
   buildDevelopmentalContext,
   type DevelopmentalDisplayContext,
 } from "./clinical-interpretation";
+// FR-C-LIT-02 (CR-2026-007) — F4 음운변동 제품화: 탐지된 변동을 부모용 음소 핀셋 분석으로 표시(display-only).
+import { analyzeErrorPattern, type ErrorPatternAnalysis } from "@/lib/diagnose/clinical";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -142,6 +144,17 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
     articulationCtx = buildDevelopmentalContext(articulationCtx, effectiveIntended, effectiveTranscript);
   }
   const articulationCopy = articulationInterpretation(result.articulationScore, articulationCtx);
+  // FR-C-LIT-02 — 탐지된 단일 음운 변동을 부모용 음소 핀셋 분석으로 표시. 점수/HITL/저장 raw 불변
+  //   (display-only): intendedWord/heardWord 재계산이라 errorPattern DB 저장과 무관. 미탐지 시 null → 미표시.
+  const errorPattern: ErrorPatternAnalysis | null =
+    fetched.clinicalContext && effectiveIntended && effectiveTranscript
+      ? analyzeErrorPattern(
+          effectiveIntended,
+          effectiveTranscript,
+          fetched.clinicalContext.phoneme,
+          fetched.clinicalContext.ageMonths,
+        )
+      : null;
   const heardWord = result.heardWord ?? transcript;
   const displayIntended = result.intendedWord ?? intendedWord;
   const isPerfectMatch =
@@ -205,6 +218,23 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
             <p className="mt-3 text-xs text-amber-800 dark:text-amber-200">
               비슷하게 말했어요. 미션으로 또박또박 함께 연습해 봐요.
             </p>
+          )}
+          {/* FR-C-LIT-02 — 음소 핀셋: 탐지된 발음 패턴 + 발달 톤 안내 (ADR-04 금칙어 0, 점수 무변경). */}
+          {errorPattern && (
+            <div
+              data-testid="error-pattern-analysis"
+              className="mt-3 rounded-md bg-white/70 px-3 py-2 dark:bg-slate-900/40"
+            >
+              <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                <span className="mr-1" aria-hidden>
+                  {errorPattern.emoji}
+                </span>
+                발음 패턴: {errorPattern.label}
+              </p>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                {errorPattern.parentNote}
+              </p>
+            </div>
           )}
         </section>
       )}

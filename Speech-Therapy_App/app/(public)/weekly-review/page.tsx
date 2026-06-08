@@ -25,9 +25,11 @@ import { redirect } from "next/navigation";
 import { getCachedUser } from "@/lib/auth/cached-get-user";
 import { prisma } from "@/lib/db";
 import { loadWeeklyReview } from "@/lib/reports/weekly-review-loader";
-import { getCurrentWeekNumber } from "@/lib/weekly-report";
+import { getCurrentWeekNumber, ScoreTrendSchema, summarizeWeeklyVariations } from "@/lib/weekly-report";
 
 import { WeeklyReviewSummary } from "@/components/weekly-review/WeeklyReviewSummary";
+// FR-Q-LIT-02 — 이번 주 음운 변동 추이 카드 (음소 핀셋, display-only).
+import { WeeklyReviewVariations } from "@/components/weekly-review/WeeklyReviewVariations";
 // Performance 감사 1차 — Recharts (~80KB gzip) dynamic import 는 본 컴포넌트
 // 내부에서 `next/dynamic` 으로 처리한다 (WeeklyReviewTrend.tsx). page 측은 일반
 // import 로 유지 — 기존 test mock (`vi.mock("@/components/weekly-review/WeeklyReviewTrend")`)
@@ -134,6 +136,13 @@ export default async function WeeklyReviewPage() {
   const currentAvg =
     (latest.articulationAvg + latest.linguisticAvg + latest.acousticAvg) / 3;
 
+  // FR-Q-LIT-02 — 이번 주 음운 변동 요약 (latest.scoreTrend per-session errorPattern 집계, display-only).
+  //   레거시/파싱 실패 row 는 빈 요약 → 카드 미렌더(회귀 0).
+  const parsedTrend = ScoreTrendSchema.safeParse(latest.scoreTrend);
+  const variationSummary = parsedTrend.success
+    ? summarizeWeeklyVariations(parsedTrend.data)
+    : { detectedSessions: 0, topPatterns: [], hasDelayed: false };
+
   // 4주 trend chart 입력 — history desc → 시간 오름차순 변환 + latest 추가.
   // 의미 있는 추이는 ≥ 2주부터 — history 0건이면 chart 미렌더.
   const chartWeeks = [...data.history].reverse().concat([
@@ -182,6 +191,13 @@ export default async function WeeklyReviewPage() {
           missionCompletedCount={latest.missionCompletedCount}
         />
       </div>
+
+      {/* 1.5) 이번 주 발음 패턴 — 음운 변동 탐지 시에만 (FR-Q-LIT-02) */}
+      {variationSummary.detectedSessions > 0 && (
+        <div className="mb-6">
+          <WeeklyReviewVariations summary={variationSummary} />
+        </div>
+      )}
 
       {/* 2) 다음 주 예측 카드 — predictedNextScore null 이면 미렌더 */}
       {latest.predictedNextScore !== null && (
