@@ -4968,3 +4968,27 @@ clinical 8 stub 중 **7개 본문 1차 보강 완료**:
 - 갱신: clinical/entities/AAIDD.md · clinical/concepts/지적장애-언어중재.md · clinical/concepts/NISE-B-ACT-학습장애검사.md (신규 페이지 없음 → 통계 불변).
 - 메모: 외부 데이터 backlog 중 **위키 내부 처리 가능분(AAIDD·수학) 완료**. 잔여 = 1/3년차 = 사용자 문서 제공 대기.
 
+## [2026-06-09] ingest | 외부 임상 KB(my-healthcare-workbase) 읽기 선행지표 선별 이식 — CL-08~11 grounding
+- pillar: clinical
+- 배경: 외부 임상 KB(`Speech_Therapy_Wiki/my-healthcare-workbase`, sources 183 / concepts 198 / maps 12)와 본 프로젝트 VPS/PRD/SRS 갭 분석(`Speech-Therapy_App/tasks/12_External_Clinical_KB_Gap_Analysis.md`) 결과, 읽기 선행지표 게임(CL-08~11)의 난이도 위계·연령 규준 grounding 갭이 외부 KB로 직접 보강 가능 → 추천 1순위 실행.
+- 추가: wiki/clinical/concepts/읽기-선행지표-발달규준.md — 음운인식(4세50%→5세80%·음소5세후반50%·철자 r=.676 / S003·S160)·해독(Simple View·저학년 β=.287·해독↔유창성 r=.788 / S090·S181)·RAN(자극유형별 중재 반응성, 숫자 비유의 / S133)·읽기유창성(중학년 β=.346·고학년 β=.522·1분 음절수 / S090·S033·S006)·음운규칙(경음화94%>구개음화20%·학령전 오류 역전 / S113·S160)·추론(사실<예측/연결<감정<평가 위계·배경지식 / S100·S142·S145) 통합 + CL-08~11 매핑표.
+- 갱신: wiki/product/concepts/F1a-F4-임상설계-reference.md (보강필요 "난이도 위계·아이템 풀 정량화" → 신규 페이지로 ✅ 해소 역링크), index (clinical concepts 19→20 / 전체 147→148).
+- cross-link: → product F1a-F4-임상설계-reference·MVP-feature-spec·MVP-clinical-foundation + SRS REQ-FUNC-CL-08~11 + clinical 학습장애-언어재활·조음장애·내러티브-담화-추론-중재·NISE-B-ACT·RAN·U-TAP·REVT·KOPLAC.
+- ⚠️ 출처/저작권: 외부 KB **2차 인용**(S0xx 귀속, raw 미보유) + NISE/KOLRA/REVT/U-TAP **구인·발달사실만 영감, 문항·규준·명칭 미복제**(CON-05/ADR-18). 만 2~4세 정상 규준·RAN/유창성 절단점 = **외부 KB 빈약 → 자체 파일럿 필요**(솔직 표기).
+
+## [2026-06-09] ingest | 읽기 선행지표 외부 KB 원본 7종 → 프로젝트 1차 source 승격
+- pillar: clinical
+- 배경: "외부 KB 원본 PDF를 raw/로 정식 입수해 1차 승격" 요청 실행. **검증 결과 7종 원본이 이미 프로젝트 `raw/assets/언어치료 자료/`에 보유**(54차 batch ingest, 외부 KB와 동일 원천) → 파일 복사 불필요, **개별 source 페이지 승격**으로 처리.
+- 추가(7): wiki/clinical/sources/2026-06-09-{S003-음운인식-읽기중재-강의 / S006-읽기평가도구-RA-RCP-BASA-EL / S090-읽기이해-예측-해독-유창성(설아영 2016) / S113-철자쓰기-발달-음운규칙(고은이 2020) / S133-음운인식-작업기억-훈련(김지윤 2016) / S160-어휘력-음운인식-철자(도신애 2020) / S181-LSSC-KORLA-평가}.md — 각 frontmatter `source_path`=로컬 raw 상대경로, `external_id`=S0xx 보존.
+- 갱신: clinical/concepts/읽기-선행지표-발달규준.md(2차 인용→**1차 source 위키링크** 전환 + 보강필요 ✅), index(clinical sources 12→19 / 전체 148→155).
+- ⚠️ 정직성 플래그: 7 source 페이지는 **원본 PDF 전문 정독 전, 외부 KB 검증 분석 + source_index 메타 기반 1차 등록**. 각 페이지에 "원문 정독 후속 검증 권장" 명시. 추론 영역(S100·S142·S145 등)은 기존 [[clinical/concepts/내러티브-담화-추론-중재]] grounding 유지 → 후속 승격 후보.
+
+## [2026-06-09] lint+note | 읽기 선행지표 7 source 원문 정독 검증 — 정량치 대조·오류 2건 정정
+- pillar: clinical
+- 방법: 외부 KB가 동일 원본에서 추출한 전문 텍스트(`.ingest/txt/S003·S006·S090·S113·S133·S160·S181`)와 7 source 페이지 정량치를 1건씩 대조(grep+정독). S090 회귀표(표-19~22)는 직접 정독.
+- ✅ 원문 일치 확인: **S090**(읽기부진 저학년 해독 β=.287/12.9%·중학년 유창성 β=.346/16.8%·일반 고학년 유창성 β=.522/37.7%·해독↔유창성 r=.788·N=479(244+235)), **S113**(경음화94.16·연음화88.33·기식음화72.91·종성69.16·구개음화20.00), **S133**(RAN 색깔1.18·그림4.25·글자3.23 유의/숫자0.68 비유의·24회기), **S003**(음절 4세50%/5세80%·음소 5세후반50%·홍성인2001 위계), **S006**(RA-RCP 6구성).
+- ⚠️ 정정 2건: **S160** — 외부 KB 요약의 "어휘↔철자 r=.322" 오귀속 → 실제 **어휘↔철자 r=.435**, .322는 어휘↔음운인식(두 예측변인 간 상관). 음운인식↔철자 r=.676은 정확. / **S181** — "처음 5문항 연속 오반응 중단" → 실제 **소검사별 연속 6~8 오반응 중단**.
+- 보강: **S133** 소집단(N=8+8) 설계·회기(60분=음운인식40+작업기억20, 24회기) 명시 추가.
+- 갱신: 7 source 페이지 검증 플래그(원문 정독 권장→✅검증완료), clinical/concepts/읽기-선행지표-발달규준.md(§A r=.435 정정 + 출처 박스 검증완료), index 2건(S160·S181 행 정정). 통계 불변.
+- 메모: 핵심 grounding 정량치 5/7 원문 일치, 2/7 정정 → CL-08~11 인수기준 임상 근거 신뢰도 확정. 원본 PDF(스캔/PPTX 포함) 이미지 레벨 정독은 미수행(추출 텍스트 기준).
+
