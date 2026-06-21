@@ -6,11 +6,11 @@
 > 카운터는 grep 가능하도록 아래 별도 줄에 유지. CORE 3 도달 시 STOP REASON: CORE_BUDGET.
 
 CORE: 0
-MINOR: 5
+MINOR: 8
 
 ## 큐 진행
 - [x] ① vocabulary (어휘 — 집중적 자극/fast mapping, S070·S071) — tsc/test(8)/lint exit 0
-- [ ] ② nonword-repetition (음운 작업기억/비단어 따라말하기, S017·S022·S133)
+- [x] ② nonword-repetition (음운 작업기억/비단어 따라말하기, S017·S022·S133) — tsc/test(7)/lint exit 0
 - [ ] ③ narrative (이야기문법·담화 7요소, S024·S102·S148)
 
 ## 결정 (Decisions)
@@ -24,3 +24,9 @@ MINOR: 5
 - (MINOR-4) 어휘 놀이 = 2단계 가이드형: **낱말 말하기(명명)** → **같은 것 찾기(범주 분류)**. 집중적 자극(노출·명명) + 범주화. 채점 없이 부모가 '다음'으로 진행.
 - (MINOR-5) 콘텐츠 = 4범주(동물/음식/탈것/물건) × 6개 = 24개 자체 작성 고빈도 명사 + 이모지(검사 그림 미복제). 연령 하한 만 2세(24m) 공통 상수 `CLINICAL_PLAY_AGE_MIN_MONTHS` 도입.
 - 산출: `lib/literacy/vocabulary{,-content}.ts` · `app/(public)/literacy/vocabulary/{page,VocabularyClient}.tsx` · `__tests__/lib/literacy/vocabulary.test.ts`. 플래그 `LITERACY_VOCAB_ENABLED`(default off). 게이트: tsc exit 0 · vitest 8 pass · eslint exit 0.
+
+### 2026-06-21 — ② nonword-repetition 완료
+- (MINOR-6) 부모 매개 **청각** 따라말하기: 부모가 무의미 음절열을 들려주고 아이가 따라 말함. '글자 가리기' 토글로 아이가 소리에만 의존하도록(작업기억 부하). 음절 길이 2→3→4→5 점증.
+- (MINOR-7) 비단어 = 실재 단어 회피 위해 저빈도 음절 조합 자체 작성(길이별 5/5/4/3, 총 17). 표준화 비단어검사 문항 미복제.
+- (MINOR-8) 연령 게이트는 `vocabulary.ts`의 `CLINICAL_PLAY_AGE_*` 상수 재사용(만 2~7세) — `inference`가 `phonological-awareness`의 연령 함수를 재사용한 선례와 동일(단일 진실원).
+- 산출: `lib/literacy/nonword-repetition{,-content}.ts` · `app/(public)/literacy/nonword-repetition/{page,NonwordRepetitionClient}.tsx` · `__tests__/lib/literacy/nonword-repetition.test.ts`. 플래그 `LITERACY_NWR_ENABLED`(default off). 게이트: tsc exit 0 · vitest 7 pass · eslint exit 0.
