@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import { buildPhonoRulesSession, buildPhonoChoices } from "@/lib/literacy/phono-rules";
 import { PHONO_RULE_LABEL } from "@/lib/literacy/phono-rules-content";
+import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
 
 const SESSION = buildPhonoRulesSession();
 
@@ -17,6 +18,8 @@ export function PhonoRulesClient() {
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+
+  useSaveLiteracyResultOnce({ done, gameSlug: "phono-rules", rawScore: 1, rawTotal: null });
 
   function restart() {
     setIdx(0);

@@ -13,6 +13,7 @@ import {
   buildVocabSortingRounds,
 } from "@/lib/literacy/vocabulary";
 import { VOCAB_CATEGORY_LABEL } from "@/lib/literacy/vocabulary-content";
+import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
 
 const NAMING = buildVocabNamingSession();
 const SORTING = buildVocabSortingRounds();
@@ -24,6 +25,14 @@ export function VocabularyClient() {
   const [namingIdx, setNamingIdx] = useState(0);
   const [sortingIdx, setSortingIdx] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
+
+  // 완료(가이드형, 무채점) 시 참여 신호 1회 영속(fire-and-forget). 훅 규칙상 조건부 return 이전 무조건 호출.
+  useSaveLiteracyResultOnce({
+    done: phase === "done",
+    gameSlug: "vocabulary",
+    rawScore: 1,
+    rawTotal: null,
+  });
 
   function restart() {
     setPhase("naming");

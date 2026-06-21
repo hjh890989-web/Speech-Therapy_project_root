@@ -20,6 +20,7 @@ import {
   type RanStimulusType,
 } from "@/lib/literacy/ran-content";
 import { computeRanResult, formatRanSeconds } from "@/lib/literacy/ran";
+import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
 
 type Phase = "ready" | "running" | "done";
 
@@ -40,6 +41,13 @@ export function RanGameClient() {
   }, [phase]);
 
   const result = computeRanResult(RAN_BOARD_SIZE, elapsedMs);
+
+  useSaveLiteracyResultOnce({
+    done: phase === "done",
+    gameSlug: "ran",
+    rawScore: elapsedMs,
+    rawTotal: RAN_BOARD_SIZE,
+  });
 
   return (
     <section data-testid="ran-game" aria-label="빨리 이름대기">

@@ -10,6 +10,7 @@
 import { useState } from "react";
 
 import { buildNwrSession } from "@/lib/literacy/nonword-repetition";
+import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
 
 const SESSION = buildNwrSession();
 
@@ -17,6 +18,13 @@ export function NonwordRepetitionClient() {
   const [idx, setIdx] = useState(0);
   const [hidden, setHidden] = useState(false);
   const [done, setDone] = useState(false);
+
+  useSaveLiteracyResultOnce({
+    done: done,
+    gameSlug: "nonword-repetition",
+    rawScore: 1,
+    rawTotal: null,
+  });
 
   function restart() {
     setIdx(0);

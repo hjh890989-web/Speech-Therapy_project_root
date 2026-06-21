@@ -13,6 +13,7 @@ import {
   INFERENCE_SCENARIOS,
   INFERENCE_LEVEL_LABEL,
 } from "@/lib/literacy/inference-content";
+import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
 
 const TOTAL = 4; // 4수준 질문 수
 
@@ -22,6 +23,8 @@ export function InferenceClient() {
   const [step, setStep] = useState(-1);
 
   const scenario = INFERENCE_SCENARIOS[scenarioIndex];
+
+  useSaveLiteracyResultOnce({ done: step === TOTAL, gameSlug: "inference", rawScore: 1, rawTotal: null });
 
   function restart() {
     setStep(-1);

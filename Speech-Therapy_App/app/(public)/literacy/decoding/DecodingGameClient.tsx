@@ -19,6 +19,7 @@ import {
   summarizeDecodingSession,
   type DecodingScore,
 } from "@/lib/literacy/decoding";
+import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
 
 interface DecodingGameClientProps {
   items: DecodingItem[];
@@ -50,8 +51,18 @@ export function DecodingGameClient({ items }: DecodingGameClientProps) {
   }
   const stt = useSpeechToText(handleResult);
 
+  // 요약은 최상단에서 1회 계산 — 완료 분기 렌더와 저장 훅이 같은 값을 공유.
+  const summary = summarizeDecodingSession(scores);
+
+  // 완료 시 결과 1회 영속(fire-and-forget). 훅 규칙상 조건부 return 이전 무조건 호출.
+  useSaveLiteracyResultOnce({
+    done: item === null,
+    gameSlug: "decoding",
+    rawScore: summary.correct,
+    rawTotal: summary.total,
+  });
+
   if (item === null) {
-    const summary = summarizeDecodingSession(scores);
     return (
       <section data-testid="decoding-summary" aria-live="polite" className="text-center">
         <p className="text-4xl" aria-hidden="true">🎉</p>

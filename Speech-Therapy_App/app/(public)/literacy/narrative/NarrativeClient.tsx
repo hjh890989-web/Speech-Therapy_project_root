@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import { buildRetellSteps } from "@/lib/literacy/narrative";
 import { NARRATIVE_STORIES } from "@/lib/literacy/narrative-content";
+import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
 
 type Phase = "read" | "retell" | "done";
 
@@ -20,6 +21,8 @@ export function NarrativeClient() {
 
   const story = NARRATIVE_STORIES[storyIdx];
   const steps = buildRetellSteps(story);
+
+  useSaveLiteracyResultOnce({ done: phase === "done", gameSlug: "narrative", rawScore: 1, rawTotal: null });
 
   function restart() {
     setPhase("read");
