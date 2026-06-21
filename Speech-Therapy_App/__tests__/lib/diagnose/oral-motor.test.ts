@@ -20,9 +20,9 @@ import {
 
 const BANNED = ["치료", "진단", "장애", "지연", "지체", "정상", "위험"];
 
-describe("oral-motor — 규준 미판정(측정만)", () => {
-  it("ORAL_MOTOR_NORM_STATUS = 'deferred' (연령 규준·판정 미연결)", () => {
-    expect(ORAL_MOTOR_NORM_STATUS).toBe("deferred");
+describe("oral-motor — 규준 상태", () => {
+  it("ORAL_MOTOR_NORM_STATUS = 'active' (S063 원문 대조 후 참고 밴드 연결 — 판정 아님)", () => {
+    expect(ORAL_MOTOR_NORM_STATUS).toBe("active");
   });
 });
 

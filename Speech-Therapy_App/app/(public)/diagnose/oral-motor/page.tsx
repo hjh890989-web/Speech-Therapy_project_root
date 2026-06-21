@@ -74,7 +74,8 @@ export default async function OralMotorPage() {
 
   return (
     <PageShell>
-      <OralMotorClient />
+      {/* 연령 규준 참고 밴드용 월령 전달(없으면 client 에서 밴드 미표시). */}
+      <OralMotorClient ageMonths={ageMonths} />
     </PageShell>
   );
 }

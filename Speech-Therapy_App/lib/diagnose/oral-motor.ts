@@ -26,9 +26,10 @@ export function isOralMotorAgeEligible(ageMonths: number): boolean {
   );
 }
 
-// ----- 규준 상태 (명시적 미판정) -----
-/// 'deferred' = 연령 규준 판정 미연결(측정만). S063 원문 대조 + 자문 후 'active' 전환 예정.
-export const ORAL_MOTOR_NORM_STATUS = "deferred" as const;
+// ----- 규준 상태 -----
+/// 'active' = SMST-C(S063) 원문 대조·검증(2026-06-21) 후 연령 규준 **참고 밴드** 연결(oral-motor-norms.ts).
+///   단 '참고'(또래 평균 대비)일 뿐 진단 판정 아님 — 점수/HITL/escalation/저장 raw 불변(display-only, ADR-04).
+export const ORAL_MOTOR_NORM_STATUS = "active" as const;
 
 // ----- 측정 (결정적 순수 함수, 판정 X) -----
 /// DDK 속도(회/초) = 반복 횟수 / 측정 시간(초). 비정상 입력 → null.

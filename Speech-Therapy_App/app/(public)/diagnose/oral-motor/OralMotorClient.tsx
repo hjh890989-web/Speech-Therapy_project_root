@@ -13,11 +13,17 @@ import {
   computeDdkRate,
   normalizeMptSeconds,
 } from "@/lib/diagnose/oral-motor";
+import {
+  interpretMpt,
+  interpretDdk,
+  type NormInterpretation,
+} from "@/lib/diagnose/oral-motor-norms";
 import { DDK_TASKS, MPT_TASK, DDK_DURATION_SEC } from "@/lib/diagnose/oral-motor-content";
 
 type Phase = "intro" | "mpt" | "ddk" | "done";
 
-export function OralMotorClient() {
+/// ageMonths 있으면(인증 user) 결과에 연령 규준 참고 밴드 표시. null(익명)이면 측정값만.
+export function OralMotorClient({ ageMonths }: { ageMonths: number | null }) {
   const [phase, setPhase] = useState<Phase>("intro");
 
   // MPT
@@ -193,26 +199,36 @@ export function OralMotorClient() {
     );
   }
 
-  // ── 완료 — 측정값만(판정 없음) ──
+  // ── 완료 — 측정값 + 연령 규준 참고 밴드(판정 아님) ──
+  const mptNorm =
+    mptSeconds !== null && ageMonths !== null ? interpretMpt(mptSeconds, ageMonths) : null;
+  const ddkNorm =
+    ddkRate !== null && ageMonths !== null
+      ? interpretDdk(ddkRate, ageMonths, DDK_TASKS[ddkTaskIdx].id)
+      : null;
   return (
     <section data-testid="oral-motor-done" aria-live="polite">
       <p className="mb-4 text-center text-4xl" aria-hidden="true">🌟</p>
       <div className="space-y-3">
-        <div className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700">
-          <span className="text-sm text-gray-600 dark:text-gray-400">길게 소리내기(MPT)</span>
-          <span className="text-lg font-bold tabular-nums" data-testid="oral-motor-result-mpt">
-            {mptSeconds !== null ? `${mptSeconds}초` : "—"}
-          </span>
-        </div>
-        <div className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700">
-          <span className="text-sm text-gray-600 dark:text-gray-400">빠르게 말하기(DDK)</span>
-          <span className="text-lg font-bold tabular-nums" data-testid="oral-motor-result-ddk">
-            {ddkRate !== null ? `${ddkRate} 회/초` : "—"}
-          </span>
-        </div>
+        <ResultRow
+          label="길게 소리내기(MPT)"
+          value={mptSeconds !== null ? `${mptSeconds}초` : "—"}
+          unit="초"
+          norm={mptNorm}
+          testid="oral-motor-result-mpt"
+        />
+        <ResultRow
+          label="빠르게 말하기(DDK)"
+          value={ddkRate !== null ? `${ddkRate} 회/초` : "—"}
+          unit="회/초"
+          norm={ddkNorm}
+          testid="oral-motor-result-ddk"
+        />
       </div>
       <p className="mt-4 text-center text-xs text-gray-500 dark:text-gray-400">
-        측정값이에요. 또래 비교 기준은 준비 중이라 잘하고 못하고를 판정하지 않아요.
+        {ageMonths !== null
+          ? "또래 평균과 견준 참고 자료예요. 잘하고 못하고를 판정하는 게 아니에요."
+          : "측정값이에요. 로그인하면 또래 평균과 견준 참고도 볼 수 있어요."}
       </p>
       <div className="mt-5 text-center">
         <button
@@ -225,5 +241,43 @@ export function OralMotorClient() {
         </button>
       </div>
     </section>
+  );
+}
+
+/// 측정값 1행 + (월령 있을 때) 연령 규준 참고 밴드. 판정 아님 — '또래 평균' 견줌.
+function ResultRow({
+  label,
+  value,
+  unit,
+  norm,
+  testid,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  norm: NormInterpretation | null;
+  testid: string;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
+        <span className="text-lg font-bold tabular-nums" data-testid={testid}>
+          {value}
+        </span>
+      </div>
+      {norm && (
+        <p
+          data-testid={`${testid}-norm`}
+          className="mt-1 text-right text-xs text-gray-500 dark:text-gray-400"
+        >
+          <span className="mr-1" aria-hidden>
+            {norm.emoji}
+          </span>
+          {norm.label} · 또래 평균 {Math.round(norm.mean * 10) / 10}
+          {unit}
+        </p>
+      )}
+    </div>
   );
 }
