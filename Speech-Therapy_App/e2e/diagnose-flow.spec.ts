@@ -78,9 +78,9 @@ test.describe("FR-Q-002 결과 페이지 — MOCK_SESSION_ID 직접 진입", () 
     // "상위 N% 안에 들어요" 는 넛지 카피 + 백분위 라인 2곳에 노출 → first() 로 strict-mode 회피.
     await expect(page.getByText(/상위 \d+% 안에 들어요/).first()).toBeVisible();
 
-    // 3축 점수 카드 (조음 / 언어 / 음향).
+    // 3축 점수 카드 (조음 / 또렷함 / 음향). 'linguistic' 축은 정직화로 '또렷함'(완성도+인식 명확성).
     await expect(page.getByText("조음")).toBeVisible();
-    await expect(page.getByText("언어")).toBeVisible();
+    await expect(page.getByText("또렷함")).toBeVisible();
     await expect(page.getByText("음향")).toBeVisible();
   });
 

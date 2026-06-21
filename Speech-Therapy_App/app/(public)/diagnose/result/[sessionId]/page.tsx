@@ -230,6 +230,12 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
                   {errorPattern.emoji}
                 </span>
                 발음 패턴: {errorPattern.label}
+                {/* 정직화: 이미 산출된 변동 예시를 함께 노출(이 패턴이 어떤 모습인지 부모 이해). */}
+                {errorPattern.example && (
+                  <span className="font-normal text-gray-500 dark:text-gray-400">
+                    {" "}(예: {errorPattern.example})
+                  </span>
+                )}
               </p>
               <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                 {errorPattern.parentNote}
@@ -239,16 +245,18 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
         </section>
       )}
 
-      {/* 3축 점수 카드 (Sprint 3 에서 분리 재설계 예정 — 현재 모두 articulation 동값) */}
+      {/* 3축 점수 카드 — 조음(자모 정확도) / 또렷함(음절 완성도+STT 인식 명확성) / 음향(길이·안정성 신호).
+          세 축 모두 단일 단어의 '소리 신호'(언어·어휘 평가 아님). raw 표시, 보정은 밴드/카피에만. */}
       <section className="mb-6" aria-label="3축 점수">
         <div className="grid grid-cols-3 gap-3">
           <ScoreCard label="조음" value={result.articulationScore} />
-          <ScoreCard label="언어" value={result.linguisticScore} />
+          {/* 정직화: linguistic 축은 '언어능력'이 아니라 '끝까지 또렷하게 말한 정도(완성도+인식 명확성)'. */}
+          <ScoreCard label="또렷함" value={result.linguisticScore} />
           <ScoreCard label="음향" value={result.acousticScore} />
         </div>
-        {/* 부모 명료성 — 점수 척도 안내 (불안형 페르소나 이해도). */}
+        {/* 부모 명료성 — 점수 척도 + 정직한 범위 안내 (이 세 항목은 발음 '소리 신호'이지 언어·어휘 평가가 아님). */}
         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          각 항목은 100점 만점이에요.
+          각 항목은 100점 만점이에요. 위 세 가지는 이번 발음 한 단어의 <strong>소리 신호</strong>예요(언어·어휘 능력을 평가하는 건 아니에요).
         </p>
         {/* CL-03 (KOPLAC 검증) — 조음 임상 밴드 해석. ADR-04 치환 톤(금칙어 0). */}
         <p
