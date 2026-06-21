@@ -43,3 +43,14 @@ MINOR: 12
 - 세 플래그 `LITERACY_VOCAB_ENABLED`/`LITERACY_NWR_ENABLED`/`LITERACY_NARRATIVE_ENABLED` 전부 default off 가드 확인.
 
 STOP REASON: QUEUE_EMPTY
+
+## 후속 (post-/goal) — 허브 연결
+
+> /goal 종료 후, 8개 literacy 게임(신규 3 + 기존 5)이 어디에서도 링크되지 않아 직접 URL로만
+> 접근 가능하던 문제 해결. 사용자 요청(작업 계속)에 따라 추가.
+
+- `lib/literacy/registry.ts` — 8개 게임 카탈로그(slug·제목·이모지·소개·플래그). `enabledLiteracyGames()` = 플래그 on 게임만(미공개 콘텐츠 누출 없음).
+- `app/(public)/literacy/page.tsx` — 허브. 활성 게임 카드 노출, 전부 off 면 '준비 중'. 발달 흐름 순(어휘→음운인식→작업기억→해독→RAN→유창성→추론→담화).
+- `__tests__/lib/literacy/registry.test.ts` — 무결성/금칙어/플래그 필터.
+- 게이트: tsc exit 0 · vitest 4 pass · eslint exit 0 · build exit 0(`/literacy` 라우트 등록).
+- 잔여: 메인 내비/홈에서 `/literacy` 진입점 노출은 별도 UX 결정(미반영).
