@@ -297,6 +297,27 @@ describe("buildNavItemsForRole — role 별 메뉴 매트릭스", () => {
     expect(item!.emoji).toBe("🧩");
     expect(containsBannedTerms(item!.label)).toBe(false);
   });
+
+  // CR-2026-007 — 구강 운동(DDK/MPT) 프로브 nav 게이팅 (oralMotorEnabled 입력 기반).
+  it("oral-motor 비활성(default) → '입 운동 확인'(/diagnose/oral-motor) 미노출 (전 role)", () => {
+    for (const role of ["anonymous", "parent", "teacher", "principal", "admin", "expert"] as MainNavRole[]) {
+      expect(buildNavItemsForRole(role).map((i) => i.href)).not.toContain("/diagnose/oral-motor");
+    }
+  });
+
+  it("oral-motor 활성 → parent/principal/admin 노출, teacher/expert·anonymous 미노출 + 금칙어 0", () => {
+    const has = (role: MainNavRole) =>
+      buildNavItemsForRole(role, { oralMotorEnabled: true }).map((i) => i.href).includes("/diagnose/oral-motor");
+    expect(has("parent")).toBe(true);
+    expect(has("principal")).toBe(true);
+    expect(has("admin")).toBe(true);
+    expect(has("teacher")).toBe(false);
+    expect(has("expert")).toBe(false);
+    expect(has("anonymous")).toBe(false);
+    const item = buildNavItemsForRole("parent", { oralMotorEnabled: true }).find((i) => i.href === "/diagnose/oral-motor");
+    expect(item!.label).toBe("입 운동 확인");
+    expect(containsBannedTerms(item!.label)).toBe(false);
+  });
 });
 
 describe("isPathActive — 정확 매치 + prefix", () => {

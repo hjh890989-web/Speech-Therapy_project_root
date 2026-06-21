@@ -36,6 +36,7 @@
 import { MainNavClient, type MainNavItem, type MainNavRole } from "./MainNavClient";
 import { getCachedUserRoleResult } from "@/lib/auth/cached-get-user";
 import { enabledLiteracyGames } from "@/lib/literacy/registry";
+import { isOralMotorEnabled } from "@/lib/diagnose/oral-motor";
 import {
   getCachedUserInstitutionId,
   getNavBadgeCounts,
@@ -52,6 +53,8 @@ export interface BuildNavOptions {
   /// CR-2026-007 — literacy 놀이(어휘/음운인식/… 8종) 중 하나라도 활성 시에만 "읽기·말 놀이"(/literacy) 노출.
   ///   호출 측(MainNav)에서 enabledLiteracyGames().length > 0 으로 산출 — 본 함수는 boolean 입력(테스트 결정성).
   literacyEnabled?: boolean;
+  /// CR-2026-007 — 구강 운동(DDK/MPT) 측정 프로브 활성 시에만 "입 운동 확인"(/diagnose/oral-motor) 노출.
+  oralMotorEnabled?: boolean;
 }
 
 export function buildNavItemsForRole(
@@ -79,6 +82,10 @@ export function buildNavItemsForRole(
   //   인증 전용 동선(부모/원장/관리자) — anonymous/teacher/expert 제외(F15/F11 게이팅과 동일 정책).
   const LITERACY_ITEMS: MainNavItem[] = opts.literacyEnabled
     ? [{ href: "/literacy", label: "읽기·말 놀이", emoji: "🧩" }]
+    : [];
+  // CR-2026-007 — 구강 운동(DDK/MPT) 측정 프로브. 플래그 on 시에만 노출(측정만, 판정 아님).
+  const ORAL_MOTOR_ITEMS: MainNavItem[] = opts.oralMotorEnabled
+    ? [{ href: "/diagnose/oral-motor", label: "입 운동 확인", emoji: "👄" }]
     : [];
 
   // 운영자 메뉴 — 단순 라벨 (정보 밀도 OK).
@@ -117,7 +124,7 @@ export function buildNavItemsForRole(
         { href: "/diagnose", label: "발음 발달 확인", emoji: "🎤" },
       ];
     case "parent":
-      return [...PARENT_BASE, ...CHAT_ITEMS, ...VOICE_ITEMS, ...LITERACY_ITEMS, SETTINGS];
+      return [...PARENT_BASE, ...CHAT_ITEMS, ...VOICE_ITEMS, ...LITERACY_ITEMS, ...ORAL_MOTOR_ITEMS, SETTINGS];
     case "teacher":
       return [
         // 선생님도 부모 화면 일부는 접근 가능 (자녀 본인 계정과 별개 — 데모 / 가이드 목적).
@@ -128,13 +135,14 @@ export function buildNavItemsForRole(
         SETTINGS,
       ];
     case "principal":
-      return [...PARENT_BASE, ...CHAT_ITEMS, ...VOICE_ITEMS, ...LITERACY_ITEMS, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, SETTINGS];
+      return [...PARENT_BASE, ...CHAT_ITEMS, ...VOICE_ITEMS, ...LITERACY_ITEMS, ...ORAL_MOTOR_ITEMS, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, SETTINGS];
     case "admin":
       return [
         ...PARENT_BASE,
         ...CHAT_ITEMS,
         ...VOICE_ITEMS,
         ...LITERACY_ITEMS,
+        ...ORAL_MOTOR_ITEMS,
         PRINCIPAL_DASHBOARD,
         TEACHER_DASHBOARD,
         HITL_QUEUE,
@@ -269,6 +277,7 @@ export async function MainNav(props: MainNavProps = {}) {
     f15ChatEnabled: process.env.F15_CHAT_ENABLED === "true",
     voiceCloneEnabled: Boolean(process.env.ELEVENLABS_API_KEY),
     literacyEnabled: enabledLiteracyGames().length > 0,
+    oralMotorEnabled: isOralMotorEnabled(),
   });
   if (needsBadge && userId) {
     const institutionId = await getCachedUserInstitutionId(userId);

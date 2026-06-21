@@ -20,6 +20,9 @@ import {
 } from "./clinical-interpretation";
 // FR-C-LIT-02 (CR-2026-007) — F4 음운변동 제품화: 탐지된 변동을 부모용 음소 핀셋 분석으로 표시(display-only).
 import { analyzeErrorPattern, type ErrorPatternAnalysis } from "@/lib/diagnose/clinical";
+// 진단 보강 프로브 진입점 — 각 프로브 플래그 on 일 때만 노출(default off). 측정/확인 활동(판정 아님).
+import { isOralMotorEnabled } from "@/lib/diagnose/oral-motor";
+import { isArticulationProbeEnabled } from "@/lib/diagnose/articulation-probe";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -338,6 +341,37 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
           </TrackedCTALink>
         </div>
       </section>
+
+      {/* 진단 보강 프로브 진입점 — 각 프로브 플래그 on 일 때만 노출(default off). 측정/확인(판정 아님). */}
+      {(isArticulationProbeEnabled() || isOralMotorEnabled()) && (
+        <section
+          data-testid="diagnose-probe-links"
+          className="mb-8 rounded-lg border border-gray-200 p-4 dark:border-gray-700"
+        >
+          <h2 className="text-base font-semibold">더 확인해보기</h2>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            한 단어 결과에 더해, 아래 활동으로 더 고르게 확인해 볼 수 있어요. (판정이 아닌 참고 자료예요.)
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            {isArticulationProbeEnabled() && (
+              <Link
+                href="/diagnose/articulation-probe"
+                className="inline-block rounded-md border border-emerald-600 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800"
+              >
+                여러 낱말 발음 확인 →
+              </Link>
+            )}
+            {isOralMotorEnabled() && (
+              <Link
+                href="/diagnose/oral-motor"
+                className="inline-block rounded-md border border-emerald-600 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800"
+              >
+                입 운동 확인 →
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
 
       <Link
         href="/diagnose"
