@@ -1,7 +1,13 @@
 // literacy 레지스트리(허브 카탈로그) 단위 테스트 — 무결성 + 금칙어 + 플래그 필터.
 
 import { describe, it, expect, afterEach } from "vitest";
-import { LITERACY_GAMES, enabledLiteracyGames } from "@/lib/literacy/registry";
+import {
+  LITERACY_GAMES,
+  enabledLiteracyGames,
+  enabledGamesForStage,
+  enabledGamesForAge,
+} from "@/lib/literacy/registry";
+import { LITERACY_STAGES } from "@/lib/literacy/stages";
 
 const BANNED = ["치료", "진단", "장애", "지연", "지체", "난독"];
 
@@ -28,6 +34,8 @@ describe("literacy registry — 무결성", () => {
       expect(g.emoji.length).toBeGreaterThan(0);
       expect(g.blurb.length).toBeGreaterThan(0);
       expect(typeof g.isEnabled).toBe("function");
+      // CR-2026-009: 모든 게임은 유효한 발달 단계로 태깅됨.
+      expect(LITERACY_STAGES.map((s) => s.id)).toContain(g.stage);
     }
   });
 
@@ -70,5 +78,55 @@ describe("enabledLiteracyGames — 플래그 필터", () => {
     process.env.LITERACY_NARRATIVE_ENABLED = "true";
     const slugs = enabledLiteracyGames().map((g) => g.slug);
     expect(slugs).toEqual(["vocabulary", "narrative"]); // 레지스트리 순서대로
+  });
+});
+
+describe("stage 라우팅 — enabledGamesForStage / enabledGamesForAge", () => {
+  const FLAGS = [
+    "LITERACY_PA_ENABLED",
+    "LITERACY_DECODING_ENABLED",
+    "LITERACY_RAN_ENABLED",
+    "LITERACY_FLUENCY_ENABLED",
+    "LITERACY_INFERENCE_ENABLED",
+    "LITERACY_VOCAB_ENABLED",
+    "LITERACY_NWR_ENABLED",
+    "LITERACY_NARRATIVE_ENABLED",
+    "LITERACY_PHONO_RULES_ENABLED",
+  ];
+  const saved: Record<string, string | undefined> = {};
+  for (const f of FLAGS) saved[f] = process.env[f];
+
+  afterEach(() => {
+    for (const f of FLAGS) {
+      if (saved[f] === undefined) delete process.env[f];
+      else process.env[f] = saved[f];
+    }
+  });
+
+  it("플래그 off → 단계별 빈 목록", () => {
+    for (const f of FLAGS) delete process.env[f];
+    for (const s of LITERACY_STAGES) {
+      expect(enabledGamesForStage(s.id)).toEqual([]);
+    }
+  });
+
+  it("S0 게임 on → 해당 단계만 노출, 다른 단계는 비노출", () => {
+    for (const f of FLAGS) delete process.env[f];
+    process.env.LITERACY_VOCAB_ENABLED = "true"; // S0
+    expect(enabledGamesForStage("S0").map((g) => g.slug)).toEqual(["vocabulary"]);
+    expect(enabledGamesForStage("S1")).toEqual([]);
+  });
+
+  it("enabledGamesForAge 는 월령을 단계로 변환해 라우팅", () => {
+    for (const f of FLAGS) delete process.env[f];
+    process.env.LITERACY_VOCAB_ENABLED = "true"; // S0 (만 2~4세)
+    expect(enabledGamesForAge(36).map((g) => g.slug)).toEqual(["vocabulary"]); // 만 3세 → S0
+    expect(enabledGamesForAge(72)).toEqual([]); // 만 6세 → S1 (해당 단계 게임 off)
+  });
+
+  it("도메인 밖 월령 → 빈 목록", () => {
+    process.env.LITERACY_VOCAB_ENABLED = "true";
+    expect(enabledGamesForAge(12)).toEqual([]); // 만 1세
+    expect(enabledGamesForAge(200)).toEqual([]);
   });
 });
