@@ -35,6 +35,7 @@
 
 import { MainNavClient, type MainNavItem, type MainNavRole } from "./MainNavClient";
 import { getCachedUserRoleResult } from "@/lib/auth/cached-get-user";
+import { enabledLiteracyGames } from "@/lib/literacy/registry";
 import {
   getCachedUserInstitutionId,
   getNavBadgeCounts,
@@ -48,6 +49,9 @@ export interface BuildNavOptions {
   f15ChatEnabled?: boolean;
   /// FR-Q-021 — F11 음성(`ELEVENLABS_API_KEY` 존재 = 기능 가능) 시에만 "부모 목소리"(/voice-recording) 노출.
   voiceCloneEnabled?: boolean;
+  /// CR-2026-007 — literacy 놀이(어휘/음운인식/… 8종) 중 하나라도 활성 시에만 "읽기·말 놀이"(/literacy) 노출.
+  ///   호출 측(MainNav)에서 enabledLiteracyGames().length > 0 으로 산출 — 본 함수는 boolean 입력(테스트 결정성).
+  literacyEnabled?: boolean;
 }
 
 export function buildNavItemsForRole(
@@ -70,6 +74,11 @@ export function buildNavItemsForRole(
   // FR-Q-021 — F11 음성 기능 가능(ELEVENLABS_API_KEY) 시 부모 메뉴에 추가. 인증 전용(page redirect)이라 anonymous 제외.
   const VOICE_ITEMS: MainNavItem[] = opts.voiceCloneEnabled
     ? [{ href: "/voice-recording", label: "부모 목소리", emoji: "🎙️" }]
+    : [];
+  // CR-2026-007 — literacy 놀이 허브. 활성 게임(플래그 on)이 하나라도 있을 때만 노출(전부 off 면 미노출).
+  //   인증 전용 동선(부모/원장/관리자) — anonymous/teacher/expert 제외(F15/F11 게이팅과 동일 정책).
+  const LITERACY_ITEMS: MainNavItem[] = opts.literacyEnabled
+    ? [{ href: "/literacy", label: "읽기·말 놀이", emoji: "🧩" }]
     : [];
 
   // 운영자 메뉴 — 단순 라벨 (정보 밀도 OK).
@@ -108,7 +117,7 @@ export function buildNavItemsForRole(
         { href: "/diagnose", label: "발음 발달 확인", emoji: "🎤" },
       ];
     case "parent":
-      return [...PARENT_BASE, ...CHAT_ITEMS, ...VOICE_ITEMS, SETTINGS];
+      return [...PARENT_BASE, ...CHAT_ITEMS, ...VOICE_ITEMS, ...LITERACY_ITEMS, SETTINGS];
     case "teacher":
       return [
         // 선생님도 부모 화면 일부는 접근 가능 (자녀 본인 계정과 별개 — 데모 / 가이드 목적).
@@ -119,12 +128,13 @@ export function buildNavItemsForRole(
         SETTINGS,
       ];
     case "principal":
-      return [...PARENT_BASE, ...CHAT_ITEMS, ...VOICE_ITEMS, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, SETTINGS];
+      return [...PARENT_BASE, ...CHAT_ITEMS, ...VOICE_ITEMS, ...LITERACY_ITEMS, PRINCIPAL_DASHBOARD, TEACHER_DASHBOARD, SETTINGS];
     case "admin":
       return [
         ...PARENT_BASE,
         ...CHAT_ITEMS,
         ...VOICE_ITEMS,
+        ...LITERACY_ITEMS,
         PRINCIPAL_DASHBOARD,
         TEACHER_DASHBOARD,
         HITL_QUEUE,
@@ -258,6 +268,7 @@ export async function MainNav(props: MainNavProps = {}) {
   let items = buildNavItemsForRole(role, {
     f15ChatEnabled: process.env.F15_CHAT_ENABLED === "true",
     voiceCloneEnabled: Boolean(process.env.ELEVENLABS_API_KEY),
+    literacyEnabled: enabledLiteracyGames().length > 0,
   });
   if (needsBadge && userId) {
     const institutionId = await getCachedUserInstitutionId(userId);
