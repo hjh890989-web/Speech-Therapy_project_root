@@ -53,4 +53,10 @@ STOP REASON: QUEUE_EMPTY
 - `app/(public)/literacy/page.tsx` — 허브. 활성 게임 카드 노출, 전부 off 면 '준비 중'. 발달 흐름 순(어휘→음운인식→작업기억→해독→RAN→유창성→추론→담화).
 - `__tests__/lib/literacy/registry.test.ts` — 무결성/금칙어/플래그 필터.
 - 게이트: tsc exit 0 · vitest 4 pass · eslint exit 0 · build exit 0(`/literacy` 라우트 등록).
-- 잔여: 메인 내비/홈에서 `/literacy` 진입점 노출은 별도 UX 결정(미반영).
+
+## 후속 2 — 내비 진입점 + 4번째 게임 (사용자 요청)
+
+- **내비 진입점**: `components/nav/MainNav.tsx` — `literacyEnabled` 옵션(=enabledLiteracyGames()>0) 추가. 활성 게임 있을 때만 부모/원장/관리자 메뉴에 "읽기·말 놀이"(/literacy) 노출(F15/F11 게이팅 동일, 회귀 0). 테스트 73 pass.
+- **④ phono-rules (소리 변신 놀이)**: 음운변동 규칙 인식(연음·경음화·ㅎ탈락·비음화). wiki 근거 S003·S087·S162. 글자→자연스러운 소리 2지선다(채점 없이 유도). 자체 작성 8아이템. 레지스트리 9번째 등록. 플래그 `LITERACY_PHONO_RULES_ENABLED`(default off). tsc/test(11)/lint exit 0.
+
+## 후속 3 — e2e (진행 중)
