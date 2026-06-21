@@ -6,12 +6,12 @@
 > 카운터는 grep 가능하도록 아래 별도 줄에 유지. CORE 3 도달 시 STOP REASON: CORE_BUDGET.
 
 CORE: 0
-MINOR: 8
+MINOR: 12
 
 ## 큐 진행
 - [x] ① vocabulary (어휘 — 집중적 자극/fast mapping, S070·S071) — tsc/test(8)/lint exit 0
 - [x] ② nonword-repetition (음운 작업기억/비단어 따라말하기, S017·S022·S133) — tsc/test(7)/lint exit 0
-- [ ] ③ narrative (이야기문법·담화 7요소, S024·S102·S148)
+- [x] ③ narrative (이야기문법·담화 7요소, S024·S102·S148) — tsc/test(8)/lint exit 0
 
 ## 결정 (Decisions)
 
@@ -30,3 +30,10 @@ MINOR: 8
 - (MINOR-7) 비단어 = 실재 단어 회피 위해 저빈도 음절 조합 자체 작성(길이별 5/5/4/3, 총 17). 표준화 비단어검사 문항 미복제.
 - (MINOR-8) 연령 게이트는 `vocabulary.ts`의 `CLINICAL_PLAY_AGE_*` 상수 재사용(만 2~7세) — `inference`가 `phonological-awareness`의 연령 함수를 재사용한 선례와 동일(단일 진실원).
 - 산출: `lib/literacy/nonword-repetition{,-content}.ts` · `app/(public)/literacy/nonword-repetition/{page,NonwordRepetitionClient}.tsx` · `__tests__/lib/literacy/nonword-repetition.test.ts`. 플래그 `LITERACY_NWR_ENABLED`(default off). 게이트: tsc exit 0 · vitest 7 pass · eslint exit 0.
+
+### 2026-06-21 — ③ narrative 완료
+- (MINOR-9) 이야기문법 7요소 거시구조(Stein & Glenn 계열): 배경·계기사건·내적반응·계획·시도·결과·반응. wiki 근거 S024·S102·S148(내적반응 산출이 고난도 — 스캐폴딩 질문으로 유도).
+- (MINOR-10) 2단계 가이드형: **이야기 읽기**(7장면 정본 순서) → **다시 말하기**(7요소 스캐폴딩 질문 1개씩 + 부모용 장면 단서). 채점 없이 유도만.
+- (MINOR-11) 자체 작성 이야기 3편(토끼와 당근/비 오는 날/함께 만든 성), 각 7장면 이모지+캡션. 표준화 담화검사 지문 미복제.
+- (MINOR-12) `presentedScenes()` = 결정적 비-항등 회전 — 향후 '순서 잇기' 모드용 유틸(테스트 포함, 현 UI는 읽기+다시말하기 사용).
+- 산출: `lib/literacy/narrative{,-content}.ts` · `app/(public)/literacy/narrative/{page,NarrativeClient}.tsx` · `__tests__/lib/literacy/narrative.test.ts`. 플래그 `LITERACY_NARRATIVE_ENABLED`(default off). 게이트: tsc exit 0 · vitest 8 pass · eslint exit 0.
