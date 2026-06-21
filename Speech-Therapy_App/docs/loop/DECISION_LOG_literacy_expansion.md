@@ -37,3 +37,9 @@ MINOR: 12
 - (MINOR-11) 자체 작성 이야기 3편(토끼와 당근/비 오는 날/함께 만든 성), 각 7장면 이모지+캡션. 표준화 담화검사 지문 미복제.
 - (MINOR-12) `presentedScenes()` = 결정적 비-항등 회전 — 향후 '순서 잇기' 모드용 유틸(테스트 포함, 현 UI는 읽기+다시말하기 사용).
 - 산출: `lib/literacy/narrative{,-content}.ts` · `app/(public)/literacy/narrative/{page,NarrativeClient}.tsx` · `__tests__/lib/literacy/narrative.test.ts`. 플래그 `LITERACY_NARRATIVE_ENABLED`(default off). 게이트: tsc exit 0 · vitest 8 pass · eslint exit 0.
+
+### 2026-06-21 — 종료
+- 최종 게이트(전체): `npx tsc --noEmit`(exit 0) · `npm test`(297 files / 3173 tests pass, exit 0) · `npm run lint`(exit 0) · `npm run build`(exit 0, `/literacy/{vocabulary,nonword-repetition,narrative}` 라우트 등록).
+- 세 플래그 `LITERACY_VOCAB_ENABLED`/`LITERACY_NWR_ENABLED`/`LITERACY_NARRATIVE_ENABLED` 전부 default off 가드 확인.
+
+STOP REASON: QUEUE_EMPTY
