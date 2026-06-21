@@ -51,7 +51,7 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2>제2조 (수집하는 개인정보 항목)</h2>
           <ul>
-            <li><strong>회원 정보</strong>: 이메일(인증), 자녀 월령(만 24~84개월), 관심 음소(선택)</li>
+            <li><strong>회원 정보</strong>: 이메일(인증), 자녀 월령(만 24~144개월), 관심 음소(선택)</li>
             <li><strong>발화 데이터</strong>: 자녀 발화의 음성→텍스트 변환 결과(transcript), 발달 점수(조음/언어/음향, 0~100), 또래 백분위</li>
             <li><strong>자동 수집</strong>: 익명 사용자 ID(cookie·localStorage), IP 주소(감사 로그), User-Agent</li>
             <li><strong>B2B 기관 정보</strong>(해당 시): 기관명, 원장/교사 이메일, 반 정보</li>

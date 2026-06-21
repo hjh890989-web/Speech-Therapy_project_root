@@ -173,7 +173,7 @@ describe("OnboardingWizardClient — FR-C-PARENT-ONBOARDING", () => {
     expect(savePrivacyConsentMock).toHaveBeenCalledTimes(1);
     const callArg = saveChildInfoMock.mock.calls[0][0];
     expect(callArg.childAgeMonths).toBeGreaterThanOrEqual(24);
-    expect(callArg.childAgeMonths).toBeLessThanOrEqual(84);
+    expect(callArg.childAgeMonths).toBeLessThanOrEqual(144); // CR-2026-009: 상한 84→144
     expect(Array.isArray(callArg.targetPhonemes)).toBe(true);
     // savePrivacyConsent 입력 검증.
     const consentArg = savePrivacyConsentMock.mock.calls[0][0];

@@ -10,7 +10,7 @@
 //   2) auth getUser data.user 없음 → unauthorized
 //   3) 정상 입력 → success + prisma.user.update 호출 + actorId 전파
 //   4) age 범위 외 (23) → invalid_age
-//   5) age 범위 외 (85) → invalid_age
+//   5) age 범위 외 (145) → invalid_age (CR-2026-009: 상한 84→144)
 //   6) phonemes 빈 배열 → invalid_phonemes
 //   7) phonemes 화이트리스트 외 음소 → invalid_phonemes
 
@@ -110,11 +110,27 @@ describe("saveChildInfo — FR-C-PARENT-ONBOARDING", () => {
     expect(updateMock).not.toHaveBeenCalled();
   });
 
-  it("age 범위 초과 (85) → invalid_age", async () => {
+  it("age 범위 초과 (145) → invalid_age", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
-    const result = await saveChildInfo({ childAgeMonths: 85, targetPhonemes: ["ㅅ"] });
+    const result = await saveChildInfo({ childAgeMonths: 145, targetPhonemes: ["ㅅ"] });
     expect(result.success).toBe(false);
     if (!result.success) expect(result.reason).toBe("invalid_age");
+  });
+
+  // CR-2026-009 학령기 전면확장 — 과거 상한(만 7세=84) 초과도 만 12세(144)까지 허용.
+  it("학령기 월령 (120 = 만 10세) → success", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
+    updateMock.mockResolvedValue({ id: USER_ID, childAgeMonths: 120 });
+    const result = await saveChildInfo({ childAgeMonths: 120, targetPhonemes: ["ㅅ"] });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.childAgeMonths).toBe(120);
+  });
+
+  it("경계 상한 (144 = 만 12세) → success", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
+    updateMock.mockResolvedValue({ id: USER_ID, childAgeMonths: 144 });
+    const result = await saveChildInfo({ childAgeMonths: 144, targetPhonemes: ["ㅅ"] });
+    expect(result.success).toBe(true);
   });
 
   it("phonemes 빈 배열 → invalid_phonemes", async () => {

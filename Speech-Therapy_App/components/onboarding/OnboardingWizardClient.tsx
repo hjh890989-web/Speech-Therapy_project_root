@@ -4,7 +4,7 @@
 //
 // 4-step 흐름:
 //   Step1 환영       — 큰 진행도 + "발음 가이드에 오신 것을 환영합니다!" + 다음
-//   Step2 자녀 정보  — childAgeMonths slider (24~84) + 관심 음소 1~2개 선택
+//   Step2 자녀 정보  — childAgeMonths slider (24~144, CR-2026-009) + 관심 음소 1~2개 선택
 //                       → saveChildInfo Server Action 호출 → 다음
 //   Step3 첫 발음 확인 — 마이크 권한 안내 + "시작하기" → /diagnose 로 이동
 //   Step4 완료/보상   — "별을 모으는 여정의 시작!" + /rewards/collection / /missions 안내
@@ -500,10 +500,10 @@ function Step2ChildInfo({
           value={childAgeMonths}
           onChange={(e) => onChangeAge(Number(e.target.value))}
           className="w-full accent-amber-500"
-          aria-label="자녀 월령 슬라이더 24개월부터 84개월"
+          aria-label="자녀 월령 슬라이더 24개월부터 144개월"
         />
         <p className="text-xs text-amber-800">
-          만 2세 (24개월) ~ 만 7세 (84개월) 사이로 선택해 주세요.
+          만 2세 (24개월) ~ 만 12세 (144개월) 사이로 선택해 주세요.
         </p>
       </div>
 

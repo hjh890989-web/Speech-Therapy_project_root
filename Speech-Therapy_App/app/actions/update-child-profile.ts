@@ -96,7 +96,7 @@ export async function updateChildProfile(
     return {
       success: false,
       reason: "invalid_age",
-      message: `자녀 월령은 ${CHILD_AGE_MIN_MONTHS}~${CHILD_AGE_MAX_MONTHS}개월 (만 2~7세) 사이로 선택해 주세요.`,
+      message: `자녀 월령은 ${CHILD_AGE_MIN_MONTHS}~${CHILD_AGE_MAX_MONTHS}개월 (만 2~12세) 사이로 선택해 주세요.`,
     };
   }
   const ageInt = Math.trunc(age);

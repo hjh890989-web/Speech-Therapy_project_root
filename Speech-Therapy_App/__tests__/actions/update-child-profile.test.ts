@@ -12,7 +12,7 @@
 //   4. 정상 update                            → withActor + user.update 본인 id 만
 //   5. R4 — 외부 user id 무시 (auth uid 만)   → 다른 id 가 인자에 있어도 auth uid 로 update
 //   6. childAgeMonths 23                      → invalid_age
-//   7. childAgeMonths 85                      → invalid_age
+//   7. childAgeMonths 145                     → invalid_age (CR-2026-009: 상한 84→144)
 //   8. preferredPhonemes 화이트리스트 외      → invalid_phonemes
 //   9. preferredPhonemes 6개 초과             → invalid_phonemes
 //  10. preferredPhonemes 빈 배열              → success (빈 배열 저장)
@@ -173,17 +173,36 @@ describe("updateChildProfile — FR-C-PARENT-SETTINGS", () => {
     expect(updateMock).not.toHaveBeenCalled();
   });
 
-  it("[7] childAgeMonths 85 → invalid_age", async () => {
+  it("[7] childAgeMonths 145 → invalid_age", async () => {
     getUserMock.mockResolvedValue({
       data: { user: { id: USER_ID } },
       error: null,
     });
     const result = await updateChildProfile({
-      childAgeMonths: 85,
+      childAgeMonths: 145,
       preferredPhonemes: ["ㅅ"],
     });
     expect(result.success).toBe(false);
     if (!result.success) expect(result.reason).toBe("invalid_age");
+  });
+
+  // CR-2026-009 학령기 전면확장 — 과거 상한(만 7세=84) 초과도 만 12세(144)까지 허용.
+  it("[7b] childAgeMonths 120 (만 10세) → success", async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: { id: USER_ID } },
+      error: null,
+    });
+    updateMock.mockResolvedValue({
+      id: USER_ID,
+      childAgeMonths: 120,
+      preferredPhonemes: ["ㅅ"],
+    });
+    const result = await updateChildProfile({
+      childAgeMonths: 120,
+      preferredPhonemes: ["ㅅ"],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.childAgeMonths).toBe(120);
   });
 
   it("[8] preferredPhonemes 화이트리스트 외 → invalid_phonemes", async () => {

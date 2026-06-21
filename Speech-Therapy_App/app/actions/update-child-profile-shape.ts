@@ -11,16 +11,16 @@
 export const ALLOWED_PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
 export type AllowedPhoneme = (typeof ALLOWED_PHONEMES)[number];
 
-/** 자녀 월령 허용 범위 (만 2~7세). */
+/** 자녀 월령 허용 범위 (만 2~12세 — CR-2026-009 학령기 전면확장. literacy 도메인 상한 144 정합). */
 export const CHILD_AGE_MIN_MONTHS = 24;
-export const CHILD_AGE_MAX_MONTHS = 84;
+export const CHILD_AGE_MAX_MONTHS = 144;
 
 /** preferredPhonemes 최대 선택 개수. */
 export const PREFERRED_PHONEMES_MAX = 5;
 
 /** Server Action 입력 — 가입한 부모가 변경하려는 자녀 프로필. */
 export interface UpdateChildProfileInput {
-  /** 자녀 월령 (24~84). */
+  /** 자녀 월령 (24~144). */
   childAgeMonths: number;
   /** 관심 음소 (0~5개, 빈 배열 허용 = 시스템 자동 추천). */
   preferredPhonemes: ReadonlyArray<AllowedPhoneme>;

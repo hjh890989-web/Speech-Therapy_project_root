@@ -449,8 +449,8 @@ describe("SEC-003 — 동의서 전자서명 보안 검증 (XSS/length/replay/CS
     it.each([
       0, // min 24 미만
       23, // 24 미만
-      85, // max 84 초과
-      120,
+      145, // max 144 초과 (CR-2026-009: 상한 84→144)
+      200,
       -1,
       3.5, // int 위반
     ])('childAgeMonths %s (범위 외 / 비정수) → 400', async (age) => {

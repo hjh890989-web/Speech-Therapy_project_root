@@ -4,7 +4,7 @@
 //
 // 흐름:
 //   1) Supabase auth 확인 — 비로그인이면 reject (unauthorized).
-//   2) 입력 검증 — childAgeMonths 범위 24~84 (만 2~7세), targetPhonemes 1~2개.
+//   2) 입력 검증 — childAgeMonths 범위 24~144 (만 2~12세, CR-2026-009), targetPhonemes 1~2개.
 //   3) prisma.user.update — 본인 row 만 업데이트 (RBAC: 다른 user 변경 절대 차단).
 //   4) withActor (DB-011) 가 audit_trigger_fn 의 actor_id 캡처.
 //
@@ -76,7 +76,7 @@ export async function saveChildInfo(
     return {
       success: false,
       reason: "invalid_age",
-      message: `자녀 월령은 ${CHILD_AGE_MIN_MONTHS}~${CHILD_AGE_MAX_MONTHS}개월 (만 2~7세) 사이로 선택해 주세요.`,
+      message: `자녀 월령은 ${CHILD_AGE_MIN_MONTHS}~${CHILD_AGE_MAX_MONTHS}개월 (만 2~12세) 사이로 선택해 주세요.`,
     };
   }
 

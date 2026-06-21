@@ -3,7 +3,7 @@
 // FR-C-PARENT-SETTINGS — /settings/child 자녀 프로필 변경 폼 (Client Component).
 //
 // 책임:
-//   - 부모의 자녀 월령 (slider 24~84) + 관심 음소 토글 (0~5개) 입력.
+//   - 부모의 자녀 월령 (slider 24~144, CR-2026-009) + 관심 음소 토글 (0~5개) 입력.
 //   - 저장 클릭 → updateChildProfile Server Action 호출.
 //   - 결과 상태 — idle / saving / success / error UI.
 //   - 성공 시 토스트 ("저장되었어요!") + 분석 이벤트 child_profile_updated 발송.
@@ -182,10 +182,10 @@ export function ChildProfileForm({
           value={childAgeMonths}
           onChange={(e) => setChildAgeMonths(Number(e.target.value))}
           className="w-full accent-amber-500"
-          aria-label="자녀 월령 슬라이더 24개월부터 84개월"
+          aria-label="자녀 월령 슬라이더 24개월부터 144개월"
         />
         <p className="text-xs text-amber-800 dark:text-amber-200">
-          만 2세 (24개월) ~ 만 7세 (84개월) 사이로 조정해 주세요.
+          만 2세 (24개월) ~ 만 12세 (144개월) 사이로 조정해 주세요.
         </p>
       </fieldset>
 

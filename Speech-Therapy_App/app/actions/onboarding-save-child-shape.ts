@@ -11,13 +11,13 @@
 export const ALLOWED_PHONEMES = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"] as const;
 export type AllowedPhoneme = (typeof ALLOWED_PHONEMES)[number];
 
-/** 자녀 월령 허용 범위 (만 2~7세). */
+/** 자녀 월령 허용 범위 (만 2~12세 — CR-2026-009 학령기 전면확장. literacy 도메인 상한 144 정합). */
 export const CHILD_AGE_MIN_MONTHS = 24;
-export const CHILD_AGE_MAX_MONTHS = 84;
+export const CHILD_AGE_MAX_MONTHS = 144;
 
 /** wizard Step 2 입력. */
 export interface SaveChildInfoInput {
-  /** 자녀 월령 (24~84). */
+  /** 자녀 월령 (24~144). */
   childAgeMonths: number;
   /** 관심 타겟 음소 (1~2개). */
   targetPhonemes: ReadonlyArray<AllowedPhoneme>;

@@ -230,7 +230,7 @@ function makePrismaCreateMany(
   };
 }
 
-/** birthDate (YYYY-MM-DD) → 오늘 기준 만 개월 (24~84 clamp). */
+/** birthDate (YYYY-MM-DD) → 오늘 기준 만 개월 (24~144 clamp — CR-2026-009 학령기 전면확장). */
 function computeAgeMonths(birthDate: string, today: Date): number {
   const [yStr, mStr, dStr] = birthDate.split("-");
   const y = Number(yStr);
@@ -243,7 +243,7 @@ function computeAgeMonths(birthDate: string, today: Date): number {
     (today.getMonth() - birth.getMonth());
   if (today.getDate() < birth.getDate()) months -= 1;
   if (months < 24) return 24;
-  if (months > 84) return 84;
+  if (months > 144) return 144;
   return months;
 }
 
