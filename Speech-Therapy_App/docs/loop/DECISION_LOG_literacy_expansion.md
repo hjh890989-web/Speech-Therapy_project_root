@@ -59,4 +59,7 @@ STOP REASON: QUEUE_EMPTY
 - **내비 진입점**: `components/nav/MainNav.tsx` — `literacyEnabled` 옵션(=enabledLiteracyGames()>0) 추가. 활성 게임 있을 때만 부모/원장/관리자 메뉴에 "읽기·말 놀이"(/literacy) 노출(F15/F11 게이팅 동일, 회귀 0). 테스트 73 pass.
 - **④ phono-rules (소리 변신 놀이)**: 음운변동 규칙 인식(연음·경음화·ㅎ탈락·비음화). wiki 근거 S003·S087·S162. 글자→자연스러운 소리 2지선다(채점 없이 유도). 자체 작성 8아이템. 레지스트리 9번째 등록. 플래그 `LITERACY_PHONO_RULES_ENABLED`(default off). tsc/test(11)/lint exit 0.
 
-## 후속 3 — e2e (진행 중)
+## 후속 3 — e2e
+
+- `e2e/literacy.spec.ts` — 공개(무인증) Playwright spec. 플래그 off 기본 상태 회귀 가드: 허브 `/literacy` 빈 상태 + 신규 4게임(vocabulary·nonword-repetition·narrative·phono-rules) '준비 중' 휴면 + 면책 노출. 플래그 on 흐름은 서버 env 제어 필요 → 단위 테스트가 로직 커버.
+- 검증: `npx playwright test e2e/literacy.spec.ts --project=chromium-desktop` → **5 passed** (webServer 자동 부팅). discovery 10 tests(데스크탑+모바일). 모바일/CI/prod(PLAYWRIGHT_BASE_URL)에서도 동일.
