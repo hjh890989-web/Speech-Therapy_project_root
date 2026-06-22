@@ -26,8 +26,10 @@ Product Requirements Document의 10차례 진화 과정. **V10이 SRS Readiness 
 | v0.8 | 49/50 | 2026-05-07 | Improvement | **VPS 검토 7대 결함 패치**: 북극성 ADR + AOS/DOS 기회 수치 + JTBD 검증 (Seg B 리스크) + TAM 명시 |
 | v0.9 | 51/52 | 2026-05-07 | Quality Improvement ⭐ | **품질 리뷰 18건 결함 반영** (정독). 51 = 외부 LLM 메타 18 Findings 발견 / 52 = **자체 반영 SRS-Ready 확정판**. CJM KPI 8건 수치화(P0) + Lock-in 4중 KPI 등록·가정 A1-A4→EXP 매핑·모니터링 5종(P1) + Story AC 30+ 측정 임계치·**HITL 루프백 재학습 3단계**(0.5%/500건/0.3%)·산술 교정(17,000배)·Traceability·NFR↔AC 연결(P2) → [[product/sources/52-PRD-V09-Quality-Improvement]] |
 | **v1.0** | **54** | 2026-05-07 | **Master** | **SRS Readiness Gate 100% 달성**: Epic별 스프린트 분해(§4.4) + Seg B 피벗 시나리오(§7.2 R6) + 용어사전(§11) |
+| **V11** | `docs/PRD_V11_TwoTrack.md` | 2026-06-22 | Opus (2트랙 재정렬) | **2트랙 비대칭 재정렬판** (신규 정본, raw 외 `docs/`): ① §0 트랙 비대칭 선언("발음=확인 / 문해=놀이·연습, 측정 vs 측정 아님") ② Pain **P5(읽기·말 활동 부재)** 신설 ③ 트랙B 보조 북극성 **W-LER**(engagement, C 지향·A 1차 = **ADR-05**) ④ 트랙B **독립 Epic**(14게임·S0~S4) — F1-a/F4 의 CR-007 괄호 주석 제거→트랙B 이관, 각 게임 `bandShippable=false` ⑤ §7 범위 트랙B 행 + **ADR-04 L88 충돌 명시 해소**(학령기 놀이 콘텐츠 In / 문해 점수화·학년 판정·고학년 읽기이해 측정 Out) ⑥ CON-04 문해 금칙어 표("학습장애·난독·읽기장애·지연·지체"→가이드/놀이, "읽기·말 발달 확인" 금지) ⑦ Glossary 트랙A/B·연습-only·bandShippable·W-LER·음운인식·해독·RAN·SVR·clin-2. 상위 근거 = `docs/VPS_V10_TwoTrack_Realign.md` |
 
 > 추가: raw 53_PRD_V09_Final_Readiness_Gate (Gate 통과 검증) → V10 Final 사이의 검증 단계.
+> ⚠️ **V11 은 raw/ 시퀀스가 아니라 `docs/` 신규 정본**(V10=raw 54 불변 보존, V11=2트랙 신규 마스터). 발음 단일트랙(V10) → 2트랙 비대칭(V11) 패러다임 전환.
 
 ## 진화 패턴 핵심
 

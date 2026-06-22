@@ -6,9 +6,9 @@ aliases: [SRS V01-V06, Software Requirements Specification 진화, SRS 타임라
 tags: [SRS, evolution, timeline, V01-V06, ISO29148, 클러스터55-67]
 ---
 
-# SRS Evolution — V01 → V06 진화 타임라인
+# SRS Evolution — V01 → V08 진화 타임라인
 
-Software Requirements Specification의 6차례 진화 + 검증 단계. **V06 = Next.js Full-stack Implementation-Ready 정본**.
+Software Requirements Specification의 진화 + 검증 단계. **V06 = Next.js Full-stack Implementation-Ready 정본** → **V07 = self-contained Merged Master**(Wiki 합성 + 컴플라이언스) → **V08 = Two-Track Realignment**(발음 확인 + 문해 연습-only 비대칭).
 
 ## 진화 표 (raw 55-65 + V06 Revision History) + 검토 단계 명시
 
@@ -25,6 +25,8 @@ Software Requirements Specification의 6차례 진화 + 검증 단계. **V06 = N
 | **63** | **SRS Comparison: Opus vs Gemini** ⭐ | **8 기준 비교 매트릭스** — Opus 5 Winner (FR·NFR·API·구조·ISO 29148) / Gemini 2 Winner (Traceability·Sequence) / 1 Tie. **Best-of-Breed V04 Master 권고** |
 | **64** | **V05 Merged Master Final** (919줄) | **Best-of-Breed 통합**. Opus 65 atomic FR + 30 NFR + 8 API + Gemini 1:1 Traceability + Reward Fallback/HITL Edge sequences + EXP/ADR/Gantt Appendix. **99 요구사항, 10 다이어그램, 919줄** |
 | **65** | **V06 Next.js Full-stack Final** ⭐ (955줄) | **V05 → V06 후속 변환** (비즈니스 의도 vs 기술 결정 분리). C-TEC-001~007 + ADR-05~07 신규 (Next.js 모놀리스 · Supabase BaaS · Vercel AI SDK + Gemini) + R7/R8 신규 (Vercel Timeout / Supabase 무료 한도) |
+| **docs/65** | **V07 Merged Master Final** (self-contained) | V06 base + Wiki 54차 ingest 합성 + 실코드 정합 + 컴플라이언스(PIPA 5중 가드·의료기기법). 95 REQ + 16 ADR + 14 Entity. `REQ-FUNC-CL-01~15`(임상 정밀 채점) 신설. **발음 단일트랙 측정 정점** |
+| **docs/SRS_V08** | **V08 Two-Track Realignment** ⭐ (2트랙 비대칭) | V07(발음) 위에 **트랙B(문해 연습-only)를 firewall 분리로 신설**. §1.1 Purpose 재작성('지연/스크리닝' 제거 → 발음 "확인" + 문해 "놀이·연습"). §1.5 **CON-06 신설**(문해 연습-only 톤·금칙어·`bandShippable=false` 밴드 미노출). §4 **`REQ-LIT-01~14` 신설**(14게임↔S0~S4↔플래그↔산출=engagement) — 측정성 `REQ-FUNC-CL-08~12` 와 분리. **CL-12 ②(만 5-7세 조건부·만 2-4세 미노출) ↔ `stages.ts` S0 모순 정정**. §10 KOPLAC 트랙B 자문="채점/판정 아님 — 난이도 위계·연령 적합성·CON-04 톤". 북극성 = W-AUR(불변) + **W-LER(engagement 보조, 옵션 C 지향·A 1차)**. 정본 = [[product/sources/SRS_V08_TwoTrack]] / 상위 [[product/concepts/VPS-evolution]] V10 |
 
 ## 진화 패턴
 
@@ -103,10 +105,16 @@ PRD V01-V10 (raw 40-54)
    ↓ 21 Epic + 7 KPI + HITL + Phase 0/1/2
 SRS V01-V06 (raw 55-65)
    ↓ ISO 29148 + 95 요구사항 (61 REQ-FUNC + 4 HITL + 30 REQ-NF; raw 표기 99 = HITL 이중계상) + Next.js Full-stack
-[Implementation Ready]
+SRS V07 (docs/65 Merged Master)
+   ↓ Wiki 합성 + 컴플라이언스 + REQ-FUNC-CL-01~15 (발음 단일트랙 측정 정점)
+SRS V08 (docs/SRS_V08_TwoTrack)
+   ↓ 2트랙 비대칭 — 트랙A 발음 "확인"(계승) + 트랙B 문해 "놀이·연습"(REQ-LIT firewall) + CON-06 + W-LER
+[Implementation Ready · 2트랙 라이브]
    ↓
 TASKS/ 100+ (별도 인덱스 page 필요)
 ```
+
+> ⚠️ **V08 비대칭 불변**: 트랙A(발음, 만2~7)는 표준화 규준으로 또래 비교 "확인", 트랙B(문해, 만2~12)는 점수·밴드·판정 없이 "놀이·연습"(`bandShippable=false`) — **"측정 vs 측정"이 아니다**. 측정성 `REQ-FUNC-CL-08~12`(발음 진단 채점 축)와 연습 `REQ-LIT-01~14`(문해 놀이)는 네임스페이스로 firewall 분리. 상세 = [[product/concepts/VPS-evolution]] V10 + `docs/realignment/00_2track_realignment_blueprint.md`.
 
 ## 학습 포인트 (워크플로 시사)
 
