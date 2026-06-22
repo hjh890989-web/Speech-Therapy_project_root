@@ -9,6 +9,8 @@
 
 import { useCallback } from "react";
 
+import { getTtsPref } from "@/lib/literacy/tts-pref";
+
 /// 텍스트를 한국어로 읽어주는 speak 함수 반환. 사용자 탭(제스처) 시 호출 → 자동재생 정책 무관.
 export function useReadAloud() {
   return useCallback((text: string) => {
@@ -19,7 +21,13 @@ export function useReadAloud() {
       synth.cancel(); // 이전 발화 중단 — 연타 시 겹침 방지.
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "ko-KR";
-      u.rate = 0.95; // 아이 대상 — 약간 천천히.
+      // 사용자 설정(기기 음성·속도) 적용 — 🔊 옆 ⚙️에서 저장. 기본=기기기본 음성·0.95x.
+      const pref = getTtsPref();
+      u.rate = pref.rate;
+      if (pref.voiceURI) {
+        const chosen = synth.getVoices().find((v) => v.voiceURI === pref.voiceURI);
+        if (chosen) u.voice = chosen;
+      }
       synth.speak(u);
     } catch {
       /* 미지원 브라우저 — 무음 폴백 */
