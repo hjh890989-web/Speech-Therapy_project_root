@@ -44,6 +44,13 @@ export interface WeeklyReportEmailArgs {
     wAurAchieved: boolean;
     predictedNextScore: number | null;
   };
+  /// (선택) CR-2026-009 — 이번 주 읽기·말 놀이 활동량(문해력 게임 활성 시). null/미설정이면 이메일 섹션 미렌더.
+  ///   slug→표시제목 매핑은 호출 측(cron) 책임. 연습-only: 활동 빈도만.
+  literacy?: {
+    totalSessions: number;
+    activeDays: number;
+    games: Array<{ title: string; count: number }>;
+  } | null;
 }
 
 /// sendWeeklyReportEmail 결과 — cron 응답 / 로그 분기.
@@ -102,6 +109,7 @@ export async function sendWeeklyReportEmail(
     wAurAchieved: args.report.wAurAchieved,
     predictedNextScore: args.report.predictedNextScore,
     dashboardLink: args.dashboardLink,
+    literacy: args.literacy ?? null,
   });
 
   // 5) sendEmail 위임 — graceful.

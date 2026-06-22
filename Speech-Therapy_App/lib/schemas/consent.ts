@@ -54,7 +54,8 @@ export const ConsentCreateInputSchema = z.object({
     (s) => s.length > 0,
     { message: "childNickname 가 sanitize 후 빈 문자열 — 위험 문자만 입력됨." },
   ),
-  childAgeMonths: z.number().int().min(24).max(84),
+  // CR-2026-009 학령기 전면확장: 만 2~12세(24~144). literacy 도메인 상한(LITERACY_AGE_MAX_MONTHS=144)과 정합.
+  childAgeMonths: z.number().int().min(24).max(144),
 });
 export type ConsentCreateInput = z.infer<typeof ConsentCreateInputSchema>;
 

@@ -491,6 +491,14 @@ export interface WeeklyReportEmailInput {
   predictedNextScore: number | null;
   /// /weekly-review 페이지 link (RBAC 자동 검증).
   dashboardLink: string;
+  /// (선택) CR-2026-009 — 이번 주 읽기·말 놀이 활동량(문해력 게임 활성 시). null/0이면 섹션 미렌더.
+  ///   slug 가 아닌 **표시 제목**으로 전달(호출 측이 registry 로 매핑) — 본 템플릿은 registry 비의존.
+  ///   연습-only: 활동 빈도만(점수/등급/판정 없음).
+  literacy?: {
+    totalSessions: number;
+    activeDays: number;
+    games: Array<{ title: string; count: number }>;
+  } | null;
 }
 
 /// 숫자 → 친화 포맷 (소수 1자리, 0~100 클램프).
@@ -530,6 +538,30 @@ export function buildWeeklyReportEmail(
 
   const subject = `[Speech-Therapy] ${childSafeForSubject}${input.year}년 ${input.weekNumber}주차 발음 발달 요약`;
 
+  // CR-2026-009 — 읽기·말 놀이 활동 섹션 (literacy 게임 활성 + 활동 있을 때만). 연습-only: 빈도만.
+  const lit = input.literacy && input.literacy.totalSessions > 0 ? input.literacy : null;
+  const literacyHtml = lit
+    ? `
+  <h2 style="font-size: 16px; margin: 24px 0 8px;">📚 이번 주 읽기·말 놀이</h2>
+  <p style="font-size: 14px; line-height: 1.6;">이번 주에 <strong>${lit.totalSessions}번</strong>, <strong>${lit.activeDays}일</strong> 함께 놀았어요. 꾸준히 잘하고 있어요!</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse: collapse; width: 100%; margin: 8px 0 16px; font-size: 14px;">
+    ${lit.games
+      .map(
+        (g) =>
+          `<tr><td style="padding: 8px 12px; background: #faf5ff; border: 1px solid #e9d5ff;">${escapeHtml(g.title)}</td><td style="padding: 8px 12px; border: 1px solid #e9d5ff; text-align: right;">${Math.max(0, Math.floor(g.count))}번</td></tr>`,
+      )
+      .join("\n    ")}
+  </table>`
+    : "";
+  const literacyText = lit
+    ? [
+        "",
+        "📚 이번 주 읽기·말 놀이",
+        `이번 주에 ${lit.totalSessions}번, ${lit.activeDays}일 함께 놀았어요.`,
+        ...lit.games.map((g) => `- ${g.title}: ${Math.max(0, Math.floor(g.count))}번`),
+      ]
+    : [];
+
   const html = `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -563,7 +595,7 @@ export function buildWeeklyReportEmail(
 
   <p style="font-size: 14px; line-height: 1.6; color: #2563eb;">${wAurLine}</p>
   <p style="font-size: 14px; line-height: 1.6; color: #555;">${predictedLine}</p>
-
+${literacyHtml}
   <p style="text-align: center; margin: 32px 0;">
     <a href="${link}" style="display: inline-block; padding: 12px 24px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">
       이번 주 상세 결과 보기
@@ -594,6 +626,7 @@ export function buildWeeklyReportEmail(
     "",
     wAurLine,
     predictedLine,
+    ...literacyText,
     "",
     `상세 결과 보기: ${input.dashboardLink}`,
     "",

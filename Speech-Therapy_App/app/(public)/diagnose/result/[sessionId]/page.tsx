@@ -20,6 +20,9 @@ import {
 } from "./clinical-interpretation";
 // FR-C-LIT-02 (CR-2026-007) — F4 음운변동 제품화: 탐지된 변동을 부모용 음소 핀셋 분석으로 표시(display-only).
 import { analyzeErrorPattern, type ErrorPatternAnalysis } from "@/lib/diagnose/clinical";
+// 진단 보강 프로브 진입점 — 각 프로브 플래그 on 일 때만 노출(default off). 측정/확인 활동(판정 아님).
+import { isOralMotorEnabled } from "@/lib/diagnose/oral-motor";
+import { isArticulationProbeEnabled } from "@/lib/diagnose/articulation-probe";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -230,6 +233,12 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
                   {errorPattern.emoji}
                 </span>
                 발음 패턴: {errorPattern.label}
+                {/* 정직화: 이미 산출된 변동 예시를 함께 노출(이 패턴이 어떤 모습인지 부모 이해). */}
+                {errorPattern.example && (
+                  <span className="font-normal text-gray-500 dark:text-gray-400">
+                    {" "}(예: {errorPattern.example})
+                  </span>
+                )}
               </p>
               <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                 {errorPattern.parentNote}
@@ -239,16 +248,18 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
         </section>
       )}
 
-      {/* 3축 점수 카드 (Sprint 3 에서 분리 재설계 예정 — 현재 모두 articulation 동값) */}
+      {/* 3축 점수 카드 — 조음(자모 정확도) / 또렷함(음절 완성도+STT 인식 명확성) / 음향(길이·안정성 신호).
+          세 축 모두 단일 단어의 '소리 신호'(언어·어휘 평가 아님). raw 표시, 보정은 밴드/카피에만. */}
       <section className="mb-6" aria-label="3축 점수">
         <div className="grid grid-cols-3 gap-3">
           <ScoreCard label="조음" value={result.articulationScore} />
-          <ScoreCard label="언어" value={result.linguisticScore} />
+          {/* 정직화: linguistic 축은 '언어능력'이 아니라 '끝까지 또렷하게 말한 정도(완성도+인식 명확성)'. */}
+          <ScoreCard label="또렷함" value={result.linguisticScore} />
           <ScoreCard label="음향" value={result.acousticScore} />
         </div>
-        {/* 부모 명료성 — 점수 척도 안내 (불안형 페르소나 이해도). */}
+        {/* 부모 명료성 — 점수 척도 + 정직한 범위 안내 (이 세 항목은 발음 '소리 신호'이지 언어·어휘 평가가 아님). */}
         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          각 항목은 100점 만점이에요.
+          각 항목은 100점 만점이에요. 위 세 가지는 이번 발음 한 단어의 <strong>소리 신호</strong>예요(언어·어휘 능력을 평가하는 건 아니에요).
         </p>
         {/* CL-03 (KOPLAC 검증) — 조음 임상 밴드 해석. ADR-04 치환 톤(금칙어 0). */}
         <p
@@ -330,6 +341,37 @@ export default async function DiagnosisResultPage({ params, searchParams }: Page
           </TrackedCTALink>
         </div>
       </section>
+
+      {/* 진단 보강 프로브 진입점 — 각 프로브 플래그 on 일 때만 노출(default off). 측정/확인(판정 아님). */}
+      {(isArticulationProbeEnabled() || isOralMotorEnabled()) && (
+        <section
+          data-testid="diagnose-probe-links"
+          className="mb-8 rounded-lg border border-gray-200 p-4 dark:border-gray-700"
+        >
+          <h2 className="text-base font-semibold">더 확인해보기</h2>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            한 단어 결과에 더해, 아래 활동으로 더 고르게 확인해 볼 수 있어요. (판정이 아닌 참고 자료예요.)
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            {isArticulationProbeEnabled() && (
+              <Link
+                href="/diagnose/articulation-probe"
+                className="inline-block rounded-md border border-emerald-600 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800"
+              >
+                여러 낱말 발음 확인 →
+              </Link>
+            )}
+            {isOralMotorEnabled() && (
+              <Link
+                href="/diagnose/oral-motor"
+                className="inline-block rounded-md border border-emerald-600 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-slate-800"
+              >
+                입 운동 확인 →
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
 
       <Link
         href="/diagnose"

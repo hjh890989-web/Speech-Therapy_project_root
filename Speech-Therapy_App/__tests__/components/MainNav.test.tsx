@@ -260,6 +260,64 @@ describe("buildNavItemsForRole — role 별 메뉴 매트릭스", () => {
       "/settings",
     ]);
   });
+
+  // CR-2026-007 — literacy 놀이 nav 게이팅 (literacyEnabled 입력 기반).
+  it("literacy 비활성(default) → '읽기·말 놀이'(/literacy) 미노출 (전 role)", () => {
+    for (const role of ["anonymous", "parent", "teacher", "principal", "admin", "expert"] as MainNavRole[]) {
+      expect(buildNavItemsForRole(role).map((i) => i.href)).not.toContain("/literacy");
+      expect(buildNavItemsForRole(role, { literacyEnabled: false }).map((i) => i.href)).not.toContain("/literacy");
+    }
+  });
+
+  it("literacy 활성 → parent/principal/admin 에 '읽기·말 놀이'(/literacy) 노출, teacher/expert·anonymous 미노출", () => {
+    const has = (role: MainNavRole) =>
+      buildNavItemsForRole(role, { literacyEnabled: true }).map((i) => i.href).includes("/literacy");
+    expect(has("parent")).toBe(true);
+    expect(has("principal")).toBe(true);
+    expect(has("admin")).toBe(true);
+    expect(has("teacher")).toBe(false);
+    expect(has("expert")).toBe(false);
+    expect(has("anonymous")).toBe(false);
+    // parent 위치 — 설정 앞.
+    const parentHrefs = buildNavItemsForRole("parent", { literacyEnabled: true }).map((i) => i.href);
+    expect(parentHrefs).toEqual([
+      "/weekly-review",
+      "/missions",
+      "/rewards/collection",
+      "/predictions",
+      "/literacy",
+      "/settings",
+    ]);
+  });
+
+  it("'읽기·말 놀이' 라벨 금칙어 0 + 메타(label/emoji)", () => {
+    const item = buildNavItemsForRole("parent", { literacyEnabled: true }).find((i) => i.href === "/literacy");
+    expect(item).toBeTruthy();
+    expect(item!.label).toBe("읽기·말 놀이");
+    expect(item!.emoji).toBe("🧩");
+    expect(containsBannedTerms(item!.label)).toBe(false);
+  });
+
+  // CR-2026-007 — 구강 운동(DDK/MPT) 프로브 nav 게이팅 (oralMotorEnabled 입력 기반).
+  it("oral-motor 비활성(default) → '입 운동 확인'(/diagnose/oral-motor) 미노출 (전 role)", () => {
+    for (const role of ["anonymous", "parent", "teacher", "principal", "admin", "expert"] as MainNavRole[]) {
+      expect(buildNavItemsForRole(role).map((i) => i.href)).not.toContain("/diagnose/oral-motor");
+    }
+  });
+
+  it("oral-motor 활성 → parent/principal/admin 노출, teacher/expert·anonymous 미노출 + 금칙어 0", () => {
+    const has = (role: MainNavRole) =>
+      buildNavItemsForRole(role, { oralMotorEnabled: true }).map((i) => i.href).includes("/diagnose/oral-motor");
+    expect(has("parent")).toBe(true);
+    expect(has("principal")).toBe(true);
+    expect(has("admin")).toBe(true);
+    expect(has("teacher")).toBe(false);
+    expect(has("expert")).toBe(false);
+    expect(has("anonymous")).toBe(false);
+    const item = buildNavItemsForRole("parent", { oralMotorEnabled: true }).find((i) => i.href === "/diagnose/oral-motor");
+    expect(item!.label).toBe("입 운동 확인");
+    expect(containsBannedTerms(item!.label)).toBe(false);
+  });
 });
 
 describe("isPathActive — 정확 매치 + prefix", () => {

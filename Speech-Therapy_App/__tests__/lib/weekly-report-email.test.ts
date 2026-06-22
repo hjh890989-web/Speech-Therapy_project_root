@@ -274,4 +274,49 @@ describe("buildWeeklyReportEmail — CON-04 / 본문 정합", () => {
     expect(tpl.html).not.toContain("<script>alert(1)</script>");
     expect(tpl.html).toContain("&lt;script&gt;");
   });
+
+  // CR-2026-009 — 읽기·말 놀이 섹션 (C1 주간 이메일 통합).
+  const baseReport = {
+    parentName: "김민지",
+    childName: "지우",
+    weekNumber: 20,
+    year: 2026,
+    articulationAvg: 80,
+    linguisticAvg: 70,
+    acousticAvg: 75,
+    sessionCount: 5,
+    missionCompletedCount: 5,
+    wAurAchieved: true,
+    predictedNextScore: 80,
+    dashboardLink: "https://speech-therapy.app/weekly-review",
+  };
+
+  it("[12] literacy 활동 있으면 읽기·말 놀이 섹션 렌더 + 금칙어 0", () => {
+    const tpl = buildWeeklyReportEmail({
+      ...baseReport,
+      literacy: {
+        totalSessions: 4,
+        activeDays: 2,
+        games: [
+          { title: "받아쓰기 놀이", count: 3 },
+          { title: "소리 규칙 읽기", count: 1 },
+        ],
+      },
+    });
+    expect(tpl.html).toContain("읽기·말 놀이");
+    expect(tpl.html).toContain("받아쓰기 놀이");
+    expect(tpl.text).toContain("받아쓰기 놀이: 3번");
+    expect(hasBannedTerm(tpl.html)).toBe(false);
+    expect(hasBannedTerm(tpl.text)).toBe(false);
+  });
+
+  it("[13] literacy null/0 이면 섹션 미렌더(기존 본문 회귀 0)", () => {
+    const noLit = buildWeeklyReportEmail(baseReport);
+    expect(noLit.html).not.toContain("읽기·말 놀이");
+    const zeroLit = buildWeeklyReportEmail({
+      ...baseReport,
+      literacy: { totalSessions: 0, activeDays: 0, games: [] },
+    });
+    expect(zeroLit.html).not.toContain("읽기·말 놀이");
+  });
 });

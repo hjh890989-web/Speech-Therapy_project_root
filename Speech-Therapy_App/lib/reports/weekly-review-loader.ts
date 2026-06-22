@@ -23,6 +23,12 @@
 
 import { prisma } from "@/lib/db";
 import { W_AUR_MIN_MISSIONS } from "@/lib/reports/weekly-aggregator";
+import { weekBounds } from "@/lib/weekly-report";
+import { enabledLiteracyGames } from "@/lib/literacy/registry";
+import {
+  aggregateLiteracyWeekly,
+  type LiteracyWeeklySummary,
+} from "@/lib/reports/literacy-weekly";
 
 /// WeeklyReport 1건의 helper 친화 shape (Prisma row shape 와 호환).
 /// `WeeklyReport` Prisma row 를 그대로 사용해도 되지만, 테스트 환경에서 Prisma client
@@ -100,4 +106,39 @@ export async function loadWeeklyReview(userId: string): Promise<WeeklyReviewData
     wAurAchieved,
     hasData: true,
   };
+}
+
+/**
+ * FR-Q-LIT (Phase 4) — 한 주 문해력 놀이 활동량 요약 (parent 리포트 '문해력' 축).
+ *
+ * 발음 WeeklyReport(cron 스냅샷)와 별개로 LiteracyResult 를 해당 주 구간에서 on-read 집계.
+ * 영속 데이터가 없으면(놀이 플래그 off → prod dormant) null → 카드 미렌더(graceful, 회귀 0).
+ *
+ * @param userId Supabase auth user.id — 호출 측 본인 ID 만(R4 cross-user 차단).
+ * @param year/week 표시 주차(보통 latest WeeklyReport 의 year/week, 없으면 현재 주차).
+ * @returns 활동 0건 또는 DB 장애 시 null.
+ */
+export async function loadLiteracyWeekly(
+  userId: string,
+  year: number,
+  week: number,
+): Promise<LiteracyWeeklySummary | null> {
+  if (!userId) return null;
+  // flag-1 — 영속 행 존재가 아니라 **현재 활성(플래그 on) 게임**으로 게이팅.
+  //   게임 on→영속→off flip 시 과거 행으로 카드가 잔존하지 않도록(불변식: off 면 노출 0).
+  //   전부 off 면 빈 집합 → rows 필터 후 0건 → aggregate null → 카드 미렌더.
+  const enabledSlugs = new Set(enabledLiteracyGames().map((g) => g.slug));
+  if (enabledSlugs.size === 0) return null;
+  const { start, end } = weekBounds(year, week);
+  try {
+    const rows = await prisma.literacyResult.findMany({
+      where: { userId, createdAt: { gte: start, lt: end } },
+      select: { stage: true, gameSlug: true, createdAt: true },
+    });
+    return aggregateLiteracyWeekly(rows.filter((r) => enabledSlugs.has(r.gameSlug)));
+  } catch (err) {
+    // DB 일시 장애 / env 미설정(worktree 등) → graceful null.
+    console.error("loadLiteracyWeekly: findMany failed", err);
+    return null;
+  }
 }

@@ -3,12 +3,19 @@
 
 import Link from "next/link";
 import { LandingBeacon } from "./LandingBeacon";
-import { LANDING_FAQ } from "@/components/landing/LandingFaq";
+import { LANDING_FAQ, LITERACY_FAQ } from "@/components/landing/LandingFaq";
+import { enabledLiteracyGames } from "@/lib/literacy/registry";
 
 // 기관 문의 수신 주소 — env 미설정 시 placeholder
 const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "partners@speech-therapy.kr";
 
 export default function Home() {
+  // CR-2026-009 — 문해력(읽기·말 놀이) 마케팅 카피는 게임 활성(플래그 on)일 때만 노출.
+  //   미출시 기능 광고 회피(활성-카피 동기화 원칙, positioning-copy-draft_CR009 §3).
+  //   ⚠️ 본 페이지는 정적 — 빌드 시점 평가. 공개 런치 = literacy 플래그 on + 재배포.
+  const literacyLive = enabledLiteracyGames().length > 0;
+  // FAQ: 문해력 활성 시 관련 항목 1개 append.
+  const faqItems = literacyLive ? [...LANDING_FAQ, LITERACY_FAQ] : LANDING_FAQ;
   return (
     <main className="min-h-screen">
       <LandingBeacon />
@@ -37,7 +44,14 @@ export default function Home() {
               <p className="text-lg text-gray-600 sm:text-xl dark:text-gray-300">
                 월령과 음소를 고르고 한 단어만 들려주면, AI 분석으로 발음 발달 단계를 바로 확인할 수 있어요.
               </p>
-              
+
+              {literacyLive && (
+                <p className="inline-flex items-center gap-2 rounded-full bg-violet-100 px-4 py-2 text-sm font-medium text-violet-800 dark:bg-violet-900/40 dark:text-violet-200">
+                  <span>📚</span>
+                  <span>이제 읽기·말(문해) 놀이도 함께 — 만 2~12세</span>
+                </p>
+              )}
+
               <div className="flex flex-col gap-4 sm:flex-row">
                 <Link
                   href="/diagnose"
@@ -228,6 +242,24 @@ export default function Home() {
                 AI 분석에 전문가 검수를 더했어요. 부모님께 더 신뢰할 수 있는 안내를 드리기 위해서예요.
               </p>
             </div>
+
+            {/* Feature 7 — 읽기·말 놀이 (문해력, CR-2026-009). literacy 활성 시에만 노출. */}
+            {literacyLive && (
+              <Link href="/literacy" className="group rounded-3xl border border-gray-100 bg-white p-8 transition hover:border-violet-200 hover:shadow-xl dark:border-gray-800 dark:bg-gray-900 dark:hover:border-violet-800">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-400 to-violet-600 text-3xl shadow-lg shadow-violet-500/30">
+                  📚
+                </div>
+                <h3 className="mt-6 text-xl font-bold text-gray-900 dark:text-white">
+                  읽기·말 놀이
+                </h3>
+                <p className="mt-3 text-gray-600 dark:text-gray-300">
+                  소리 놀이부터 글 읽고 답하기까지, 발달 단계에 맞춘 읽기·말 놀이로 문해력을 키워요. (만 2~12세)
+                </p>
+                <div className="mt-4 inline-flex items-center text-violet-600 font-semibold dark:text-violet-400">
+                  놀이 보러 가기 →
+                </div>
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -363,7 +395,7 @@ export default function Home() {
 
             <div className="grid grid-cols-2 gap-6">
               <div className="rounded-3xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-8 text-center text-white shadow-xl">
-                <div className="text-5xl font-extrabold">2-7</div>
+                <div className="text-5xl font-extrabold">{literacyLive ? "2-12" : "2-7"}</div>
                 <p className="mt-2 text-emerald-100">대상 연령 (세)</p>
               </div>
               <div className="rounded-3xl bg-gradient-to-br from-sky-500 to-sky-600 p-8 text-center text-white shadow-xl">
@@ -432,7 +464,7 @@ export default function Home() {
           </div>
 
           <div className="mt-12 space-y-4">
-            {LANDING_FAQ.map((faq, idx) => (
+            {faqItems.map((faq, idx) => (
               <details key={idx} className="group rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-bold text-gray-900 dark:text-white">
                   <span>{faq.q}</span>

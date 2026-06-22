@@ -37,7 +37,7 @@ model User {
   email            String?          @unique
   /// RBAC 역할. REQ-NF-019 의 키.
   role             Role
-  /// 부모의 자녀 월령 (만 2~7세 = 24~84). 부모 외 역할은 null.
+  /// 부모의 자녀 월령. 발음(만 2~7세)+문해력(만 2~12세, CR-2026-009) = 24~144. 부모 외 역할은 null.
   childAgeMonths   Int?
   /// FR-C-PARENT-SETTINGS — 부모가 /settings/child 에서 선택한 관심 음소 목록.
   /// 화이트리스트: ALLOWED_PHONEMES (ㄱ/ㄴ/ㅅ/ㅈ/ㄹ), 0~5개 (빈 배열 허용 = 시스템 자동 선택).
@@ -102,6 +102,8 @@ model User {
   offlineEntriesAsSubject OfflineEntry[] @relation("OfflineEntrySubject")
   /// FR-Q-013 후속 — 본인이 입력한 (teacher) 오프라인 활동 기록.
   offlineEntriesAsAuthor  OfflineEntry[] @relation("OfflineEntryAuthor")
+  /// CR-2026-009 — 본인(자녀) 문해력 놀이/probe 결과.
+  literacyResults   LiteracyResult[]
 
   @@index([institutionId])
   @@index([classId])
@@ -525,6 +527,44 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([actorId])
   @@index([tableName, rowId])
+}
+
+// ============================================================================
+// CR-2026-009 — LiteracyResult (문해력 놀이/probe 결과 영속)
+// 5단계 사다리(lib/literacy/stages.ts) 기반. 발음 EvaluationResult 와 분리된 별도 테이블.
+//
+// ⚠️ 임상 안전 경계 (project 규칙 — 임상 보정은 display 레이어에만):
+//   - rawScore 는 원점수 — **보정 금지**. referenceBand(참고밴드)는 display 레이어 전용이며
+//     임상 규준 검증(Phase 2: 출시가능 밴드 0건) 통과 전까지 null(연습-only).
+//   - 발음 채점(diagnosis)·HITL·escalation 과 무관 — 별도 활동.
+//   - 영속은 게임 활성 플래그 ON + 인증 user + PIPA 동의 시에만(Server Action 게이트).
+// R4: userId(User UUID)만 — 자녀 식별 정보 미저장. childAgeMonths(월령)만.
+// CON-04: 본 model 컬럼/값에 "치료/진단/장애" 금칙어 0.
+// RLS: literacy_result_select_own / literacy_result_insert_own / literacy_result_delete_admin (defense-in-depth).
+// ============================================================================
+
+model LiteracyResult {
+  id             String   @id @default(uuid()) @db.Uuid
+  /// 결과 주체 User.id — 부모(자녀 보호자). withActor 가 audit.actor_id GUC 주입(LiteracyResult 감사
+  /// 트리거는 EvaluationResult 선례처럼 미등록 — 행은 정상 저장, 감사 행은 미생성).
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 발달 단계(stages.ts LiteracyStageId): "S0".."S4" — 게임 구인 기준(registry.stage).
+  stage          String
+  /// 놀이 slug (registry LITERACY_GAMES 와 정합 — 구인 식별).
+  gameSlug       String
+  /// 원점수(raw) — 구인별(0/1 합·완료시간 ms·정확음절수 등). **보정 금지(display 레이어만).**
+  rawScore       Float
+  /// 분모/총문항(구인별, 선택).
+  rawTotal       Float?
+  /// 측정 시 자녀 월령 (만 2~12세 = 24~144).
+  childAgeMonths Int
+  /// 임상 참고밴드(display 전용). Phase 2 검증 통과 단계만 — 그 전까지 null(연습-only).
+  referenceBand  String?
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([stage, gameSlug])
 }
 
 // ============================================================================

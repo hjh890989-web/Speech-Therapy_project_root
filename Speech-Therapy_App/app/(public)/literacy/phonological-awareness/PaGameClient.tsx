@@ -20,6 +20,7 @@ import {
   SELF_CORRECTION_WINDOW_MS,
   type PaScore,
 } from "@/lib/literacy/phonological-awareness";
+import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
 
 interface PaGameClientProps {
   items: PaItem[];
@@ -51,9 +52,19 @@ export function PaGameClient({ items }: PaGameClientProps) {
   // 선택지는 아이템 바뀔 때만 셔플 (재렌더마다 순서 변경 방지).
   const choices = useMemo(() => (item ? shuffle(item.choices) : []), [item]);
 
+  // 요약은 최상단에서 1회 계산 — 완료 분기 렌더와 저장 훅이 같은 값을 공유.
+  const summary = summarizePaSession(scores);
+
+  // 완료 시 결과 1회 영속(fire-and-forget). 훅 규칙상 조건부 return 이전 무조건 호출.
+  useSaveLiteracyResultOnce({
+    done: item === null,
+    gameSlug: "phonological-awareness",
+    rawScore: summary.correct,
+    rawTotal: summary.total,
+  });
+
   // item === null = 모든 아이템 완료 → 요약.
   if (item === null) {
-    const summary = summarizePaSession(scores);
     return (
       <section data-testid="pa-summary" aria-live="polite" className="text-center">
         <p className="text-4xl" aria-hidden="true">🎉</p>

@@ -16,6 +16,7 @@ import {
   type PassageType,
 } from "@/lib/literacy/reading-fluency-content";
 import { computeFluencyResult, formatFluencySeconds } from "@/lib/literacy/reading-fluency";
+import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
 
 type Phase = "ready" | "running" | "done";
 
@@ -39,6 +40,13 @@ export function ReadingFluencyClient() {
   }, [phase]);
 
   const result = computeFluencyResult(passage.syllableCount, elapsedMs);
+
+  useSaveLiteracyResultOnce({
+    done: phase === "done",
+    gameSlug: "reading-fluency",
+    rawScore: elapsedMs,
+    rawTotal: passage.syllableCount,
+  });
 
   return (
     <section data-testid="fluency-game" aria-label="또박또박 읽기">

@@ -155,6 +155,25 @@ describe("OnboardingWizardClient — FR-C-PARENT-ONBOARDING", () => {
     expect(pressedCount).toBeGreaterThanOrEqual(1);
   });
 
+  it("Step2 학령기(prefill 120) — 음소 선택 안내(선택) + 0개까지 해제 가능 (CR-2026-009)", () => {
+    render(<OnboardingWizardClient initialStep={2} prefillChildAgeMonths={120} />);
+    // 학령기 안내 노출.
+    expect(screen.getByTestId("onboarding-phoneme-optional-note")).toBeInTheDocument();
+    // 초기 'ㅅ' 해제 → 0개 허용(만2~7의 '최소 1개 유지'와 달리).
+    fireEvent.click(screen.getByTestId("onboarding-phoneme-ㅅ"));
+    expect(screen.getByTestId("onboarding-phoneme-ㅅ")).toHaveAttribute("aria-pressed", "false");
+    const pressedCount = ["ㄱ", "ㄴ", "ㅅ", "ㅈ", "ㄹ"].filter(
+      (p) =>
+        screen.getByTestId(`onboarding-phoneme-${p}`).getAttribute("aria-pressed") === "true",
+    ).length;
+    expect(pressedCount).toBe(0);
+  });
+
+  it("Step2 만2~7(기본) — 음소 선택 안내(선택) 미노출", () => {
+    render(<OnboardingWizardClient initialStep={2} prefillChildAgeMonths={48} />);
+    expect(screen.queryByTestId("onboarding-phoneme-optional-note")).toBeNull();
+  });
+
   it("Step2 '다음' → saveChildInfo + savePrivacyConsent 호출 + 성공 시 Step3 진입", async () => {
     render(<OnboardingWizardClient initialStep={2} />);
     // SEC-COMP-PIPA: 두 동의 모두 체크 후 다음 버튼 활성화.
@@ -173,7 +192,7 @@ describe("OnboardingWizardClient — FR-C-PARENT-ONBOARDING", () => {
     expect(savePrivacyConsentMock).toHaveBeenCalledTimes(1);
     const callArg = saveChildInfoMock.mock.calls[0][0];
     expect(callArg.childAgeMonths).toBeGreaterThanOrEqual(24);
-    expect(callArg.childAgeMonths).toBeLessThanOrEqual(84);
+    expect(callArg.childAgeMonths).toBeLessThanOrEqual(144); // CR-2026-009: 상한 84→144
     expect(Array.isArray(callArg.targetPhonemes)).toBe(true);
     // savePrivacyConsent 입력 검증.
     const consentArg = savePrivacyConsentMock.mock.calls[0][0];

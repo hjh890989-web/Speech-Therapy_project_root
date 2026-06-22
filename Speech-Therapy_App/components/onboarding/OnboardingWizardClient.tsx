@@ -4,7 +4,7 @@
 //
 // 4-step 흐름:
 //   Step1 환영       — 큰 진행도 + "발음 가이드에 오신 것을 환영합니다!" + 다음
-//   Step2 자녀 정보  — childAgeMonths slider (24~84) + 관심 음소 1~2개 선택
+//   Step2 자녀 정보  — childAgeMonths slider (24~144, CR-2026-009) + 관심 음소 1~2개 선택
 //                       → saveChildInfo Server Action 호출 → 다음
 //   Step3 첫 발음 확인 — 마이크 권한 안내 + "시작하기" → /diagnose 로 이동
 //   Step4 완료/보상   — "별을 모으는 여정의 시작!" + /rewards/collection / /missions 안내
@@ -46,6 +46,7 @@ import {
   ALLOWED_PHONEMES,
   CHILD_AGE_MAX_MONTHS,
   CHILD_AGE_MIN_MONTHS,
+  SPEECH_PHONEME_AGE_MAX_MONTHS,
   type AllowedPhoneme,
 } from "@/app/actions/onboarding-save-child-shape";
 import { markOnboardingCompletedInDb } from "@/app/actions/mark-onboarding-completed";
@@ -106,6 +107,19 @@ export function OnboardingWizardClient({
   // Server Action 호출 상태 (Step2 → Step3 진행).
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // CR-2026-009 — 학령기(만 7세 초과): 발음 미션 비대상 → 음소 선택사항(0개 허용) +
+  //   Step3 발음 진단 funnel 대신 읽기·말 놀이로 안내(발음 진단은 만2-7 월령 clamp로 또래비교 무의미).
+  const isSchoolAge = childAgeMonths > SPEECH_PHONEME_AGE_MAX_MONTHS;
+
+  // age-2 — 학령기에서 음소를 0개로 비운 뒤 만 7세 이하로 슬라이더를 내리면 빈 채 잔류 →
+  //   제출 시 invalid_phonemes. 비학령기 전환 + 0개면 기본값 복구(서버는 만2-7 1~2개 필수).
+  useEffect(() => {
+    if (!isSchoolAge && selectedPhonemes.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedPhonemes(["ㅅ"]);
+    }
+  }, [isSchoolAge, selectedPhonemes.length]);
 
   // 시간 측정 — wizard 시작 + 각 step 진입 시각.
   // useRef 초기값은 render 중 호출되므로 Date.now() 직접 호출 회피 (react-hooks/purity).
@@ -270,15 +284,20 @@ export function OnboardingWizardClient({
 
   /** Step 3 의 "시작하기" — 분석 이벤트 후 /diagnose 로 이동. */
   const handleStartDiagnose = useCallback(() => {
-    const primaryPhoneme = selectedPhonemes[0] ?? "ㅅ";
     goToNextStep(3);
+    if (isSchoolAge) {
+      // age-1 — 학령기(만 7세 초과)는 발음 진단(만2-7 월령 clamp → 또래비교 무의미) 대신 읽기·말 놀이로.
+      router.push("/literacy/start");
+      return;
+    }
+    const primaryPhoneme = selectedPhonemes[0] ?? "ㅅ";
     // 발음 확인 페이지 진입 — onboarding=1 query 로 분기 표시.
     const params = new URLSearchParams({
       phoneme: primaryPhoneme,
       onboarding: "1",
     });
     router.push(`/diagnose?${params.toString()}`);
-  }, [router, selectedPhonemes, goToNextStep]);
+  }, [router, selectedPhonemes, goToNextStep, isSchoolAge]);
 
   /** Step 3 의 "이번엔 건너뛰기" — Step4 로 바로 이동. */
   const handleSkipDiagnose = useCallback(() => {
@@ -290,8 +309,8 @@ export function OnboardingWizardClient({
   const togglePhoneme = useCallback((p: AllowedPhoneme) => {
     setSelectedPhonemes((prev) => {
       if (prev.includes(p)) {
-        // 최소 1개는 유지.
-        if (prev.length === 1) return prev;
+        // 만 2~7세는 최소 1개 유지 / 학령기는 0개까지 허용(선택사항).
+        if (!isSchoolAge && prev.length === 1) return prev;
         return prev.filter((x) => x !== p);
       }
       if (prev.length >= NAMESPACE_PHONEME_LIMIT) {
@@ -300,7 +319,7 @@ export function OnboardingWizardClient({
       }
       return [...prev, p];
     });
-  }, []);
+  }, [isSchoolAge]);
 
   const progressPct = useMemo(
     () => Math.round(((step - MIN_STEP + 1) / (MAX_STEP - MIN_STEP + 1)) * 100),
@@ -500,17 +519,27 @@ function Step2ChildInfo({
           value={childAgeMonths}
           onChange={(e) => onChangeAge(Number(e.target.value))}
           className="w-full accent-amber-500"
-          aria-label="자녀 월령 슬라이더 24개월부터 84개월"
+          aria-label="자녀 월령 슬라이더 24개월부터 144개월"
         />
         <p className="text-xs text-amber-800">
-          만 2세 (24개월) ~ 만 7세 (84개월) 사이로 선택해 주세요.
+          만 2세 (24개월) ~ 만 12세 (144개월) 사이로 선택해 주세요.
         </p>
       </div>
 
       <div className="space-y-3 rounded-lg bg-sky-50 p-5">
         <p className="text-lg font-semibold text-sky-900">
-          어떤 발음이 궁금하세요? (1~2개)
+          {childAgeMonths > SPEECH_PHONEME_AGE_MAX_MONTHS
+            ? "어떤 발음이 궁금하세요? (선택)"
+            : "어떤 발음이 궁금하세요? (1~2개)"}
         </p>
+        {childAgeMonths > SPEECH_PHONEME_AGE_MAX_MONTHS && (
+          <p
+            data-testid="onboarding-phoneme-optional-note"
+            className="text-sm text-sky-800"
+          >
+            큰 아이는 읽기·말 놀이 중심이에요. 발음이 궁금하면 골라도 좋아요(선택).
+          </p>
+        )}
         <div
           data-testid="onboarding-phoneme-group"
           role="group"
