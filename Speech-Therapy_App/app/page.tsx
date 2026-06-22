@@ -315,8 +315,13 @@ export default function Home() {
         <div className="mx-auto max-w-5xl">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl dark:text-white">
-              간단한 3단계로 확인하세요
+              {literacyLive ? "이렇게 함께 시작해요" : "간단한 3단계로 확인하세요"}
             </h2>
+            {literacyLive && (
+              <p className="mt-3 text-gray-600 dark:text-gray-300">
+                <strong>🎙️ 발음</strong>은 또래와 비교해 확인(아래 3단계), <strong>📚 읽기·말</strong>은 발달 단계에 맞춘 놀이로 시작해요.
+              </p>
+            )}
           </div>
 
           <div className="mt-16 relative">
@@ -379,6 +384,22 @@ export default function Home() {
               </div>
             </div>
           </div>
+          {literacyLive && (
+            <div className="mt-12 rounded-3xl border-2 border-violet-200 bg-violet-50 p-8 text-center dark:border-violet-900 dark:bg-violet-950/30">
+              <p className="text-sm font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-400">
+                📚 읽기·말 놀이는 이렇게
+              </p>
+              <p className="mt-2 text-gray-700 dark:text-gray-200">
+                아이 연령을 고르면 발달 단계에 맞는 읽기·말 놀이를 안내해요. 점수·판정 없이 매주 꾸준히 함께해요.
+              </p>
+              <Link
+                href="/literacy/start"
+                className="mt-4 inline-flex items-center rounded-2xl border-2 border-violet-400 px-6 py-3 text-sm font-semibold text-violet-700 transition hover:bg-violet-100 dark:text-violet-300 dark:hover:bg-violet-900/40"
+              >
+                읽기·말 놀이 시작 →
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
@@ -470,10 +491,12 @@ export default function Home() {
 
         <div className="relative mx-auto max-w-4xl text-center">
           <h2 className="text-3xl font-extrabold text-white sm:text-4xl md:text-5xl">
-            오늘, 아이의 발음을 확인하세요
+            {literacyLive ? "오늘, 우리 아이와 함께 시작하세요" : "오늘, 아이의 발음을 확인하세요"}
           </h2>
           <p className="mt-4 text-lg text-emerald-100">
-            회원가입 없이 무료로 5분 만에 시작할 수 있어요.
+            {literacyLive
+              ? "발음 확인도, 읽기·말 놀이도 — 회원가입 없이 무료로 시작할 수 있어요."
+              : "회원가입 없이 무료로 5분 만에 시작할 수 있어요."}
           </p>
           
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -486,6 +509,14 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </Link>
+            {literacyLive && (
+              <Link
+                href="/literacy/start"
+                className="inline-flex items-center justify-center rounded-2xl bg-white px-10 py-5 text-lg font-bold text-violet-600 shadow-xl shadow-emerald-900/20 transition hover:bg-gray-100 hover:shadow-2xl"
+              >
+                📚 읽기·말 놀이 시작
+              </Link>
+            )}
             <Link
               href="/login"
               className="inline-flex items-center justify-center rounded-2xl border-2 border-white/70 bg-white/10 px-10 py-5 text-lg font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
