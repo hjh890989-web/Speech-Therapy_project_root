@@ -15,6 +15,7 @@ import {
   type InferenceScore,
 } from "@/lib/literacy/inference-reading";
 import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
 
 interface InferenceReadingClientProps {
   items: InferenceCard[];
@@ -121,15 +122,21 @@ export function InferenceReadingClient({ items }: InferenceReadingClientProps) {
       >
         <h2 className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">{active.passageTitle}</h2>
         <p className="text-base leading-relaxed text-slate-800 dark:text-slate-100">{active.passageText}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <ReadAloudButton text={active.passageText} label="듣기" />
+        </div>
       </article>
 
-      {/* 추론 질문 */}
-      <p
-        className="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100"
-        data-testid="inference-reading-question"
-      >
-        {active.question}
-      </p>
+      {/* 추론 질문 + 읽어주기(초저학년 도움) */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <p
+          className="text-lg font-semibold text-gray-900 dark:text-gray-100"
+          data-testid="inference-reading-question"
+        >
+          {active.question}
+        </p>
+        <ReadAloudButton text={active.question} label="듣기" />
+      </div>
 
       {/* 선택지 3개 */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="inference-reading-choices">

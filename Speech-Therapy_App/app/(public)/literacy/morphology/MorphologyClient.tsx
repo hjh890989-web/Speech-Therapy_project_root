@@ -8,6 +8,7 @@
 
 import { useMemo, useState } from "react";
 
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
 import type { MorphItem } from "@/lib/literacy/morphology-content";
 import {
   scoreMorphAttempt,
@@ -120,13 +121,16 @@ export function MorphologyClient({ items }: MorphologyClientProps) {
         {index + 1} / {items.length}
       </p>
 
-      {/* 문항 */}
-      <p
-        className="mb-5 text-lg font-semibold text-gray-900 dark:text-gray-100"
-        data-testid="morphology-prompt"
-      >
-        {active.prompt}
-      </p>
+      {/* 문항 — 지시문(낱말 합치기 안내)만 읽어줌. 선택지(정답)는 누설 금지로 제외. */}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <p
+          className="text-lg font-semibold text-gray-900 dark:text-gray-100"
+          data-testid="morphology-prompt"
+        >
+          {active.prompt}
+        </p>
+        <ReadAloudButton text={active.prompt} label="듣기" />
+      </div>
 
       {/* 선택지 3개 */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="morphology-choices">

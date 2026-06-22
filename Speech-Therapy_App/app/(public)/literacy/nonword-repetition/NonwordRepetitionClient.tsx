@@ -11,6 +11,7 @@ import { useState } from "react";
 
 import { buildNwrSession } from "@/lib/literacy/nonword-repetition";
 import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
 
 const SESSION = buildNwrSession();
 
@@ -72,7 +73,7 @@ export function NonwordRepetitionClient() {
         </button>
       </div>
 
-      <div className="mb-6 flex min-h-[140px] flex-col items-center justify-center rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-8 dark:border-emerald-800 dark:bg-emerald-950/30">
+      <div className="mb-6 flex min-h-[140px] flex-col items-center justify-center gap-3 rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-8 dark:border-emerald-800 dark:bg-emerald-950/30">
         {hidden ? (
           <span className="text-5xl" aria-hidden="true" data-testid="nwr-hidden">🔊</span>
         ) : (
@@ -83,6 +84,7 @@ export function NonwordRepetitionClient() {
             {item.syllables}
           </p>
         )}
+        <ReadAloudButton text={item.syllables} label="소리 듣기" />
       </div>
 
       <p className="mb-5 text-center text-sm text-gray-500 dark:text-gray-400">

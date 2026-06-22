@@ -19,6 +19,7 @@ import {
   type SpellingScore,
 } from "@/lib/literacy/spelling";
 import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
 
 interface SpellingClientProps {
   items: SpellingItem[];
@@ -145,9 +146,12 @@ export function SpellingClient({ items }: SpellingClientProps) {
       >
         「{active.sound}」
       </p>
-      <p className="mb-4 text-base font-semibold text-gray-800 dark:text-gray-200" data-testid="spelling-prompt">
-        바르게 쓴 글자는 무엇일까요?
-      </p>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <p className="text-base font-semibold text-gray-800 dark:text-gray-200" data-testid="spelling-prompt">
+          바르게 쓴 글자는 무엇일까요?
+        </p>
+        <ReadAloudButton text="바르게 쓴 글자는 무엇일까요?" label="듣기" />
+      </div>
 
       {/* 선택지 (정답 철자 vs 소리기반 오답) */}
       <div className="grid grid-cols-2 gap-3" data-testid="spelling-choices">

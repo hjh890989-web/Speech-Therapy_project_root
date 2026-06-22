@@ -17,6 +17,10 @@ import {
 } from "@/lib/literacy/reading-fluency-content";
 import { computeFluencyResult, formatFluencySeconds } from "@/lib/literacy/reading-fluency";
 import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
+
+// ⚠️ 지시문만 읽어줌 — fluency-passage(지문)는 아이가 직접 또박또박 읽는 유창성 과제라 절대 읽어주지 않음.
+const FLUENCY_INSTRUCTION = "아래 글을 처음부터 끝까지 또박또박 소리 내어 읽어 봐요.";
 
 type Phase = "ready" | "running" | "done";
 
@@ -68,6 +72,14 @@ export function ReadingFluencyClient() {
               {PASSAGE_TYPE_LABEL[t]}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* 지시문 + 읽어주기(지문은 읽어주지 않음 — 아이가 직접 읽는 과제) */}
+      {phase === "ready" && (
+        <div className="mb-4 flex flex-wrap items-center justify-center gap-3" data-testid="fluency-instruction">
+          <p className="text-sm text-gray-600 dark:text-gray-400">{FLUENCY_INSTRUCTION}</p>
+          <ReadAloudButton text={FLUENCY_INSTRUCTION} label="듣기" />
         </div>
       )}
 
