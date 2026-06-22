@@ -37,6 +37,8 @@ import {
 } from "@/lib/reports/weekly-aggregator";
 import { sendSlackMessage } from "@/lib/notifications/slack";
 import { sendWeeklyReportEmail } from "@/lib/email/weekly-report-email";
+import { loadLiteracyWeekly } from "@/lib/reports/weekly-review-loader";
+import { LITERACY_GAMES } from "@/lib/literacy/registry";
 import { prisma } from "@/lib/db";
 
 const SLACK_ALERT_THRESHOLD = 5;
@@ -153,6 +155,29 @@ export async function GET(request: Request) {
       if (!sendEmailsEnabled) {
         continue;
       }
+      // CR-2026-009 — 이번 주 읽기·말 놀이 활동(문해력 게임 활성 시). off/0이면 null → 이메일 섹션 미렌더.
+      //   loadLiteracyWeekly 가 enabledLiteracyGames 게이트 + graceful(내부 catch). slug→표시제목 매핑.
+      let literacy: {
+        totalSessions: number;
+        activeDays: number;
+        games: Array<{ title: string; count: number }>;
+      } | null = null;
+      try {
+        const litSummary = await loadLiteracyWeekly(userId, data.year, data.weekNumber);
+        if (litSummary) {
+          literacy = {
+            totalSessions: litSummary.totalSessions,
+            activeDays: litSummary.activeDays,
+            games: litSummary.byGame.map((g) => ({
+              title: LITERACY_GAMES.find((x) => x.slug === g.gameSlug)?.title ?? g.gameSlug,
+              count: g.count,
+            })),
+          };
+        }
+      } catch (litErr) {
+        console.error("weekly-reports: literacy 집계 실패 (graceful)", userId, litErr);
+      }
+
       try {
         const emailResult = await sendWeeklyReportEmail({
           userId,
@@ -169,6 +194,7 @@ export async function GET(request: Request) {
             wAurAchieved: data.wAurAchieved,
             predictedNextScore: data.predictedNextScore,
           },
+          literacy,
         });
         if (emailResult.sent) {
           emailSentCount += 1;
