@@ -8,6 +8,7 @@
 
 import { useState } from "react";
 
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
 import { buildRetellSteps } from "@/lib/literacy/narrative";
 import { NARRATIVE_STORIES } from "@/lib/literacy/narrative-content";
 import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
@@ -84,6 +85,10 @@ export function NarrativeClient() {
           <p className="mt-3 text-xl font-semibold text-gray-900 dark:text-gray-100" data-testid="narrative-prompt">
             {s.label}
           </p>
+          {/* 가이드형 — 안내 질문 읽어주기 OK. */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+            <ReadAloudButton text={s.label} label="듣기" />
+          </div>
         </div>
         <p className="mb-5 text-center text-sm text-gray-500 dark:text-gray-400">
           아이가 자유롭게 이야기하면 따뜻하게 들어주세요. (단서: {s.caption})

@@ -20,6 +20,7 @@ import {
   type DecodingScore,
 } from "@/lib/literacy/decoding";
 import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
 
 interface DecodingGameClientProps {
   items: DecodingItem[];
@@ -80,6 +81,9 @@ export function DecodingGameClient({ items }: DecodingGameClientProps) {
 
   const active: DecodingItem = item;
 
+  // ⚠️ 지시문만 읽어줌 — decoding-word(해독 대상 낱말)는 아이가 직접 읽는 과제라 절대 읽어주지 않음.
+  const instruction = `${DECODING_POSITION_LABEL[active.positionFocus]}에 집중해서 또박또박 읽어 봐요.`;
+
   return (
     <section data-testid="decoding-game" aria-label="소리 내어 읽기">
       {/* 진행 */}
@@ -93,9 +97,10 @@ export function DecodingGameClient({ items }: DecodingGameClientProps) {
           {active.word}
         </p>
       </div>
-      <p className="mb-6 text-center text-xs text-gray-500 dark:text-gray-400">
-        {DECODING_POSITION_LABEL[active.positionFocus]}에 집중해서 또박또박 읽어 봐요.
-      </p>
+      <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
+        <p className="text-center text-xs text-gray-500 dark:text-gray-400">{instruction}</p>
+        <ReadAloudButton text={instruction} label="듣기" />
+      </div>
 
       {/* 입력 — STT 지원 시 마이크, 미지원 시 부모 확인 */}
       {stt.supported ? (

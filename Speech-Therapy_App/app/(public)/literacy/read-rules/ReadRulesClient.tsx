@@ -8,6 +8,7 @@
 
 import { useMemo, useState } from "react";
 
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
 import type { ReadRuleItem } from "@/lib/literacy/read-rules-content";
 import {
   scoreReadRuleAttempt,
@@ -127,9 +128,13 @@ export function ReadRulesClient({ items }: ReadRulesClientProps) {
       >
         {active.word}
       </p>
-      <p className="mb-5 text-center text-base font-semibold text-gray-800 dark:text-gray-200" data-testid="read-rules-prompt">
+      <p className="mb-2 text-center text-base font-semibold text-gray-800 dark:text-gray-200" data-testid="read-rules-prompt">
         이 낱말은 어떻게 소리 날까요?
       </p>
+      {/* 지시문만 읽어줌 — 낱말(read-rules-word) 발음은 과제(아이가 소리 고름)라 누설 금지. */}
+      <div className="mb-5 flex flex-wrap items-center justify-center gap-3">
+        <ReadAloudButton text="이 낱말은 어떻게 소리 날까요?" label="듣기" />
+      </div>
 
       {/* 선택지 (바른 소리 vs 글자 그대로 소리) */}
       <div className="grid grid-cols-2 gap-3" data-testid="read-rules-choices">

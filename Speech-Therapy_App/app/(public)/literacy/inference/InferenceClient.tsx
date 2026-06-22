@@ -9,6 +9,7 @@
 
 import { useState } from "react";
 
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
 import {
   INFERENCE_SCENARIOS,
   INFERENCE_LEVEL_LABEL,
@@ -42,6 +43,10 @@ export function InferenceClient() {
         <p className="mt-1 text-lg leading-relaxed text-gray-900 dark:text-gray-100" data-testid="inference-situation">
           {scenario.situation}
         </p>
+        {/* 가이드형(채점 없음) — 시나리오 읽어주기 OK. */}
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <ReadAloudButton text={scenario.situation} label="듣기" />
+        </div>
       </div>
 
       {/* 인트로 */}
@@ -64,9 +69,13 @@ export function InferenceClient() {
           <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
             {step + 1} / {TOTAL} · {INFERENCE_LEVEL_LABEL[scenario.questions[step].level]}
           </p>
-          <p className="mb-6 text-xl font-semibold text-gray-900 dark:text-gray-100" data-testid="inference-prompt">
+          <p className="mb-2 text-xl font-semibold text-gray-900 dark:text-gray-100" data-testid="inference-prompt">
             {scenario.questions[step].prompt}
           </p>
+          {/* 가이드형(채점 없음) — 질문 읽어주기 OK. */}
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <ReadAloudButton text={scenario.questions[step].prompt} label="듣기" />
+          </div>
           <p className="mb-5 text-center text-sm text-gray-500 dark:text-gray-400">
             아이가 자유롭게 대답하면, 따뜻하게 들어주고 다음으로 넘어가요.
           </p>

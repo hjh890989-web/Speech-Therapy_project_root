@@ -21,6 +21,8 @@ import {
   type PaScore,
 } from "@/lib/literacy/phonological-awareness";
 import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
+import { useReadAloud } from "@/lib/literacy/use-read-aloud";
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
 
 interface PaGameClientProps {
   items: PaItem[];
@@ -47,6 +49,7 @@ export function PaGameClient({ items }: PaGameClientProps) {
   const [scOpen, setScOpen] = useState(false);
   const [feedback, setFeedback] = useState<"correct" | "retry" | "moveon" | null>(null);
   const [locked, setLocked] = useState(false);
+  const speak = useReadAloud();
 
   const item = index < items.length ? items[index] : null;
   // 선택지는 아이템 바뀔 때만 셔플 (재렌더마다 순서 변경 방지).
@@ -101,6 +104,7 @@ export function PaGameClient({ items }: PaGameClientProps) {
 
   function handleChoice(choice: string) {
     if (locked) return;
+    speak(choice); // 글 못 읽는 아이용 — 고른 선택지를 소리로 들려줌.
 
     if (phase === "answering") {
       if (choice === active.answer) {
@@ -133,10 +137,13 @@ export function PaGameClient({ items }: PaGameClientProps) {
         {index + 1} / {items.length}
       </p>
 
-      {/* 지시문 */}
-      <p className="mb-5 text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="pa-prompt">
-        {active.prompt}
-      </p>
+      {/* 지시문 + 읽어주기(글 못 읽는 아이용) */}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
+        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="pa-prompt">
+          {active.prompt}
+        </p>
+        <ReadAloudButton text={active.prompt} label="듣기" />
+      </div>
 
       {/* 선택지 */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="pa-choices">

@@ -14,6 +14,7 @@ import {
 } from "@/lib/literacy/vocabulary";
 import { VOCAB_CATEGORY_LABEL } from "@/lib/literacy/vocabulary-content";
 import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
 
 const NAMING = buildVocabNamingSession();
 const SORTING = buildVocabSortingRounds();
@@ -55,9 +56,12 @@ export function VocabularyClient() {
           data-testid="vocabulary-naming-card"
         >
           <span className="text-7xl" aria-hidden="true">{item.emoji}</span>
-          <p className="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="vocabulary-word">
-            {item.word}
-          </p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="vocabulary-word">
+              {item.word}
+            </p>
+            <ReadAloudButton text={item.word} label="듣기" />
+          </div>
         </div>
         <p className="mb-5 text-center text-sm text-gray-500 dark:text-gray-400">
           그림을 보고 아이가 이름을 소리 내어 말하면, 따뜻하게 호응하고 다음으로 넘어가요.
@@ -88,9 +92,15 @@ export function VocabularyClient() {
         <p className="mb-2 text-center text-xs text-gray-500 dark:text-gray-400">
           같은 것 찾기 · {sortingIdx + 1} / {SORTING.length}
         </p>
-        <p className="mb-5 text-center text-xl font-semibold text-gray-900 dark:text-gray-100" data-testid="vocabulary-sorting-prompt">
-          <strong>{VOCAB_CATEGORY_LABEL[round.target]}</strong>은 어느 것일까요?
-        </p>
+        <div className="mb-5 flex flex-wrap items-center justify-center gap-3">
+          <p className="text-center text-xl font-semibold text-gray-900 dark:text-gray-100" data-testid="vocabulary-sorting-prompt">
+            <strong>{VOCAB_CATEGORY_LABEL[round.target]}</strong>은 어느 것일까요?
+          </p>
+          <ReadAloudButton
+            text={`${VOCAB_CATEGORY_LABEL[round.target]}은 어느 것일까요?`}
+            label="듣기"
+          />
+        </div>
         <div className="mb-5 flex justify-center gap-3" role="group" aria-label="보기">
           {round.choices.map((c) => {
             const isTarget = c.category === round.target;

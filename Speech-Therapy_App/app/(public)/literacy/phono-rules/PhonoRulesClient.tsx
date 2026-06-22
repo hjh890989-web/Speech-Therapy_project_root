@@ -11,6 +11,7 @@ import { useState } from "react";
 import { buildPhonoRulesSession, buildPhonoChoices } from "@/lib/literacy/phono-rules";
 import { PHONO_RULE_LABEL } from "@/lib/literacy/phono-rules-content";
 import { useSaveLiteracyResultOnce } from "@/lib/literacy/use-save-result";
+import { ReadAloudButton } from "@/components/literacy/ReadAloudButton";
 
 const SESSION = buildPhonoRulesSession();
 
@@ -65,9 +66,12 @@ export function PhonoRulesClient() {
         </p>
       </div>
 
-      <p className="mb-4 text-center text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="phono-rules-prompt">
-        자연스럽게 읽으면 어떤 소리가 날까요?
-      </p>
+      <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
+        <p className="text-center text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="phono-rules-prompt">
+          자연스럽게 읽으면 어떤 소리가 날까요?
+        </p>
+        <ReadAloudButton text="자연스럽게 읽으면 어떤 소리가 날까요?" label="듣기" />
+      </div>
       <div className="mb-5 flex justify-center gap-3" role="group" aria-label="보기">
         {choices.map((c) => {
           const isPicked = picked === c.text;
