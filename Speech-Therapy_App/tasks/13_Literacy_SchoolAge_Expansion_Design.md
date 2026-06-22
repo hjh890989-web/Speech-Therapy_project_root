@@ -144,7 +144,7 @@ model LiteracyResult {
 | **1c 영속** | `LiteracyResult` 모델 + 마이그레이션 + `saveLiteracyResult` 서버액션 + 테스트 | 인라인 | ✅ (migrate deploy 완료) |
 | **2 임상검증** | 학령기 규준 원문대조 workflow | workflow | ✅ 완료(§5) |
 | **3a 영속 wiring** | 기존 9게임 *Client → `useSaveLiteracyResultOnce` → `saveLiteracyResult` (childAgeMonths 서버조회로 리팩터) | 인라인 | ✅ |
-| **3b 학령기 콘텐츠** | S2~S4 신규 게임/probe 콘텐츠 + (검증 0건이라 밴드 없이 연습-only) | 인라인 | ⏳ |
+| **3b 학령기 콘텐츠** | S2~S4 신규 게임/probe 콘텐츠 (검증 0건 → 밴드 없이 연습-only) — **첫 게임: S2 받아쓰기·철자** ✅ / 잔여 S2 해독심화·S3 유창성·이해·S4 추론·형태소 ⏳ | 인라인 | 🟡 진행 |
 | **4 리포트** | 주간리포트 문해력 축(LiteracyResult 집계) | 인라인 | ⏳ |
 
 **Phase 3a 영속 wiring 상세(2026-06-22)**: 공용 훅 [`lib/literacy/use-save-result.ts`](../lib/literacy/use-save-result.ts) `useSaveLiteracyResultOnce`(완료 시 1회 fire-and-forget, 실패해도 놀이 불방해, sentRef 가드). 액션 리팩터 = `childAgeMonths`를 클라 입력에서 제거하고 **인증 User 에서 서버 조회**(stage 와 함께 클라 신뢰 X). 게임별 rawScore 의미(gameSlug 로 해석):
