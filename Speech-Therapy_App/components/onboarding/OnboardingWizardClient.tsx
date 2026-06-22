@@ -46,6 +46,7 @@ import {
   ALLOWED_PHONEMES,
   CHILD_AGE_MAX_MONTHS,
   CHILD_AGE_MIN_MONTHS,
+  SPEECH_PHONEME_AGE_MAX_MONTHS,
   type AllowedPhoneme,
 } from "@/app/actions/onboarding-save-child-shape";
 import { markOnboardingCompletedInDb } from "@/app/actions/mark-onboarding-completed";
@@ -286,12 +287,15 @@ export function OnboardingWizardClient({
     goToNextStep(3);
   }, [goToNextStep]);
 
+  // CR-2026-009 — 학령기(만 7세 초과)는 발음 미션 비대상 → 음소 0개 허용(읽기·말 놀이 중심).
+  const isSchoolAge = childAgeMonths > SPEECH_PHONEME_AGE_MAX_MONTHS;
+
   /** 음소 토글. */
   const togglePhoneme = useCallback((p: AllowedPhoneme) => {
     setSelectedPhonemes((prev) => {
       if (prev.includes(p)) {
-        // 최소 1개는 유지.
-        if (prev.length === 1) return prev;
+        // 만 2~7세는 최소 1개 유지 / 학령기는 0개까지 허용(선택사항).
+        if (!isSchoolAge && prev.length === 1) return prev;
         return prev.filter((x) => x !== p);
       }
       if (prev.length >= NAMESPACE_PHONEME_LIMIT) {
@@ -300,7 +304,7 @@ export function OnboardingWizardClient({
       }
       return [...prev, p];
     });
-  }, []);
+  }, [isSchoolAge]);
 
   const progressPct = useMemo(
     () => Math.round(((step - MIN_STEP + 1) / (MAX_STEP - MIN_STEP + 1)) * 100),
@@ -509,8 +513,18 @@ function Step2ChildInfo({
 
       <div className="space-y-3 rounded-lg bg-sky-50 p-5">
         <p className="text-lg font-semibold text-sky-900">
-          어떤 발음이 궁금하세요? (1~2개)
+          {childAgeMonths > SPEECH_PHONEME_AGE_MAX_MONTHS
+            ? "어떤 발음이 궁금하세요? (선택)"
+            : "어떤 발음이 궁금하세요? (1~2개)"}
         </p>
+        {childAgeMonths > SPEECH_PHONEME_AGE_MAX_MONTHS && (
+          <p
+            data-testid="onboarding-phoneme-optional-note"
+            className="text-sm text-sky-800"
+          >
+            큰 아이는 읽기·말 놀이 중심이에요. 발음이 궁금하면 골라도 좋아요(선택).
+          </p>
+        )}
         <div
           data-testid="onboarding-phoneme-group"
           role="group"

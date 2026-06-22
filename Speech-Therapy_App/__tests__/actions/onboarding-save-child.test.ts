@@ -133,9 +133,28 @@ describe("saveChildInfo — FR-C-PARENT-ONBOARDING", () => {
     expect(result.success).toBe(true);
   });
 
-  it("phonemes 빈 배열 → invalid_phonemes", async () => {
+  it("phonemes 빈 배열 (만2~7) → invalid_phonemes", async () => {
     getUserMock.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
     const result = await saveChildInfo({ childAgeMonths: 48, targetPhonemes: [] });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.reason).toBe("invalid_phonemes");
+  });
+
+  // CR-2026-009 온보딩 음소 연령분기 — 학령기(만 7세 초과=84개월 초과)는 음소 0개 허용.
+  it("학령기(120) + 음소 0개 → success (읽기·말 놀이 중심)", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
+    updateMock.mockResolvedValue({ id: USER_ID, childAgeMonths: 120 });
+    const result = await saveChildInfo({ childAgeMonths: 120, targetPhonemes: [] });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.childAgeMonths).toBe(120);
+      expect(result.targetPhonemes).toEqual([]);
+    }
+  });
+
+  it("경계: 만 7세(84) 정확히 → 음소 0개 거부(아직 1~2개 필수)", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: USER_ID } }, error: null });
+    const result = await saveChildInfo({ childAgeMonths: 84, targetPhonemes: [] });
     expect(result.success).toBe(false);
     if (!result.success) expect(result.reason).toBe("invalid_phonemes");
   });

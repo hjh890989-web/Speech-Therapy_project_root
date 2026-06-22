@@ -29,6 +29,7 @@ import {
   ALLOWED_PHONEMES,
   CHILD_AGE_MIN_MONTHS,
   CHILD_AGE_MAX_MONTHS,
+  SPEECH_PHONEME_AGE_MAX_MONTHS,
   type AllowedPhoneme,
   type SaveChildInfoInput,
   type SaveChildInfoResult,
@@ -80,15 +81,20 @@ export async function saveChildInfo(
     };
   }
 
-  // 3) phoneme 검증 — 1~2개 + 화이트리스트.
+  // 3) phoneme 검증 — 만 2~7세 1~2개 필수 / **학령기(만 7세 초과)는 0~2개**(선택, CR-2026-009).
+  //    학령기는 발음 미션 비대상(읽기·말 놀이 중심) → 음소 미선택 허용.
   const rawPhonemes = Array.isArray(input?.targetPhonemes)
     ? input.targetPhonemes
     : [];
-  if (rawPhonemes.length < 1 || rawPhonemes.length > 2) {
+  const isSchoolAge = age > SPEECH_PHONEME_AGE_MAX_MONTHS;
+  const minPhonemes = isSchoolAge ? 0 : 1;
+  if (rawPhonemes.length < minPhonemes || rawPhonemes.length > 2) {
     return {
       success: false,
       reason: "invalid_phonemes",
-      message: "관심 음소는 1~2개 선택해 주세요.",
+      message: isSchoolAge
+        ? "관심 음소는 최대 2개까지 선택할 수 있어요."
+        : "관심 음소는 1~2개 선택해 주세요.",
     };
   }
   const allowedSet = new Set<string>(ALLOWED_PHONEMES);

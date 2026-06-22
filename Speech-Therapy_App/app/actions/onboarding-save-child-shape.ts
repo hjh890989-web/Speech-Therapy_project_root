@@ -15,6 +15,13 @@ export type AllowedPhoneme = (typeof ALLOWED_PHONEMES)[number];
 export const CHILD_AGE_MIN_MONTHS = 24;
 export const CHILD_AGE_MAX_MONTHS = 144;
 
+/**
+ * 발음 음소 선택이 의미 있는 연령 상한(만 7세 = 84개월).
+ * CR-2026-009 온보딩 음소 연령분기: 이 값을 **초과(학령기)** 하면 발음 미션 비대상 →
+ * 온보딩 음소 선택을 **선택사항(0개 허용)** 으로 완화(읽기·말 놀이 중심). 만 2~7세는 1~2개 필수 유지.
+ */
+export const SPEECH_PHONEME_AGE_MAX_MONTHS = 84;
+
 /** wizard Step 2 입력. */
 export interface SaveChildInfoInput {
   /** 자녀 월령 (24~144). */

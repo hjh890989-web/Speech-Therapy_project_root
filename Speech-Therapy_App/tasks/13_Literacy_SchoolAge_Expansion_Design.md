@@ -59,7 +59,7 @@
 
 ✅ **회귀 우려(프리필) 해소 확인**: diagnose 프리필은 이미 `>84 → null` 가드([diagnose/page.tsx](../app/(public)/diagnose/page.tsx)), DiagnosisForm 입력은 `min=24 max=84`로 제한, `diagnosis.ts`는 84 유지 → **>84 자녀가 등록돼도 발음 diagnose 크래시 없음**(graceful). 우려했던 하드 회귀는 실재하지 않음.
 
-⏳ **Phase 3 런치 번들로 연기(문서화)**: ① 마케팅/법적 포지셔닝 카피(landing FAQ·terms "만 2~7세 발음 서비스") ② 온보딩 음소선택의 연령별 분기(만8+는 발음 음소 선택 불필요) ③ literacy 게임 연령상한 단계별 상향. — literacy 플래그 off 동안 prod 라이브 표면 없음 → 카피는 실제 런치와 동반 갱신.
+**Phase 3 런치 번들 진행**: ① 포지셔닝 카피 — **초안 작성 완료** [`docs/positioning-copy-draft_CR009.md`](../docs/positioning-copy-draft_CR009.md)(런치 시 적용·약관/처리방침 법률 재확인 전제, 미출시 광고 회피로 라이브 미반영). ② 온보딩 음소 연령분기 — **✅ 구현 완료**(만 7세 초과 시 음소 0개 허용 + 안내, `SPEECH_PHONEME_AGE_MAX_MONTHS=84`, saveChildInfo/wizard/테스트). ③ literacy 게임 연령상한 단계별 상향 = 게임별 콘텐츠와 함께(잔여).
 
 ---
 
