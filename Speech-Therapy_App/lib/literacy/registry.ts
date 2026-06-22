@@ -14,6 +14,7 @@ import { isNwrEnabled } from "./nonword-repetition";
 import { isNarrativeEnabled } from "./narrative";
 import { isPhonoRulesEnabled } from "./phono-rules";
 import { isSpellingEnabled } from "./spelling";
+import { isReadRulesEnabled } from "./read-rules";
 import { stageForAgeMonths, type LiteracyStageId } from "./stages";
 
 export interface LiteracyGameMeta {
@@ -40,6 +41,7 @@ export const LITERACY_GAMES: readonly LiteracyGameMeta[] = [
   { slug: "decoding", title: "소리 내어 읽기", emoji: "🔡", blurb: "글자와 소리를 맞춰 또박또박 읽어 보아요.", isEnabled: isDecodingEnabled, stage: "S1" },
   { slug: "phono-rules", title: "소리 변신 놀이", emoji: "🔁", blurb: "글자와 다르게 나는 소리를 알아맞혀 보아요.", isEnabled: isPhonoRulesEnabled, stage: "S2" },
   { slug: "spelling", title: "받아쓰기 놀이", emoji: "✏️", blurb: "소리를 듣고 바르게 쓴 글자를 골라 보아요.", isEnabled: isSpellingEnabled, stage: "S2" },
+  { slug: "read-rules", title: "소리 규칙 읽기", emoji: "📣", blurb: "낱말이 어떻게 소리 나는지 골라 보아요.", isEnabled: isReadRulesEnabled, stage: "S2" },
   { slug: "ran", title: "빨리 이름대기", emoji: "⚡", blurb: "그림을 보고 빠르게 이름을 말해 보아요.", isEnabled: isRanEnabled, stage: "S1" },
   { slug: "reading-fluency", title: "또박또박 읽기", emoji: "📃", blurb: "짧은 글을 리듬을 살려 읽어 보아요.", isEnabled: isFluencyEnabled, stage: "S3" },
   { slug: "inference", title: "생각 나누기", emoji: "💭", blurb: "짧은 이야기로 함께 생각을 나눠 보아요.", isEnabled: isInferenceEnabled, stage: "S4" },

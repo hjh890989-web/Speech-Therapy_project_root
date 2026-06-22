@@ -63,3 +63,11 @@ STOP REASON: QUEUE_EMPTY
 
 - `e2e/literacy.spec.ts` — 공개(무인증) Playwright spec. 플래그 off 기본 상태 회귀 가드: 허브 `/literacy` 빈 상태 + 신규 4게임(vocabulary·nonword-repetition·narrative·phono-rules) '준비 중' 휴면 + 면책 노출. 플래그 on 흐름은 서버 env 제어 필요 → 단위 테스트가 로직 커버.
 - 검증: `npx playwright test e2e/literacy.spec.ts --project=chromium-desktop` → **5 passed** (webServer 자동 부팅). discovery 10 tests(데스크탑+모바일). 모바일/CI/prod(PLAYWRIGHT_BASE_URL)에서도 동일.
+
+## 후속 4 — Phase 3b /goal 큐 (학령기 S2~S4 '연습' 게임, CR-2026-009)
+
+> 기존 만2-7 게임이 84개월에 잘려 S0-S1만 커버 → 학령기(초1~6) 신규 게임 추가. **연습-only**(임상밴드 0건,
+> Phase 2 검증). 자체 콘텐츠(저작권 §7). 영속은 `useSaveLiteracyResultOnce`→raw만. 고정 큐 4종.
+> 베이스라인: ⓪ spelling(받아쓰기, S2) 커밋 완료 — 참조 템플릿.
+
+- [x] **① read-rules (소리 규칙 읽기)** — 불일치형 음운규칙 해독(받아쓰기의 역: 낱말 보고 '바른 소리' 고르기). 5규칙(경음화·연음화·비음화·기식음화·구개음화)×5=25 자체 아이템. 난이도 위계 **잠정**(정렬용, 철자 S113 수치 미적용=읽기와 별개). 연령 84~119(초1~3, S2). 플래그 `LITERACY_READ_RULES_ENABLED`(off). registry 11번째. gate: tsc0 · vitest 19(read-rules 13 + registry 6) · eslint0.

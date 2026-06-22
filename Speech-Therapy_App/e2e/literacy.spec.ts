@@ -14,6 +14,7 @@ const COMING_SOON = [
   { path: "/literacy/narrative", testId: "narrative-coming-soon" },
   { path: "/literacy/phono-rules", testId: "phono-rules-coming-soon" },
   { path: "/literacy/spelling", testId: "spelling-coming-soon" },
+  { path: "/literacy/read-rules", testId: "read-rules-coming-soon" },
 ];
 
 test.describe("읽기·말 놀이 허브 (플래그 off 기본)", () => {
