@@ -73,3 +73,6 @@ STOP REASON: QUEUE_EMPTY
 - [x] **① read-rules (소리 규칙 읽기)** — 불일치형 음운규칙 해독(받아쓰기의 역: 낱말 보고 '바른 소리' 고르기). 5규칙(경음화·연음화·비음화·기식음화·구개음화)×5=25 자체 아이템. 난이도 위계 **잠정**(정렬용, 철자 S113 수치 미적용=읽기와 별개). 연령 84~119(초1~3, S2). 플래그 `LITERACY_READ_RULES_ENABLED`(off). registry 11번째. gate: tsc0 · vitest 19(read-rules 13 + registry 6) · eslint0.
 - [x] **② reading-comprehension (글 읽고 답하기)** — 사실적 읽기이해(짧은 자체 지문 + 사실 확인 3지선다). 자체 창작 지문 3편 × 문항 3 = 9 카드(정답=지문에 직접 제시, look-back 권장). **시간압박 없는 자유 재시도**(SC 3초 타이머 미적용 — 속도 아닌 이해). 연령 108~131(초3~4, S3). 플래그 `LITERACY_COMPREHENSION_ENABLED`(off). registry 12번째. gate: tsc0 · vitest 18(comprehension 12 + registry 6) · eslint0.
 - [x] **③ inference-reading (숨은 뜻 찾기)** — 추론 독해(지문 단서로 인물 마음·까닭·결과 유추, 정답이 지문에 직접 노출 X — 테스트로 가드). 자체 지문 3편 × 추론 문항 3 = 9 카드. 자유 재시도. 연령 132~144(초5~6, S4). **기존 `inference`(만5-7 가이드형)와 별개 슬러그/플래그** `LITERACY_INFERENCE_READING_ENABLED`(off). registry 13번째. gate: tsc0 · vitest 19(inference-reading 13 + registry 6) · eslint0.
+- [x] **④ morphology (낱말 조각 놀이)** — 형태소 인식(합성어 만들기·파생어 만들기·형태소 분석 3유형 객관식). 자체 15문항(3유형×5). 난이도 위계 잠정(합성<파생<분석, 정렬용). SC 3초 재시도. 연령 120~144(초4~6, S4). 플래그 `LITERACY_MORPHOLOGY_ENABLED`(off). registry 14번째. gate: tsc0 · vitest 19(morphology 13 + registry 6) · eslint0.
+
+**STOP REASON: QUEUE_EMPTY** (4종 완료). 최종 전체 게이트는 아래 "큐 종료" 참조.

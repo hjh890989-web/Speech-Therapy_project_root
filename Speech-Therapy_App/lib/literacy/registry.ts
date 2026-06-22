@@ -17,6 +17,7 @@ import { isSpellingEnabled } from "./spelling";
 import { isReadRulesEnabled } from "./read-rules";
 import { isComprehensionEnabled } from "./reading-comprehension";
 import { isInferenceReadingEnabled } from "./inference-reading";
+import { isMorphologyEnabled } from "./morphology";
 import { stageForAgeMonths, type LiteracyStageId } from "./stages";
 
 export interface LiteracyGameMeta {
@@ -49,6 +50,7 @@ export const LITERACY_GAMES: readonly LiteracyGameMeta[] = [
   { slug: "reading-comprehension", title: "글 읽고 답하기", emoji: "📖", blurb: "짧은 글을 읽고 내용에 맞는 답을 골라 보아요.", isEnabled: isComprehensionEnabled, stage: "S3" },
   { slug: "inference", title: "생각 나누기", emoji: "💭", blurb: "짧은 이야기로 함께 생각을 나눠 보아요.", isEnabled: isInferenceEnabled, stage: "S4" },
   { slug: "inference-reading", title: "숨은 뜻 찾기", emoji: "🔎", blurb: "글을 읽고 드러나지 않은 뜻을 헤아려 보아요.", isEnabled: isInferenceReadingEnabled, stage: "S4" },
+  { slug: "morphology", title: "낱말 조각 놀이", emoji: "🧩", blurb: "낱말을 합치고 나누며 숨은 뜻을 찾아 보아요.", isEnabled: isMorphologyEnabled, stage: "S4" },
   { slug: "narrative", title: "이야기 놀이", emoji: "📖", blurb: "이야기를 차례대로 다시 말해 보아요.", isEnabled: isNarrativeEnabled, stage: "S0" },
 ];
 

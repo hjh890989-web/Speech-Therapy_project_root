@@ -25,12 +25,13 @@ const KNOWN_SLUGS = new Set([
   "reading-comprehension",
   "inference",
   "inference-reading",
+  "morphology",
   "narrative",
 ]);
 
 describe("literacy registry — 무결성", () => {
-  it("13개 게임, slug 유일 + 알려진 라우트와 매칭, 모든 필드 채움", () => {
-    expect(LITERACY_GAMES.length).toBe(13);
+  it("14개 게임, slug 유일 + 알려진 라우트와 매칭, 모든 필드 채움", () => {
+    expect(LITERACY_GAMES.length).toBe(14);
     expect(new Set(LITERACY_GAMES.map((g) => g.slug)).size).toBe(LITERACY_GAMES.length);
     for (const g of LITERACY_GAMES) {
       expect(KNOWN_SLUGS.has(g.slug), `미지의 slug ${g.slug}`).toBe(true);
@@ -64,6 +65,7 @@ describe("enabledLiteracyGames — 플래그 필터", () => {
     "LITERACY_READ_RULES_ENABLED",
     "LITERACY_COMPREHENSION_ENABLED",
     "LITERACY_INFERENCE_READING_ENABLED",
+    "LITERACY_MORPHOLOGY_ENABLED",
   ];
   const saved: Record<string, string | undefined> = {};
   for (const f of FLAGS) saved[f] = process.env[f];
@@ -104,6 +106,7 @@ describe("stage 라우팅 — enabledGamesForStage / enabledGamesForAge", () => 
     "LITERACY_READ_RULES_ENABLED",
     "LITERACY_COMPREHENSION_ENABLED",
     "LITERACY_INFERENCE_READING_ENABLED",
+    "LITERACY_MORPHOLOGY_ENABLED",
   ];
   const saved: Record<string, string | undefined> = {};
   for (const f of FLAGS) saved[f] = process.env[f];
