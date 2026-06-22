@@ -101,8 +101,44 @@ export default async function WeeklyReviewPage() {
   const displayWeekNumber = data.latest?.weekNumber ?? currentWeek;
   const displayYear = data.latest?.year ?? currentYear;
 
-  // ---- 빈 상태 분기 (가입 직후 / cron 미실행) ----
+  // FR-Q-LIT — 이번 주 문해력 놀이 활동량(on-read, 연습-only). **발음 리포트 유무와 독립** →
+  //   학령기/문해력-only 가정(발음 미션 비대상)도 카드 표시. 플래그 off(prod) → null → 미렌더(회귀 0).
+  const literacySummary = await loadLiteracyWeekly(me.userId, displayYear, displayWeekNumber);
+
+  // ---- 빈 상태 / 문해력-only 분기 ----
   if (!data.hasData || data.latest === null) {
+    // 발음 WeeklyReport 는 없지만 문해력 활동이 있으면 — 문해력-only 뷰(학령기/문해력만 하는 가정).
+    //   리포트 기둥이 확장 타깃(만8~12 발음 비대상)에서도 작동하도록.
+    if (literacySummary !== null) {
+      return (
+        <PageShell childAgeMonths={me.childAgeMonths} year={displayYear} weekNumber={displayWeekNumber}>
+          <WeeklyReviewBeacon
+            userId={me.userId}
+            hasData={true}
+            wAurAchieved={false}
+            weekNumber={displayWeekNumber}
+          />
+          <p
+            data-testid="weekly-review-literacy-only-intro"
+            className="mb-6 text-sm text-slate-600 dark:text-slate-400"
+          >
+            이번 주 읽기·말 놀이 활동을 정리했어요.
+          </p>
+          <div className="mb-6">
+            <WeeklyReviewLiteracy summary={literacySummary} />
+          </div>
+          <section className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+            <Link
+              href="/literacy/start"
+              data-testid="weekly-review-literacy-cta"
+              className="inline-flex min-h-[44px] items-center rounded-md border border-violet-600 px-5 py-2.5 text-sm font-semibold text-violet-700 hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-400 dark:border-violet-400 dark:text-violet-300 dark:hover:bg-violet-950/30"
+            >
+              읽기·말 놀이 계속하기 →
+            </Link>
+          </section>
+        </PageShell>
+      );
+    }
     return (
       <PageShell childAgeMonths={me.childAgeMonths} year={displayYear} weekNumber={displayWeekNumber}>
         <WeeklyReviewBeacon
@@ -144,10 +180,6 @@ export default async function WeeklyReviewPage() {
   const variationSummary = parsedTrend.success
     ? summarizeWeeklyVariations(parsedTrend.data)
     : { detectedSessions: 0, topPatterns: [], hasDelayed: false };
-
-  // FR-Q-LIT (Phase 4) — 이번 주 문해력 놀이 활동량(latest 주차 기준 on-read 집계, 연습-only).
-  //   놀이 플래그 off(prod) → 영속 0건 → null → 카드 미렌더(회귀 0).
-  const literacySummary = await loadLiteracyWeekly(me.userId, displayYear, displayWeekNumber);
 
   // 4주 trend chart 입력 — history desc → 시간 오름차순 변환 + latest 추가.
   // 의미 있는 추이는 ≥ 2주부터 — history 0건이면 chart 미렌더.
