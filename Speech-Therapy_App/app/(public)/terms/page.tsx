@@ -6,6 +6,7 @@
 
 import Link from "next/link";
 import { COMPANY_INFO, COMPANY_INFO_FINALIZED } from "@/lib/company-info";
+import { enabledLiteracyGames } from "@/lib/literacy/registry";
 
 export const metadata = {
   title: "이용약관 — Speech-Therapy",
@@ -14,6 +15,11 @@ export const metadata = {
 };
 
 export default function TermsOfServicePage() {
+  // CR-2026-009 — 서비스 범위(연령·도메인) 문구를 현재 활성 기능과 일치시킨다.
+  //   literacy 플래그 off(현재) → 만 2~7세 발음 문구 / on → 만 2~12세 발음+문해 문구.
+  //   ⚠️ 확장 문구(on)는 약관 material change → literacy 플래그 on(공개 런치) 전 PIPA/의료기기
+  //      변호사 재확인 필요(2026-05-30 자문은 만2-7 발음 기준). 정적 페이지=빌드 시점 평가.
+  const literacyLive = enabledLiteracyGames().length > 0;
   return (
     <main
       data-testid="terms-of-service-page"
@@ -49,7 +55,12 @@ export default function TermsOfServicePage() {
         <section>
           <h2>제2조 (서비스의 정의 — 의료기기 아님)</h2>
           <ul>
-            <li>본 서비스는 만 2~7세 자녀의 발음 발달을 부모(법정대리인)가 직접 확인·안내할 수 있도록 돕는 <strong>발달 가이드용 보조 도구</strong>예요.</li>
+            <li>
+              {literacyLive
+                ? "본 서비스는 만 2~7세 자녀의 발음 발달과 만 2~12세 자녀의 읽기·말(문해) 발달을 부모(법정대리인)가 직접 확인·안내할 수 있도록 돕는 "
+                : "본 서비스는 만 2~7세 자녀의 발음 발달을 부모(법정대리인)가 직접 확인·안내할 수 있도록 돕는 "}
+              <strong>발달 가이드용 보조 도구</strong>예요.
+            </li>
             <li>본 서비스는 <strong>의료기기가 아니며, 의료적 진단·치료·처방을 제공하지 않아요</strong>. 의학적 평가가 필요한 경우 의료기관을 방문해 주세요.</li>
             <li>발달 점수·또래 백분위 등 안내는 일반적인 발달 참고 자료이며, 개별 진단을 대체하지 않아요.</li>
           </ul>

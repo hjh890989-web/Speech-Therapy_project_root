@@ -6,6 +6,7 @@
 
 import Link from "next/link";
 import { COMPANY_INFO, COMPANY_INFO_FINALIZED } from "@/lib/company-info";
+import { enabledLiteracyGames } from "@/lib/literacy/registry";
 
 export const metadata = {
   title: "개인정보 처리방침 — Speech-Therapy",
@@ -14,6 +15,9 @@ export const metadata = {
 };
 
 export default function PrivacyPolicyPage() {
+  // CR-2026-009 — 서비스 범위 문구를 현재 활성 기능과 일치(off=만2-7 발음 / on=만2-12 발음+문해).
+  //   ⚠️ 확장 문구는 literacy 플래그 on 전 PIPA/의료기기 변호사 재확인 필요. 정적=빌드 시점 평가.
+  const literacyLive = enabledLiteracyGames().length > 0;
   return (
     <main
       data-testid="privacy-policy-page"
@@ -42,8 +46,10 @@ export default function PrivacyPolicyPage() {
           <p>
             {COMPANY_INFO.name}(이하 &ldquo;회사&rdquo;)은 「개인정보 보호법」 및 관련 법령을
             준수하며, Speech-Therapy 서비스(이하 &ldquo;서비스&rdquo;)를 이용하는 정보주체의
-            개인정보를 보호하기 위해 본 방침을 수립·공개해요. 본 서비스는 만 2~7세 자녀의 발음
-            발달을 부모(법정대리인)가 직접 확인·안내할 수 있도록 돕는 발달 가이드용 보조 도구이며,
+            개인정보를 보호하기 위해 본 방침을 수립·공개해요.{" "}
+            {literacyLive
+              ? "본 서비스는 만 2~7세 자녀의 발음 발달과 만 2~12세 자녀의 읽기·말(문해) 발달을 부모(법정대리인)가 직접 확인·안내할 수 있도록 돕는 발달 가이드용 보조 도구이며,"
+              : "본 서비스는 만 2~7세 자녀의 발음 발달을 부모(법정대리인)가 직접 확인·안내할 수 있도록 돕는 발달 가이드용 보조 도구이며,"}
             <strong> 의료기기가 아니에요</strong>(의료적 진단·치료·처방 미제공).
           </p>
         </section>
