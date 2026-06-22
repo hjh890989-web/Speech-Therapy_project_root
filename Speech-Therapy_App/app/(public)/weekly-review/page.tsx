@@ -24,12 +24,14 @@ import { redirect } from "next/navigation";
 
 import { getCachedUser } from "@/lib/auth/cached-get-user";
 import { prisma } from "@/lib/db";
-import { loadWeeklyReview } from "@/lib/reports/weekly-review-loader";
+import { loadWeeklyReview, loadLiteracyWeekly } from "@/lib/reports/weekly-review-loader";
 import { getCurrentWeekNumber, ScoreTrendSchema, summarizeWeeklyVariations } from "@/lib/weekly-report";
 
 import { WeeklyReviewSummary } from "@/components/weekly-review/WeeklyReviewSummary";
 // FR-Q-LIT-02 — 이번 주 음운 변동 추이 카드 (음소 핀셋, display-only).
 import { WeeklyReviewVariations } from "@/components/weekly-review/WeeklyReviewVariations";
+// FR-Q-LIT (Phase 4) — 이번 주 문해력 놀이 활동량 카드 (연습-only, 플래그 off 시 데이터 0 → 미렌더).
+import { WeeklyReviewLiteracy } from "@/components/weekly-review/WeeklyReviewLiteracy";
 // Performance 감사 1차 — Recharts (~80KB gzip) dynamic import 는 본 컴포넌트
 // 내부에서 `next/dynamic` 으로 처리한다 (WeeklyReviewTrend.tsx). page 측은 일반
 // import 로 유지 — 기존 test mock (`vi.mock("@/components/weekly-review/WeeklyReviewTrend")`)
@@ -143,6 +145,10 @@ export default async function WeeklyReviewPage() {
     ? summarizeWeeklyVariations(parsedTrend.data)
     : { detectedSessions: 0, topPatterns: [], hasDelayed: false };
 
+  // FR-Q-LIT (Phase 4) — 이번 주 문해력 놀이 활동량(latest 주차 기준 on-read 집계, 연습-only).
+  //   놀이 플래그 off(prod) → 영속 0건 → null → 카드 미렌더(회귀 0).
+  const literacySummary = await loadLiteracyWeekly(me.userId, displayYear, displayWeekNumber);
+
   // 4주 trend chart 입력 — history desc → 시간 오름차순 변환 + latest 추가.
   // 의미 있는 추이는 ≥ 2주부터 — history 0건이면 chart 미렌더.
   const chartWeeks = [...data.history].reverse().concat([
@@ -196,6 +202,13 @@ export default async function WeeklyReviewPage() {
       {variationSummary.detectedSessions > 0 && (
         <div className="mb-6">
           <WeeklyReviewVariations summary={variationSummary} />
+        </div>
+      )}
+
+      {/* 1.6) 이번 주 읽기·말 놀이 활동 — 문해력 영속 데이터 있을 때만 (FR-Q-LIT, Phase 4) */}
+      {literacySummary !== null && (
+        <div className="mb-6">
+          <WeeklyReviewLiteracy summary={literacySummary} />
         </div>
       )}
 

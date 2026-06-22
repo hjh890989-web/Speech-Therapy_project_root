@@ -51,8 +51,11 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 const loadWeeklyReviewMock = vi.fn();
+const loadLiteracyWeeklyMock = vi.fn();
 vi.mock("@/lib/reports/weekly-review-loader", () => ({
   loadWeeklyReview: (...args: unknown[]) => loadWeeklyReviewMock(...args),
+  // FR-Q-LIT (Phase 4) — 기본 null(문해력 활동 없음 → 카드 미렌더). 기존 시나리오 회귀 0.
+  loadLiteracyWeekly: (...args: unknown[]) => loadLiteracyWeeklyMock(...args),
 }));
 
 // FR-Q-LIT-02 — getCurrentWeekNumber 만 override, 나머지 순수 export(ScoreTrendSchema·
@@ -170,6 +173,8 @@ beforeEach(() => {
   userFindUniqueMock.mockReset();
   getUserMock.mockReset();
   loadWeeklyReviewMock.mockReset();
+  loadLiteracyWeeklyMock.mockReset();
+  loadLiteracyWeeklyMock.mockResolvedValue(null); // 기본: 문해력 활동 없음 → 카드 미렌더(회귀 0).
   redirectMock.mockClear();
   weeklyReportUpdateMock.mockReset();
   weeklyReportUpdateMock.mockResolvedValue({});
@@ -196,6 +201,46 @@ describe("/weekly-review — FR-Q-WEEKLY-REVIEW 부모용 주간 리뷰 페이�
     expect(container.querySelector("[data-testid='weekly-review-child-age']")?.textContent).toContain(
       "48",
     );
+  });
+
+  it("[1-lit] 문해력 활동 있으면 읽기·말 놀이 카드 렌더 (FR-Q-LIT Phase 4)", async () => {
+    setAuthUser(USER_ME);
+    userFindUniqueMock.mockResolvedValueOnce({ childAgeMonths: 96 });
+    loadWeeklyReviewMock.mockResolvedValueOnce({
+      latest: makeRow({ sessionCount: 5 }),
+      history: [],
+      wAurAchieved: true,
+      hasData: true,
+    });
+    loadLiteracyWeeklyMock.mockResolvedValueOnce({
+      totalSessions: 4,
+      activeDays: 2,
+      byStage: [{ stage: "S2", count: 4 }],
+      byGame: [{ gameSlug: "spelling", count: 4 }],
+    });
+
+    const ui = await WeeklyReviewPage();
+    const { container } = render(ui);
+
+    expect(container.querySelector("[data-testid='weekly-review-literacy']")).not.toBeNull();
+    expect(
+      container.querySelector("[data-testid='weekly-review-literacy-summary']")?.textContent,
+    ).toContain("4");
+  });
+
+  it("[1-lit-empty] 문해력 활동 0(null)이면 카드 미렌더", async () => {
+    setAuthUser(USER_ME);
+    userFindUniqueMock.mockResolvedValueOnce({ childAgeMonths: 48 });
+    loadWeeklyReviewMock.mockResolvedValueOnce({
+      latest: makeRow({ sessionCount: 5 }),
+      history: [],
+      wAurAchieved: true,
+      hasData: true,
+    });
+    // loadLiteracyWeeklyMock 기본 null (beforeEach)
+    const ui = await WeeklyReviewPage();
+    const { container } = render(ui);
+    expect(container.querySelector("[data-testid='weekly-review-literacy']")).toBeNull();
   });
 
   it("[2] hasData=false → empty state + /diagnose CTA", async () => {
