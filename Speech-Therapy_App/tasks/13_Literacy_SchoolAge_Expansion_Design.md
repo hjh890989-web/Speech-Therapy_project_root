@@ -165,6 +165,17 @@ model LiteracyResult {
 
 ① NISE-B·ACT 등 표준화 검사 **문항·지문·자극·단어목록·정답 미복제** · ② 앱을 해당 검사로 칭하거나 그 규준 주장 금지 · ③ 자체 콘텐츠·자체 척도 · ④ 비의료·진단 용어("학습장애/난독증") 미노출 · ⑤ CON-04 금칙어("치료/진단/장애") 0 · ⑥ 상업 출시 전 원본성 법률검토.
 
+### 학령기 게임 활성화(플래그 on) 게이트 — 현황 (2026-06-22)
+
+학령기 5종(spelling·read-rules·reading-comprehension·inference-reading·morphology) **플래그 on** 전 두 자문 통과 필요. 발송용 문서 작성 완료(외부 컨택·발송은 제품팀):
+
+| 게이트 | 문서 | 상태 |
+|---|---|---|
+| 임상 자문(KOPLAC) — 콘텐츠·연령·난이도 적절성 | [`docs/clinical-consultation-packet_schoolage-literacy_CR009.md`](../docs/clinical-consultation-packet_schoolage-literacy_CR009.md) | ✅ 작성 / ⏳ 발송·서명 대기 |
+| 원본성 법률 검토(OPS-LIT-01) — 콘텐츠 IP | [`docs/compliance-originality-brief_OPS-LIT-01.md`](../docs/compliance-originality-brief_OPS-LIT-01.md) | ✅ 작성 / ⏳ 발송·의견서 대기 |
+
+> 둘 다 충족(임상 서명 + 법률 의견서) 시 게임별 플래그 활성화. **연습-only**라 임상 자문은 규준 검증이 아닌 *연습 적절성*에 한정.
+
 ---
 
 ## §8. 본 턴 산출 (Phase 0 + 1a + 1d)
