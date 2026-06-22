@@ -17,6 +17,11 @@ import {
   type WaurWeek,
 } from "@/lib/reports/waur-trend";
 import { W_AUR_MIN_MISSIONS } from "@/lib/reports/weekly-aggregator";
+import {
+  getRecentWlerTrend,
+  W_LER_MIN_DAYS,
+  type WlerWeek,
+} from "@/lib/reports/wler-trend";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +48,12 @@ export default async function WaurTrendPage() {
   const trend = await getRecentWaurTrend(new Date(), TREND_WEEKS);
   const latest = trend[0];
   const hasData = trend.some((w) => w.activeUsers > 0);
+
+  // 보조지표 W-LER(주간 문해 활동률, engagement) — ADR_NorthStar_2track (옵션 C 지향·A 1차).
+  //   발음 W-AUR 과 별개 집계(문해 만2~12). 연습-only: target 없음(baseline 축적 중), 추세만.
+  const wlerTrend = await getRecentWlerTrend(new Date(), TREND_WEEKS);
+  const wlerLatest = wlerTrend[0];
+  const wlerHasData = wlerTrend.some((w) => w.activeUsers > 0);
 
   return (
     <main
@@ -170,6 +181,99 @@ export default async function WaurTrendPage() {
           <li>activation funnel(/admin/funnel)은 단일 완료까지 — retention 은 본 W-AUR 표면에서 확인.</li>
         </ul>
       </footer>
+
+      {/* ── 보조지표: W-LER (주간 문해 활동률, engagement) — ADR_NorthStar_2track ── */}
+      <section
+        data-testid="wler-section"
+        aria-labelledby="wler-heading"
+        className="mt-10 border-t border-slate-200 pt-8"
+      >
+        <h2 id="wler-heading" className="text-xl font-bold text-slate-900 sm:text-2xl">
+          주간 문해 활동률 (W-LER){" "}
+          <span className="text-sm font-normal text-slate-500">· 보조지표</span>
+        </h2>
+        <p className="mt-2 text-sm text-slate-600">
+          읽기·말 놀이 트랙(만 2~12세)의 주간 <strong>활동 참여(engagement)</strong> 지표입니다.
+          점수·완수율이 아니라 — 그 주 서로 다른 날 <strong>{W_LER_MIN_DAYS}일 이상</strong> 놀이한
+          사용자 비율이에요. baseline 축적 중이라 목표선은 아직 없습니다(추세만).
+        </p>
+
+        {!wlerHasData ? (
+          <div
+            data-testid="wler-empty-state"
+            aria-label="문해 활동 데이터 없음"
+            className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-6 text-sm text-slate-700"
+          >
+            <p className="mb-2 font-semibold text-slate-900">
+              최근 {TREND_WEEKS}주 문해 활동 없음
+            </p>
+            <p>아직 집계할 읽기·말 놀이 활동이 없어요. 데이터가 쌓이면 활동률 추세가 표시됩니다.</p>
+          </div>
+        ) : (
+          <>
+            <div
+              data-testid="wler-latest-card"
+              className="mt-4 rounded-lg border-2 border-violet-300 bg-violet-50 p-5"
+            >
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-600">
+                최신 주 ({wlerLatest.year}-W{wlerLatest.week}) · 보조지표
+              </p>
+              <p className="mt-1 text-4xl font-bold tabular-nums text-slate-900">
+                {formatPercent(wlerLatest.rate)}
+              </p>
+              <p className="mt-1 text-sm text-slate-700">
+                활동일 {W_LER_MIN_DAYS}일+ 참여 {wlerLatest.engagedUsers}명 / 문해 활동{" "}
+                {wlerLatest.activeUsers}명 · 활동 참여(engagement)
+              </p>
+            </div>
+
+            <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+              <table
+                data-testid="wler-trend-table"
+                className="w-full min-w-[420px] text-left text-sm"
+              >
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th scope="col" className="px-3 py-2">주차</th>
+                    <th scope="col" className="px-3 py-2">문해 활동 사용자</th>
+                    <th scope="col" className="px-3 py-2">참여 (활동일 {W_LER_MIN_DAYS}일+)</th>
+                    <th scope="col" className="px-3 py-2">W-LER</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {wlerTrend.map((w: WlerWeek) => (
+                    <tr
+                      key={`${w.year}-${w.week}`}
+                      data-testid={`wler-row-${w.year}-${w.week}`}
+                      className="border-t border-slate-100 hover:bg-slate-50"
+                    >
+                      <td className="px-3 py-2 font-medium text-slate-900">
+                        {w.year}-W{w.week}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs text-slate-700">
+                        {w.activeUsers}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs text-slate-700">
+                        {w.engagedUsers}
+                      </td>
+                      <td className="px-3 py-2 text-slate-800">
+                        <span data-testid={`wler-rate-${w.year}-${w.week}`}>
+                          {formatPercent(w.rate)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="mt-3 text-xs text-slate-500">
+              ⚠️ W-LER 은 <strong>활동 참여(engagement)</strong> 지표입니다 — 발음 W-AUR(미션 완수율)과
+              달리 점수·또래 비교·판정을 산출하지 않아요. 목표값은 baseline 확보 후 산정합니다.
+            </p>
+          </>
+        )}
+      </section>
     </main>
   );
 }
