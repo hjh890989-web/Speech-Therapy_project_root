@@ -71,3 +71,4 @@ STOP REASON: QUEUE_EMPTY
 > 베이스라인: ⓪ spelling(받아쓰기, S2) 커밋 완료 — 참조 템플릿.
 
 - [x] **① read-rules (소리 규칙 읽기)** — 불일치형 음운규칙 해독(받아쓰기의 역: 낱말 보고 '바른 소리' 고르기). 5규칙(경음화·연음화·비음화·기식음화·구개음화)×5=25 자체 아이템. 난이도 위계 **잠정**(정렬용, 철자 S113 수치 미적용=읽기와 별개). 연령 84~119(초1~3, S2). 플래그 `LITERACY_READ_RULES_ENABLED`(off). registry 11번째. gate: tsc0 · vitest 19(read-rules 13 + registry 6) · eslint0.
+- [x] **② reading-comprehension (글 읽고 답하기)** — 사실적 읽기이해(짧은 자체 지문 + 사실 확인 3지선다). 자체 창작 지문 3편 × 문항 3 = 9 카드(정답=지문에 직접 제시, look-back 권장). **시간압박 없는 자유 재시도**(SC 3초 타이머 미적용 — 속도 아닌 이해). 연령 108~131(초3~4, S3). 플래그 `LITERACY_COMPREHENSION_ENABLED`(off). registry 12번째. gate: tsc0 · vitest 18(comprehension 12 + registry 6) · eslint0.
