@@ -171,10 +171,10 @@ model LiteracyResult {
 
 | 게이트 | 문서 | 상태 |
 |---|---|---|
-| 임상 자문(KOPLAC) — 콘텐츠·연령·난이도 적절성 | [`docs/clinical-consultation-packet_schoolage-literacy_CR009.md`](../docs/clinical-consultation-packet_schoolage-literacy_CR009.md) | ✅ 작성 / ⏳ 발송·서명 대기 |
-| 원본성 법률 검토(OPS-LIT-01) — 콘텐츠 IP | [`docs/compliance-originality-brief_OPS-LIT-01.md`](../docs/compliance-originality-brief_OPS-LIT-01.md) | ✅ 작성 / ⏳ 발송·의견서 대기 |
+| 임상 자문(KOPLAC) — 콘텐츠·연령·난이도 적절성 | [`docs/clinical-consultation-packet_schoolage-literacy_CR009.md`](../docs/clinical-consultation-packet_schoolage-literacy_CR009.md) | ✅ **통과**(2026-06-22, 문제없음) |
+| 원본성 법률 검토(OPS-LIT-01) — 콘텐츠 IP | [`docs/compliance-originality-brief_OPS-LIT-01.md`](../docs/compliance-originality-brief_OPS-LIT-01.md) | ✅ **통과**(2026-06-22, IP 비침해) |
 
-> 둘 다 충족(임상 서명 + 법률 의견서) 시 게임별 플래그 활성화. **연습-only**라 임상 자문은 규준 검증이 아닌 *연습 적절성*에 한정.
+> ✅ **양쪽 게이트 통과(2026-06-22, 사용자 보고).** → 학령기 5종 **내부/제한 테스트 활성화 가능**(가역 prod flag flip). **공개 런치**는 별도 런치 번들(포지셔닝 카피 + 온보딩 음소 연령분기) 후.
 
 ---
 

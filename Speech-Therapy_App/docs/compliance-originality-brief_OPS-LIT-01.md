@@ -67,6 +67,11 @@
 - 자체 제작·비복제 설계 원칙 — [`tasks/13_…SchoolAge_Expansion_Design.md`](../tasks/13_Literacy_SchoolAge_Expansion_Design.md) §7, [`tasks/11_…Constructs_Expansion_Design.md`](../tasks/11_Literacy_Constructs_Expansion_Design.md) §2.
 
 ## §6. Action Items
+
+### ✅ 자문 결과 (2026-06-22, 사용자 보고)
+- **변호사 의견 = IP 비침해** — 자체 제작 콘텐츠가 NISE-B·ACT/KOLRA/RA-RCP 등의 저작권·상표권을 침해하지 않음. 수정 권고 콘텐츠 0건.
+- → OPS-LIT-01 원본성 게이트 통과. 임상 서명(문제없음)과 함께 **학령기 플래그 활성화 게이트 양쪽 충족**.
+
 ### 자문 의뢰 전 (사용자)
 - [ ] 변호사 선정(저작권/IT 콘텐츠 경험) · 자문료 확보
 - [ ] 별첨(전 게임 콘텐츠 원문 export) 준비 — 제품팀이 `*-content.ts`에서 추출

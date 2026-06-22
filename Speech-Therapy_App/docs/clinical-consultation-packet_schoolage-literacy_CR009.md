@@ -105,7 +105,7 @@
 
 ## 7. 검증 결과 + 반영 프로세스
 
-> ⏳ **검증 대기.** 자문 3~4인 서면 답변 + 서명 수령 시 본 절에 기록.
+> ✅ **검증 완료 (2026-06-22, 사용자 보고).** 임상 전문가 의견 = **문제 없음** — 연습-only 전제하에 학령기 5종의 콘텐츠·연령·난이도·비오도 설계가 적절. 학령기 임상 게이트 통과(규준 검증 아님 — 연습 적절성 확인).
 
 - 검증 답변 수령 → 게임별 **플래그 활성화 결정**(`LITERACY_SPELLING_ENABLED` / `LITERACY_READ_RULES_ENABLED` / `LITERACY_COMPREHENSION_ENABLED` / `LITERACY_INFERENCE_READING_ENABLED` / `LITERACY_MORPHOLOGY_ENABLED`).
 - **검증 전 활성 금지**(전 플래그 default off). 활성은 게임별 단계적(한 종 → 코호트 → 전체) 권고.
