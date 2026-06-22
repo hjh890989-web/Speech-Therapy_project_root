@@ -37,6 +37,13 @@ export const LANDING_FAQ: FaqItem[] = [
   },
 ];
 
+/// CR-2026-009 — 문해력(읽기·말 놀이) FAQ. 게임 활성(플래그 on) 시에만 page.tsx 가 append.
+///   미출시 광고 회피(활성-카피 동기화). CON-04: 금칙어(치료/진단/장애) 0.
+export const LITERACY_FAQ: FaqItem = {
+  q: "읽기·말 놀이는 무엇인가요?",
+  a: "발음 확인에 더해, 만 2~12세 발달 단계에 맞춘 읽기·말(문해) 놀이를 제공해요. 소리 놀이·받아쓰기·글 읽고 답하기처럼 또래 단계에 맞는 활동을 함께할 수 있어요. 점수를 매기는 게 아니라 즐겁게 연습하는 놀이예요.",
+};
+
 export function LandingFaq() {
   return (
     <section
