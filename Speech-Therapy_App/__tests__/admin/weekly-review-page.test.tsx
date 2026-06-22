@@ -269,6 +269,37 @@ describe("/weekly-review — FR-Q-WEEKLY-REVIEW 부모용 주간 리뷰 페이�
     expect(container.querySelector("[data-testid='weekly-review-trend']")).toBeNull();
   });
 
+  it("[2-lit] 발음 리포트 없음 + 문해력 활동 있음 → 문해력-only 뷰(empty-state 아님)", async () => {
+    setAuthUser(USER_ME);
+    userFindUniqueMock.mockResolvedValueOnce({ childAgeMonths: 120 }); // 학령기
+    loadWeeklyReviewMock.mockResolvedValueOnce({
+      latest: null,
+      history: [],
+      wAurAchieved: false,
+      hasData: false,
+    });
+    loadLiteracyWeeklyMock.mockResolvedValueOnce({
+      totalSessions: 3,
+      activeDays: 2,
+      byStage: [],
+      byGame: [{ gameSlug: "spelling", count: 3 }],
+    });
+
+    const ui = await WeeklyReviewPage();
+    const { container } = render(ui);
+
+    // 문해력 카드 + 문해력-only 안내 노출, 발음 empty-state 는 미렌더.
+    expect(container.querySelector("[data-testid='weekly-review-literacy']")).not.toBeNull();
+    expect(
+      container.querySelector("[data-testid='weekly-review-literacy-only-intro']"),
+    ).not.toBeNull();
+    expect(container.querySelector("[data-testid='weekly-review-empty']")).toBeNull();
+    const litCta = container.querySelector("[data-testid='weekly-review-literacy-cta']");
+    expect(litCta?.getAttribute("href")).toBe("/literacy/start");
+    // 발음 3축 요약은 미렌더(발음 데이터 없음).
+    expect(container.querySelector("[data-testid='weekly-review-summary']")).toBeNull();
+  });
+
   it("[3] W-AUR 달성 (sessionCount=5) → achieved 카드", async () => {
     setAuthUser(USER_ME);
     userFindUniqueMock.mockResolvedValueOnce({ childAgeMonths: 48 });
