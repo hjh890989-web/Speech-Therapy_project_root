@@ -16,7 +16,8 @@ raw 53 § 선택적 보강 § "용어 사전 (Glossary)" 권고 직접 실행. *
 
 | 약어 | 풀이 | 정의 | 본 위키 정본 |
 |---|---|---|---|
-| **W-AUR** | Weekly Active User Retention | 주간 미션 완수율. **본 프로젝트 북극성 KPI** (≥60%) | [[product/sources/52-PRD-V09-Quality-Improvement]] § §1.3 |
+| **W-AUR** | Weekly Active User Retention | 주간 발음 미션 완수율. **북극성 KPI — 트랙A(발음)** (≥60%) | [[product/sources/52-PRD-V09-Quality-Improvement]] § §1.3 |
+| **W-LER** | Weekly Literacy Engagement Rate | 주간 문해 활동률(engagement). **북극성 보조지표 — 트랙B(문해)**. 활동일 ≥2(`W_LER_MIN_DAYS`), 완수율 아님·target은 baseline 후 | ADR 북극성 2트랙 (`lib/reports/wler-trend.ts`) |
 | **M3** | Month-3 Retention | 3개월 차 리텐션 유지율 (≥40%) | RTM § REQ-NF-026 |
 | **CVR** | Conversion Rate | 무료 진단 → Basic 결제 전환율 (≥8%) | RTM § REQ-NF-027 |
 | **CAC** | Customer Acquisition Cost | 고객 획득 비용 (목표 ≤30,000원 → B2B 제휴 후 10,000원↓) | [[product/concepts/customer-segmentation]] |
@@ -73,6 +74,19 @@ raw 53 § 선택적 보강 § "용어 사전 (Glossary)" 권고 직접 실행. *
 | **KOPLAC** | Korean Pragmatic Language Assessment | 한국어 화용언어능력검사 (F15 영감) | [[clinical/entities/KOPLAC]] |
 | **PECS** | Picture Exchange Communication System | 그림교환의사소통체계 (AAC, 회피) | [[clinical/entities/PECS]] |
 
+### 문해 구인 (Literacy, 트랙B — 연습-only)
+
+> 트랙B(읽기·말)는 점수·밴드·판정 없는 **연습-only**(`bandShippable=false`·`referenceBand=null`). 아래는 놀이 난이도 위계의 임상 영감 — 측정 척도 아님(만2~4 일반 모집단 규준 빈약).
+
+| 용어 | 풀이 | 정의 | 본 위키 정본 |
+|---|---|---|---|
+| **음운인식** | Phonological Awareness | 말소리 단위(운율·음절·음소) 인식·조작. 읽기 선행지표 | [[clinical/concepts/읽기-선행지표-발달규준]] §2.A |
+| **해독** | Decoding | 자소-음소 대응으로 글자→소리 | [[clinical/concepts/읽기-선행지표-발달규준]] §2.B |
+| **RAN** | Rapid Automatized Naming | 빠른 자동 이름대기. 읽기유창성 예측 | [[clinical/concepts/읽기-선행지표-발달규준]] §2.C |
+| **읽기유창성** | Reading Fluency | 정확·속도·운율 있는 읽기 | [[clinical/concepts/읽기-선행지표-발달규준]] §2.D |
+| **SVR** | Simple View of Reading | 읽기이해 = 해독 × 언어이해 | [[clinical/concepts/읽기-선행지표-발달규준]] |
+| **연습-only** | practice-only | 문해 트랙 불변 — 점수·밴드·또래백분위·판정 미산출, 활동 빈도(engagement)만 | `lib/literacy/stages.ts` `bandShippable=false` |
+
 ## 4. 제품·요구사항
 
 | 약어 | 풀이 | 정의 | 본 위키 정본 |
@@ -91,6 +105,9 @@ raw 53 § 선택적 보강 § "용어 사전 (Glossary)" 권고 직접 실행. *
 | **REQ-NF** | Non-Functional Requirement | 비기능 요구사항 (30개: 성능·SLA·신뢰성·보안·모니터링·KPI) |
 | **MoSCoW** | Must·Should·Could·Won't | 우선순위 4단계 (Must=Phase 0, Should=Phase 1, Could=Phase 2, Won't=명시적 제외) |
 | **RTM** | Requirements Traceability Matrix | 요구사항 추적 매트릭스 (5축: REQ × Epic × Task × Persona × ADR) | [[product/concepts/requirements-traceability-matrix]] |
+| **트랙A / 트랙B** | Track A / Track B | 2트랙 비대칭: A=발음·발화 "확인"(만2~7, 표준화 규준) / B=읽기·말 "놀이·연습"(만2~12, 연습-only). "측정 vs 측정" 아님 | 재정렬 청사진 §3 · VPS V10 |
+| **bandShippable** | 출시 가능 밴드 | 문해 단계별 참고밴드 출시 가능 여부. **전 단계 false**(Phase 2 규준검증 0건) | `lib/literacy/stages.ts` |
+| **REQ-LIT** | Literacy Requirement | 문해 트랙 연습 콘텐츠 요구(측정 REQ 아님). 14게임 ↔ S0~S4 | SRS V08 §4.1 |
 
 ## 5. 기술 스택 (Technical)
 
