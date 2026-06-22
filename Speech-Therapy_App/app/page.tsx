@@ -35,6 +35,50 @@ export default function Home() {
                 <span>무가입 · 5분 · 음성 미저장</span>
               </div>
               
+              {literacyLive ? (
+                <div className="space-y-6" data-testid="hero-persona-router">
+                  <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl dark:text-white">
+                    우리 아이,
+                    <br />
+                    <span className="text-emerald-600 dark:text-emerald-400">무엇이 궁금하세요?</span>
+                  </h1>
+                  <p className="text-lg text-gray-600 sm:text-xl dark:text-gray-300">
+                    발음·발화는 또래와 비교해 <strong>확인</strong>하고, 읽기·말은 발달 단계에 맞춘{" "}
+                    <strong>놀이</strong>로 함께해요.
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Link
+                      href="/diagnose"
+                      data-testid="hero-track-speech"
+                      className="group flex flex-col gap-2 rounded-2xl border-2 border-emerald-200 bg-white p-6 transition hover:border-emerald-400 hover:shadow-lg dark:border-emerald-900 dark:bg-gray-900 dark:hover:border-emerald-600"
+                    >
+                      <span className="text-3xl">🎙️</span>
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">발음이 걱정이에요</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-300">
+                        만 2~7세 · 또래와 비교해 발음 발달을 5분에 확인
+                      </span>
+                      <span className="mt-1 inline-flex items-center font-semibold text-emerald-600 dark:text-emerald-400">
+                        5분 발음 확인 →
+                      </span>
+                    </Link>
+                    <Link
+                      href="/literacy/start"
+                      data-testid="hero-track-literacy"
+                      className="group flex flex-col gap-2 rounded-2xl border-2 border-violet-200 bg-white p-6 transition hover:border-violet-400 hover:shadow-lg dark:border-violet-900 dark:bg-gray-900 dark:hover:border-violet-600"
+                    >
+                      <span className="text-3xl">📚</span>
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">읽기·말이 궁금해요</span>
+                      <span className="text-sm text-gray-600 dark:text-gray-300">
+                        만 2~12세 · 발달 단계에 맞춘 읽기·말 놀이를 함께
+                      </span>
+                      <span className="mt-1 inline-flex items-center font-semibold text-violet-600 dark:text-violet-400">
+                        읽기·말 놀이 시작 →
+                      </span>
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <>
               <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl dark:text-white">
                 우리 아이 발음,
                 <br />
@@ -69,7 +113,9 @@ export default function Home() {
                   기능 살펴보기
                 </Link>
               </div>
-              
+                </>
+              )}
+
               <div className="flex items-center gap-6 pt-4">
                 <div className="flex -space-x-3">
                   {[1,2,3,4].map(i => (
