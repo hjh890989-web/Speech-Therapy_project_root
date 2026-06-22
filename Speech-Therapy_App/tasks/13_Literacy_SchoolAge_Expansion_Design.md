@@ -133,7 +133,7 @@ model LiteracyResult {
 |---|---|---|---|
 | ① 초기 짧은 확인 probe | diagnose 5분 | **stage 라우팅 진입**(`/literacy/start`) → (후속) 채점 probe + 참고밴드 | 1d(라우터 ✅) → 후속(채점) |
 | ② 미션+미니게임 | MissionCard | 9종 + S2~S4 신규 + 미션 연동 + 영속 | 1c·3 |
-| ③ 주간리포트 | weekly-aggregator | 문해력 축 통합 | 4 |
+| ③ 주간리포트 | weekly-aggregator | 문해력 활동 축(/weekly-review 카드) | 4 ✅ |
 
 | Phase | 내용 | 방식 | 상태 |
 |---|---|---|---|
@@ -145,7 +145,7 @@ model LiteracyResult {
 | **2 임상검증** | 학령기 규준 원문대조 workflow | workflow | ✅ 완료(§5) |
 | **3a 영속 wiring** | 기존 9게임 *Client → `useSaveLiteracyResultOnce` → `saveLiteracyResult` (childAgeMonths 서버조회로 리팩터) | 인라인 | ✅ |
 | **3b 학령기 콘텐츠** | S2~S4 신규 게임 (검증 0건 → 밴드 없이 연습-only). 완료: spelling(S2 받아쓰기) + /goal 큐 4종 — read-rules(S2 해독) · reading-comprehension(S3 사실이해) · inference-reading(S4 추론) · morphology(S4 형태소). registry 14게임. 잔여: S3 유창성 학령기 확장 등 | 인라인 | ✅ 큐 완료(QUEUE_EMPTY) |
-| **4 리포트** | 주간리포트 문해력 축(LiteracyResult 집계) | 인라인 | ⏳ |
+| **4 리포트** | 주간리뷰 문해력 활동 축(LiteracyResult on-read 집계 → /weekly-review 카드, engagement 중심, 마이그레이션 0) | 인라인 | ✅ |
 
 **Phase 3a 영속 wiring 상세(2026-06-22)**: 공용 훅 [`lib/literacy/use-save-result.ts`](../lib/literacy/use-save-result.ts) `useSaveLiteracyResultOnce`(완료 시 1회 fire-and-forget, 실패해도 놀이 불방해, sentRef 가드). 액션 리팩터 = `childAgeMonths`를 클라 입력에서 제거하고 **인증 User 에서 서버 조회**(stage 와 함께 클라 신뢰 X). 게임별 rawScore 의미(gameSlug 로 해석):
 
