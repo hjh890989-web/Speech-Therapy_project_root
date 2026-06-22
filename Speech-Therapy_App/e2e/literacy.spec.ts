@@ -9,6 +9,13 @@ import { test, expect } from "@playwright/test";
 
 // 신규 임상 연습 게임 — 플래그 off 시 '준비 중' coming-soon testid.
 const COMING_SOON = [
+  // CR-2026-007 게임 5종(flag-3 회귀망 보강).
+  { path: "/literacy/phonological-awareness", testId: "pa-coming-soon" },
+  { path: "/literacy/decoding", testId: "decoding-coming-soon" },
+  { path: "/literacy/ran", testId: "ran-coming-soon" },
+  { path: "/literacy/reading-fluency", testId: "fluency-coming-soon" },
+  { path: "/literacy/inference", testId: "inference-coming-soon" },
+  // CR-2026-007 후속 + CR-2026-009 게임.
   { path: "/literacy/vocabulary", testId: "vocabulary-coming-soon" },
   { path: "/literacy/nonword-repetition", testId: "nwr-coming-soon" },
   { path: "/literacy/narrative", testId: "narrative-coming-soon" },
@@ -40,4 +47,20 @@ test.describe("임상 연습 게임 — 플래그 off 휴면(준비 중)", () =>
       await expect(page.getByTestId("literacy-hub-list")).toHaveCount(0);
     });
   }
+});
+
+test.describe("플래그 off — 문해력 표면 미노출 (flag-3 회귀망)", () => {
+  test("/literacy/start — 전 게임 off 시 빈 안내(놀이 카드 0)", async ({ page }) => {
+    await page.goto("/literacy/start");
+    await expect(page.getByTestId("literacy-start")).toBeVisible();
+    await expect(page.getByTestId("literacy-start-empty")).toBeVisible();
+  });
+
+  test("랜딩 / — off 시 읽기·말 놀이 링크(내비/기능카드) 미노출", async ({ page }) => {
+    await page.goto("/");
+    // literacyLive=off → 내비 '읽기·말 놀이' + 랜딩 기능카드(둘 다 href=/literacy) 노출 0.
+    await expect(page.locator('a[href="/literacy"]')).toHaveCount(0);
+    // 문해력 FAQ 항목도 off 면 미노출.
+    await expect(page.getByText("읽기·말 놀이는 무엇인가요?")).toHaveCount(0);
+  });
 });

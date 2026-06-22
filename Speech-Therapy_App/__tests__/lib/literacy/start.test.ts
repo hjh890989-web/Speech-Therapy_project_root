@@ -12,6 +12,11 @@ const FLAGS = [
   "LITERACY_NWR_ENABLED",
   "LITERACY_NARRATIVE_ENABLED",
   "LITERACY_PHONO_RULES_ENABLED",
+  "LITERACY_SPELLING_ENABLED",
+  "LITERACY_READ_RULES_ENABLED",
+  "LITERACY_COMPREHENSION_ENABLED",
+  "LITERACY_INFERENCE_READING_ENABLED",
+  "LITERACY_MORPHOLOGY_ENABLED",
 ];
 const saved: Record<string, string | undefined> = {};
 for (const f of FLAGS) saved[f] = process.env[f];
@@ -32,12 +37,14 @@ describe("enabledGamesForAgeOrAll", () => {
     expect(slugs).toEqual(["vocabulary", "inference"]); // 레지스트리 순서
   });
 
-  it("월령 알면 그 단계 놀이만", () => {
+  it("월령 알면 그 월령에 적격인 놀이만 (연령적격 라우팅, dead-end 0)", () => {
     for (const f of FLAGS) delete process.env[f];
-    process.env.LITERACY_VOCAB_ENABLED = "true"; // S0
-    process.env.LITERACY_INFERENCE_ENABLED = "true"; // S4
-    expect(enabledGamesForAgeOrAll(36).map((g) => g.slug)).toEqual(["vocabulary"]); // 만3 → S0
-    expect(enabledGamesForAgeOrAll(138).map((g) => g.slug)).toEqual(["inference"]); // 만11.5 → S4
+    process.env.LITERACY_VOCAB_ENABLED = "true"; // gate 24~84
+    process.env.LITERACY_INFERENCE_READING_ENABLED = "true"; // 학령기 게임 gate 132~144
+    // 만3(36): vocab 적격 / inference-reading 미적격.
+    expect(enabledGamesForAgeOrAll(36).map((g) => g.slug)).toEqual(["vocabulary"]);
+    // 만11.5(138): 학령기 게임만 — vocab(상한 84) 미적격 → 라우팅된 inference-reading 는 실제 적격(dead-end 아님).
+    expect(enabledGamesForAgeOrAll(138).map((g) => g.slug)).toEqual(["inference-reading"]);
   });
 
   it("월령 알지만 도메인 밖 → 빈 목록(전체 fallback 아님)", () => {

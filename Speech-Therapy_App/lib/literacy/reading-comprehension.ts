@@ -2,7 +2,7 @@
 //
 // ⚠️ 연습-only: 임상 판정/참고밴드 미산출(Phase 2 검증). raw 정답수만 영속(referenceBand=null).
 //    LITERACY_COMPREHENSION_ENABLED default off → UI 휴면.
-// 연령 게이트: 만 9~11세(108~131개월 = 초3~4) — 사실적 읽기이해 구간(S3).
+// 연령 게이트: 만 9~10세(108~131개월 = 초3~4) — 사실적 읽기이해 구간(S3).
 // 채점: 시간압박 없는 재읽기 모델 — 첫 정답=1 / 첫 오답 후 재선택 정답=1(다시읽기) / 그 외=0.
 //   (SC 3초 타이머 미적용: 사실적 이해는 look-back 권장 — 속도 아닌 이해가 핵심.)
 
@@ -16,7 +16,7 @@ export function isComprehensionEnabled(): boolean {
   return process.env.LITERACY_COMPREHENSION_ENABLED === "true";
 }
 
-// ----- 연령 게이트 (만 9~11세 = 초3~4) -----
+// ----- 연령 게이트 (만 9~10세 = 초3~4) -----
 export const COMPREHENSION_AGE_MIN_MONTHS = 108; // 만 9세(초3)
 export const COMPREHENSION_AGE_MAX_MONTHS = 131; // 만 10세 11개월(초4)
 

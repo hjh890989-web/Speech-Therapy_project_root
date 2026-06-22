@@ -76,3 +76,13 @@ STOP REASON: QUEUE_EMPTY
 - [x] **④ morphology (낱말 조각 놀이)** — 형태소 인식(합성어 만들기·파생어 만들기·형태소 분석 3유형 객관식). 자체 15문항(3유형×5). 난이도 위계 잠정(합성<파생<분석, 정렬용). SC 3초 재시도. 연령 120~144(초4~6, S4). 플래그 `LITERACY_MORPHOLOGY_ENABLED`(off). registry 14번째. gate: tsc0 · vitest 19(morphology 13 + registry 6) · eslint0.
 
 **STOP REASON: QUEUE_EMPTY** (4종 완료). 최종 전체 게이트는 아래 "큐 종료" 참조.
+
+## 후속 5 — 브랜치 전체 적대적 코드 리뷰 + 수정 (2026-06-22)
+
+> 멀티에이전트 리뷰(23 agents, 7차원 fan-out→적대검증). 15발견→12확정(critical 0/high 1/med 2/low 9), refuted/uncertain 걸러짐. 판정 **ready-with-fixes**(전 표면 default off→라이브 회귀 0, 전부 latent). 불변식(연습-only·영속보안) 위반 0 확인. 확정 결함 전건 수정:
+
+- [x] **clin-1(high)** start 라우팅↔게임 연령게이트 disjoint → dead-end. **fix**: registry `isAgeEligible` 필드 추가, `enabledGamesForAge` 를 stage 태그가 아닌 게임 실제 연령적격으로 라우팅(gc-3 비대칭 동반 해소). + dead-end 0 불변식 테스트.
+- [x] **flag-1(med)** 주간카드가 영속행 존재로 게이팅 → on→off flip 잔존. **fix**: `loadLiteracyWeekly` 가 `enabledLiteracyGames()` slug 로 필터 + 전부 off 면 null.
+- [x] **age-1(med)** 학령기 user 온보딩 Step3→/diagnose(월령 36 clamp). **fix**: `handleStartDiagnose` 가 isSchoolAge 면 /literacy/start 로.
+- [x] **clin-2(low)** 주간카드 단계칩 학년 함의 오해 → byStage 칩 제거(놀이별만). **age-2(low)** 학령기 음소 0개 후 하향 시 기본값 복구 effect. **gc-1(low)** articulation-probe 건너뛴 단어 score 0 집계 → 미발화 제외. **flag-3(low)** e2e 5종 testid + 랜딩/start off-미노출 단언. **age-3/schema-1/ps-1/gc-4(low)** 주석·라벨 drift 정정.
+- 게이트: tsc0 · vitest 312files·3330 · lint0 · build0. uncertain(정적 프리렌더 flip·CHECK 제약·멀티라운드 집계)은 문서화/by-design.

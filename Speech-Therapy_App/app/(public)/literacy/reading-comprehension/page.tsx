@@ -1,6 +1,6 @@
 // FR-Q-LIT (CR-2026-009 / Phase 3b S3) — 사실적 읽기이해 미니게임 페이지 (Server Component).
 //
-// 게이트: LITERACY_COMPREHENSION_ENABLED !== 'true' → '준비 중' 휴면 / 활성 시 연령(만9~11=초3~4,
+// 게이트: LITERACY_COMPREHENSION_ENABLED !== 'true' → '준비 중' 휴면 / 활성 시 연령(만9~10=초3~4,
 //   월령 알 때만 강제). CON-04: '치료/진단/장애' 0건 — 놀이 톤(연습-only).
 
 import { getCachedUser } from "@/lib/auth/cached-get-user";
@@ -54,7 +54,7 @@ export default async function ReadingComprehensionPage() {
     );
   }
 
-  // ── 게이트 2: 연령 (만 9~11세=초3~4, 월령을 알 때만 강제) ──
+  // ── 게이트 2: 연령 (만 9~10세=초3~4, 월령을 알 때만 강제) ──
   const ageMonths = await loadChildAgeMonths();
   const ageKnownButIneligible =
     ageMonths !== null && !isComprehensionAgeEligible(ageMonths);

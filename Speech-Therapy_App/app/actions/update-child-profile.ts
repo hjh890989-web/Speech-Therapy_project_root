@@ -16,7 +16,7 @@
 //
 // 흐름:
 //   1) Supabase auth.getUser() → userId. 비로그인이면 unauthorized.
-//   2) Zod-like validation — childAgeMonths 24~84 int, preferredPhonemes 화이트리스트 0~5개.
+//   2) Zod-like validation — childAgeMonths 24~144 int (CR-2026-009), preferredPhonemes 화이트리스트 0~5개.
 //   3) withActor(userId, tx => tx.user.update({...})) — 본인 row 만 + AuditLog actor_id 캡처.
 //   4) graceful — throw 절대 금지. 모든 분기 결과 객체 반환.
 //

@@ -108,6 +108,19 @@ export function OnboardingWizardClient({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // CR-2026-009 — 학령기(만 7세 초과): 발음 미션 비대상 → 음소 선택사항(0개 허용) +
+  //   Step3 발음 진단 funnel 대신 읽기·말 놀이로 안내(발음 진단은 만2-7 월령 clamp로 또래비교 무의미).
+  const isSchoolAge = childAgeMonths > SPEECH_PHONEME_AGE_MAX_MONTHS;
+
+  // age-2 — 학령기에서 음소를 0개로 비운 뒤 만 7세 이하로 슬라이더를 내리면 빈 채 잔류 →
+  //   제출 시 invalid_phonemes. 비학령기 전환 + 0개면 기본값 복구(서버는 만2-7 1~2개 필수).
+  useEffect(() => {
+    if (!isSchoolAge && selectedPhonemes.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedPhonemes(["ㅅ"]);
+    }
+  }, [isSchoolAge, selectedPhonemes.length]);
+
   // 시간 측정 — wizard 시작 + 각 step 진입 시각.
   // useRef 초기값은 render 중 호출되므로 Date.now() 직접 호출 회피 (react-hooks/purity).
   // null 초기화 → mount effect 에서 lazy 초기화.
@@ -271,24 +284,26 @@ export function OnboardingWizardClient({
 
   /** Step 3 의 "시작하기" — 분석 이벤트 후 /diagnose 로 이동. */
   const handleStartDiagnose = useCallback(() => {
-    const primaryPhoneme = selectedPhonemes[0] ?? "ㅅ";
     goToNextStep(3);
+    if (isSchoolAge) {
+      // age-1 — 학령기(만 7세 초과)는 발음 진단(만2-7 월령 clamp → 또래비교 무의미) 대신 읽기·말 놀이로.
+      router.push("/literacy/start");
+      return;
+    }
+    const primaryPhoneme = selectedPhonemes[0] ?? "ㅅ";
     // 발음 확인 페이지 진입 — onboarding=1 query 로 분기 표시.
     const params = new URLSearchParams({
       phoneme: primaryPhoneme,
       onboarding: "1",
     });
     router.push(`/diagnose?${params.toString()}`);
-  }, [router, selectedPhonemes, goToNextStep]);
+  }, [router, selectedPhonemes, goToNextStep, isSchoolAge]);
 
   /** Step 3 의 "이번엔 건너뛰기" — Step4 로 바로 이동. */
   const handleSkipDiagnose = useCallback(() => {
     skippedStepsRef.current += 1;
     goToNextStep(3);
   }, [goToNextStep]);
-
-  // CR-2026-009 — 학령기(만 7세 초과)는 발음 미션 비대상 → 음소 0개 허용(읽기·말 놀이 중심).
-  const isSchoolAge = childAgeMonths > SPEECH_PHONEME_AGE_MAX_MONTHS;
 
   /** 음소 토글. */
   const togglePhoneme = useCallback((p: AllowedPhoneme) => {

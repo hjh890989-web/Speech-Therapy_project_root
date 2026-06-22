@@ -132,16 +132,29 @@ describe("stage 라우팅 — enabledGamesForStage / enabledGamesForAge", () => 
     expect(enabledGamesForStage("S1")).toEqual([]);
   });
 
-  it("enabledGamesForAge 는 월령을 단계로 변환해 라우팅", () => {
+  it("enabledGamesForAge 는 게임 실제 연령적격으로 라우팅(stage 태그 아님)", () => {
     for (const f of FLAGS) delete process.env[f];
-    process.env.LITERACY_VOCAB_ENABLED = "true"; // S0 (만 2~4세)
-    expect(enabledGamesForAge(36).map((g) => g.slug)).toEqual(["vocabulary"]); // 만 3세 → S0
-    expect(enabledGamesForAge(72)).toEqual([]); // 만 6세 → S1 (해당 단계 게임 off)
+    process.env.LITERACY_VOCAB_ENABLED = "true"; // gate 24~84
+    process.env.LITERACY_INFERENCE_READING_ENABLED = "true"; // 학령기 gate 132~144
+    // vocab 은 24~84 적격 — stage 태그(S0) 무관하게 72 에서도 노출.
+    expect(enabledGamesForAge(36).map((g) => g.slug)).toEqual(["vocabulary"]);
+    expect(enabledGamesForAge(72).map((g) => g.slug)).toEqual(["vocabulary"]);
+    expect(enabledGamesForAge(90)).toEqual([]); // vocab 상한(84) 초과 + 학령기 게임 하한(132) 미만
+    expect(enabledGamesForAge(138).map((g) => g.slug)).toEqual(["inference-reading"]);
   });
 
   it("도메인 밖 월령 → 빈 목록", () => {
     process.env.LITERACY_VOCAB_ENABLED = "true";
-    expect(enabledGamesForAge(12)).toEqual([]); // 만 1세
+    expect(enabledGamesForAge(12)).toEqual([]); // 만 1세 (vocab 하한 24 미만)
     expect(enabledGamesForAge(200)).toEqual([]);
+  });
+
+  it("clin-1 불변식: 라우팅된 모든 게임은 해당 월령에 isAgeEligible (dead-end 0)", () => {
+    for (const f of FLAGS) process.env[f] = "true"; // 전부 on
+    for (let m = 24; m <= 144; m += 3) {
+      for (const g of enabledGamesForAge(m)) {
+        expect(g.isAgeEligible(m), `${g.slug} routed at ${m}m but not age-eligible`).toBe(true);
+      }
+    }
   });
 });

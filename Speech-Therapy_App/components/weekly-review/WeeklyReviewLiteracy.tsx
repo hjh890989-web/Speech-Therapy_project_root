@@ -5,12 +5,7 @@
 // CON-04: '치료/진단/장애' 0건. 라벨은 stages.ts/registry 의 부모 친화 명칭.
 
 import type { LiteracyWeeklySummary } from "@/lib/reports/literacy-weekly";
-import { LITERACY_STAGES } from "@/lib/literacy/stages";
 import { LITERACY_GAMES } from "@/lib/literacy/registry";
-
-function stageTitle(stage: string): string {
-  return LITERACY_STAGES.find((s) => s.id === stage)?.title ?? stage;
-}
 
 function gameTitle(slug: string): string {
   return LITERACY_GAMES.find((g) => g.slug === slug)?.title ?? slug;
@@ -34,21 +29,7 @@ export function WeeklyReviewLiteracy({ summary }: { summary: LiteracyWeeklySumma
         함께 놀았어요. 꾸준히 잘하고 있어요!
       </p>
 
-      {/* 단계별 분포 */}
-      {summary.byStage.length > 0 && (
-        <ul className="mt-3 flex flex-wrap gap-2" data-testid="weekly-review-literacy-stages">
-          {summary.byStage.map((s) => (
-            <li
-              key={s.stage}
-              className="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-800 dark:bg-violet-900/50 dark:text-violet-100"
-            >
-              {stageTitle(s.stage)} {s.count}번
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* 놀이별 분포 */}
+      {/* 놀이별 분포 — 단계(학년 함의) 라벨 대신 놀이 이름만 표시(clin-2: 구인-태그 stage 오해 회피). */}
       {summary.byGame.length > 0 && (
         <ul className="mt-3 space-y-1" data-testid="weekly-review-literacy-games">
           {summary.byGame.map((g) => (

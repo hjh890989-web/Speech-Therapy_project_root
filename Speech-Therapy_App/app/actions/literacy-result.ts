@@ -11,7 +11,8 @@
 //      미상 또는 만 2~12세 도메인 밖이면 persisted:false "age_out_of_domain".
 //   5) PIPA 동의 가드(인증 user) — 미동의 시 persisted:false "consent_required".
 //   6) INSERT — **rawScore 그대로(보정 금지)**, referenceBand=null(Phase 2 검증 전 연습-only),
-//      stage 는 게임 구인 단계(registry)에서 서버 파생. withActor 가 audit actor 캡처.
+//      stage 는 게임 구인 단계(registry)에서 서버 파생. withActor 가 트랜잭션 + audit.actor_id GUC 주입
+//      (LiteracyResult 감사 트리거는 EvaluationResult 선례처럼 미등록 — 향후 트리거 추가 시 actor 캡처).
 //
 // 임상 안전: 발음 채점(diagnosis)/HITL/escalation 과 무관 — 별도 활동. raw 불변(project 규칙).
 // CON-04: 메시지에 "치료/진단/장애" 금칙어 0.

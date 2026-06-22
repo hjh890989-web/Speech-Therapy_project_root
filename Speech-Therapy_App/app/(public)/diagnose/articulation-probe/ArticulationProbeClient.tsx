@@ -56,8 +56,12 @@ export function ArticulationProbeClient() {
 
   function nextWord() {
     if (!current) return;
-    const score = captured?.score ?? 0;
-    setResults((prev) => [...prev, { word: current.word, position: current.position, score }]);
+    // gc-1 — 건너뛴(미발화) 단어는 결과에 기록하지 않는다. score 0 으로 push 하면
+    //   aggregateArticulationProbe valid 필터(Number.isFinite(0)=true)가 평균을 끌어내림(UI '건너뛰기 무해' 안내와 모순).
+    //   실발화(captured 존재)만 집계 — count·평균이 실제 측정만 반영.
+    if (captured) {
+      setResults((prev) => [...prev, { word: current.word, position: current.position, score: captured.score }]);
+    }
     stt.reset();
     if (idx >= words.length - 1) setPhase("done");
     else setIdx((i) => i + 1);

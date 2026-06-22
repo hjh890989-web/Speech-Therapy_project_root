@@ -24,6 +24,7 @@
 import { prisma } from "@/lib/db";
 import { W_AUR_MIN_MISSIONS } from "@/lib/reports/weekly-aggregator";
 import { weekBounds } from "@/lib/weekly-report";
+import { enabledLiteracyGames } from "@/lib/literacy/registry";
 import {
   aggregateLiteracyWeekly,
   type LiteracyWeeklySummary,
@@ -123,13 +124,18 @@ export async function loadLiteracyWeekly(
   week: number,
 ): Promise<LiteracyWeeklySummary | null> {
   if (!userId) return null;
+  // flag-1 — 영속 행 존재가 아니라 **현재 활성(플래그 on) 게임**으로 게이팅.
+  //   게임 on→영속→off flip 시 과거 행으로 카드가 잔존하지 않도록(불변식: off 면 노출 0).
+  //   전부 off 면 빈 집합 → rows 필터 후 0건 → aggregate null → 카드 미렌더.
+  const enabledSlugs = new Set(enabledLiteracyGames().map((g) => g.slug));
+  if (enabledSlugs.size === 0) return null;
   const { start, end } = weekBounds(year, week);
   try {
     const rows = await prisma.literacyResult.findMany({
       where: { userId, createdAt: { gte: start, lt: end } },
       select: { stage: true, gameSlug: true, createdAt: true },
     });
-    return aggregateLiteracyWeekly(rows);
+    return aggregateLiteracyWeekly(rows.filter((r) => enabledSlugs.has(r.gameSlug)));
   } catch (err) {
     // DB 일시 장애 / env 미설정(worktree 등) → graceful null.
     console.error("loadLiteracyWeekly: findMany failed", err);
